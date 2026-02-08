@@ -1,0 +1,21 @@
+# https://medium.com/@anshusinghal703/rust-dev-speedup-secret-cutting-compile-time-from-22-minutes-to-under-a-minute-with-a-single-be8a0da4fc83
+
+[build]
+incremental = true
+# Okay, so for development, boosting codegen units really helps parallelize stuff.
+# Default `codegen-units` for `dev` is usually 16, or sometimes up to 256 for incremental builds.
+# Try playing around with values like 8, 12, or 16. It helps spread the work across your CPU cores.
+# Higher numbers typically mean quicker compiles during dev, but just know it *might* shave a tiny bit off runtime optimization.
+rustflags = ["-C", "codegen-units=32"]
+rustc-wrapper = "sccache"
+
+[profile.dev]
+# The `dev` profile usually defaults to `opt-level = 0` (no optimization). If you bump this to 1,
+# you might get a little speed boost by enabling some basic optimizations without blowing up compile time.
+# opt-level = 1 # Feel free to uncomment and test this if you're still chasing faster dev builds!
+# This `build-override` section? It's kind of a big deal for optimizing build scripts and those pesky procedural macros.
+# By default, these often compile with `opt-level = 0` even in your `dev` setup.
+# Giving them a boost here can seriously cut down compile times, especially if your project leans heavily on complex proc-macros like Serde.
+
+[profile.dev.build-override]
+opt-level = 3 # Let's make those build scripts and procedural macros fly!
