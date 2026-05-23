@@ -30,7 +30,7 @@ This project, standing on the shoulders of giants, builds on the amazing work of
 
 - Cross platform and light-weight dependencies for audio streams and debug.
 
-# Internal
+## Internal
 
 - The modulator and demodulator stack have been separated into layers, with up and downstream arms (Demodulate/Modulate), but also loopback within layers.
 
@@ -53,13 +53,13 @@ This project, standing on the shoulders of giants, builds on the amazing work of
     5. Decoder
     6. -> Demodulator arm of the Modem
 
-# External
+## External
 
 - Higher level external layers should encode/decode the FT4, JS8 variants and other development protocols. Encode and decode of FT8 messages is currently linked for development convenience but will be removed.  
 
 - Architecture allows consideration of use to implement Delay Tolerant Networks leveraging the large amount of work in this field, with Amateur Radio callsigns as end point designators.
 
-# Side Benefits
+## Side Benefits
 
 - Rust learning for me. I've had 35 years of Fortran, C and C++. So it's time to move on, and yes, at the moment it's all about me.
 - The code here is not entirely Rust idiomatic (yet).
@@ -68,14 +68,14 @@ This project, standing on the shoulders of giants, builds on the amazing work of
 - The memory safety and low resource use in embedded arm-core systems will likely be competitive with C and assembler.
 - Stream based vs block based decoding may better spread CPU load.
 
-# Current State
+## Current State
 
 - Unit testing is passing except for some device name parsing.
 - Streaming non time-sychronised decoding is working and tested, but only for FT8.
 - Roundtrip audio loopback test is nearly there. Currently this loop is being short circuited from FSK input translated to into likelihood ratios inserted into the demodulator chain.
 - Protocol and runtime parameters are contained in rustxxx.rs
 
-# TODO
+## TODO
 
 - Think of a better project name!!!
 - Document how to BUILD & RUN.
