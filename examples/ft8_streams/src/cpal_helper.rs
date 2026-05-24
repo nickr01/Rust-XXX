@@ -7,7 +7,6 @@ use cpal::traits::{HostTrait, DeviceTrait, StreamTrait};
 pub fn get_audio_input_device_by_id(host: &cpal::Host, audio_input_device_id: &String) -> Result<cpal::Device, anyhow::Error> {
     let audio_input_device_id: &cpal::DeviceId = &audio_input_device_id.parse()?;
     dbg!(audio_input_device_id);
-
     match host.device_by_id(audio_input_device_id) {
         Some(device) => Ok(device),
         None => { return Err(anyhow::anyhow!("Cannot get input device by id {}", audio_input_device_id)) }
@@ -16,7 +15,6 @@ pub fn get_audio_input_device_by_id(host: &cpal::Host, audio_input_device_id: &S
 
 pub fn get_audio_input_device_by_name(host: &cpal::Host, audio_input_device_name: &String) -> Result<cpal::Device, anyhow::Error> {
     dbg!(audio_input_device_name);
-
     for device in host.input_devices()? {
         let desc =  device.description()?;
         let desc = desc.name();
@@ -172,8 +170,8 @@ mod tests {
     #[test]
     fn test_audio_input_device_by_id() {
         let host = cpal::default_host();
-        let name: String = "coreaudio:com.rogueamoeba.Loopback:FDC858DA-EA9D-469B-9B86-2C4ADC20537E".to_string();
-        let _ = get_audio_input_device_by_name(&host, &name)
+        let id: String = "coreaudio:com.rogueamoeba.Loopback:FDC858DA-EA9D-469B-9B86-2C4ADC20537E".to_string();
+        let _ = get_audio_input_device_by_id(&host, &id)
             .expect("Cannot get device by name");
     }
 
@@ -186,9 +184,17 @@ mod tests {
     }
 
     #[test]
-    fn test_audio_input_config_by_id() {
+    fn test_audio_input_device_default_config_by_name() {
         let host = cpal::default_host();
-        let id: String = "coreaudio:BuiltInSpeakerDevice".to_string();
+        let name: String = "Loopback Audio".to_string();
+        let (_, _) = get_audio_input_device_default_config(&host, &name)
+            .expect("Cannot get device and config");
+    }
+
+    #[test]
+    fn test_audio_input_device_default_config_by_id() {
+        let host = cpal::default_host();
+        let id: String = "coreaudio:com.rogueamoeba.Loopback:FDC858DA-EA9D-469B-9B86-2C4ADC20537E".to_string();
         let (_, _) = get_audio_input_device_default_config(&host, &id)
             .expect("Cannot get device and config");
     }
@@ -204,25 +210,24 @@ mod tests {
     #[test]
     fn test_audio_output_device_by_id() {
         let host = cpal::default_host();
-        let name: String = "coreaudio:BuiltInSpeakerDevice".to_string();
-        let _ = get_audio_output_device_by_name(&host, &name)
+        let id: String = "coreaudio:BuiltInSpeakerDevice".to_string();
+        let _ = get_audio_output_device_by_id(&host, &id)
             .expect("Cannot get device by id");
     }
 
     #[test]
-    fn test_audio_output_config_by_name() {
+    fn test_audio_output_device_default_config_by_name() {
         let host = cpal::default_host();
-        let name: String = "MacBook Pro Speakers".to_string();
-        let _ = get_audio_output_device_by_name(&host, &name)
-            .expect("Cannot get device by name");
+        let id: String = "MacBook Pro Speakers".to_string();
+        let (_, _) = get_audio_output_device_default_config(&host, &id)
+            .expect("Cannot get device and config");
     }
 
     #[test]
-    fn test_audio_output_config_by_id() {
+    fn test_audio_output_device_default_config_by_id() {
         let host = cpal::default_host();
         let id: String = "coreaudio:BuiltInSpeakerDevice".to_string();
         let (_, _) = get_audio_output_device_default_config(&host, &id)
             .expect("Cannot get device and config");
     }
-
 }
