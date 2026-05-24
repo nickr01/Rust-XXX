@@ -15,6 +15,7 @@ use crate::waterfall;
 // use std::thread::yield_now;
 // use std::time::Instant;
 
+#[cfg(any(feature = "enable_rx", test))]
 pub struct Receiver {
     pub start_time: std::time::Instant,
     pub nfft: usize, 
@@ -22,6 +23,7 @@ pub struct Receiver {
     pub runtime: &'static rustxxx::Runtime,
 }
 
+#[cfg(any(feature = "enable_rx", test))]
 impl Receiver {
 
     pub fn new(

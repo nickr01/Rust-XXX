@@ -19,6 +19,7 @@ impl rustxxx::Modem {
     //     encode174(&a91, &mut self.codeword);
 
     // gray encode codewords into tones
+    #[cfg(any(feature = "enable_tx", test))]
     pub fn _gray_encode(&self, 
         codeword: &[u8],  // [u8; XXX.ldpc_n_bytes()], 
         // self.l2_tones: &mut [u8; XXX.nd()]
@@ -70,6 +71,7 @@ impl rustxxx::Modem {
     }
 
     // gray decode tones into codewords
+    #[cfg(any(feature = "enable_rx", test))]
     pub fn _gray_decode(&self, 
         l2_tones: &[u8], //  [u8; XXX.nd()], 
     ) -> Vec<u8> {
@@ -122,7 +124,8 @@ impl rustxxx::Modem {
     }
 
     // these are the action stubs
-    pub fn _l2_gray_encode(&self, 
+    #[cfg(any(feature = "enable_tx", test))]
+     pub fn _l2_gray_encode(&self, 
         codeword: &[u8] // mut [u8; XXX.ldpc_n_bytes()]
     ) -> Result<Vec<u8>, rustxxx::XxxError>{
         // let mut tones = [0u8; XXX.nd()];
@@ -130,6 +133,7 @@ impl rustxxx::Modem {
         Ok(self._gray_encode(codeword))
     }
 
+    #[cfg(test)]
     pub fn _l2_gray_decode(&self, 
         l2_tones: &[u8], // [u8; XXX.nd()]
     ) ->Result<Vec<u8>, rustxxx::XxxError> {

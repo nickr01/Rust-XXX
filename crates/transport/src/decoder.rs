@@ -49,11 +49,14 @@ fn max4(a: f32, b: f32, c: f32, d: f32) -> f32 {
 }
 
 pub type DecodeHash = std::collections::HashMap<Vec<u8>, MessageDf>;
+
+#[cfg(any(feature = "enable_rx", test))]
 pub struct Decoder {
     protocol: &'static rustxxx::Protocol,
     runtime: &'static rustxxx::Runtime,
 }
 
+#[cfg(any(feature = "enable_rx", test))]
 impl Decoder {
     pub fn new(
         protocol: &'static rustxxx::Protocol,

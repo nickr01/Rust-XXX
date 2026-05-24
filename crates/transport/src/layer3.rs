@@ -15,6 +15,7 @@ pub struct LogL {
     pub bits: Vec<f32>,
 }
 
+#[cfg(any(feature = "enable_rx", test))]
 impl LogL {
     pub fn new(protocol: &rustxxx::Protocol) -> LogL {
         let bits: Vec<f32> = vec![0.0; protocol.token_bits().0];
@@ -35,6 +36,7 @@ pub fn _ecc_parity8(mut x: u8) -> u8 {
 // used in the Sum Product algorithm
 // Approximation to speed up tanh/atanh
 // #[cfg(feature = "ldpc_bp")]
+#[cfg(any(feature = "enable_rx", test))]
 fn fast_tanh(x: f32) -> f32 {
     if cfg!(feature = "use_f32tan") {
         x.tanh()
@@ -53,6 +55,7 @@ fn fast_tanh(x: f32) -> f32 {
 }
 
 // #[cfg(feature = "ldpc_bp")]
+#[cfg(any(feature = "enable_rx", test))]
 fn fast_atanh(x: f32) -> f32 {
     if cfg!(feature = "use_f32tan") {
         x.atan()
@@ -73,6 +76,7 @@ impl rustxxx::Modem {
     // [OUT] codeword - array of 174 bits stored as 22 bytes (MSB first)
 
     // codeword pre-filled with message+CRC and trailing zeros
+    #[cfg(any(feature = "enable_tx", test))]
     fn _ecc_encode(&self, 
         // l4_message: &Vec<u8>, // [u8; XXX.ldpc_k_bytes()], 
         // cw out:  mut [u8; XXX.ldpc_n_bytes()]
@@ -121,6 +125,7 @@ impl rustxxx::Modem {
     //     encode174(&a91, &mut codeword);
 
     // Check if each bit of Codeword satisfies the check matrix of ldpc
+    #[cfg(any(feature = "enable_rx", test))]
     pub fn ecc_check_errors(&self, cw_crc_ecc: &[u8]
         // codeword: &[u8; XXX.ldpc_n_bytes()]
     ) -> usize {
@@ -174,6 +179,7 @@ impl rustxxx::Modem {
     // Implementation of decoder using product-sum algorithm
     //
     // #[cfg(feature = "ldpc_bp")]
+    #[cfg(any(feature = "enable_rx", test))]
     pub fn ecc_decode_bp(&self, 
         logls: &[LogL], // bits
         max_iters: usize,
@@ -289,6 +295,7 @@ impl rustxxx::Modem {
     //  Implementing a decoder with a bit-flip algorithm
     //
     // #[cfg(feature = "ldpc_bitflip")]
+    #[cfg(any(feature = "enable_rx", test))]
     pub fn ecc_decode_bitflip(&self, 
         logls: &[LogL], // bits!!
         max_iters: usize,
@@ -360,11 +367,13 @@ impl rustxxx::Modem {
     }
 
     // These are the action stubs
+    #[cfg(any(feature = "enable_tx", test))]
     pub fn _l3_ecc_add(&self, cw_crc: &[u8]) -> Result<Vec<u8>, rustxxx::XxxError> {
         // TODO encode args not right yet
         Ok(self._ecc_encode(cw_crc))
     }
 
+    #[cfg(test)]
     pub fn _l3_ecc_remove(&self, cw_crc_ecc: &[u8]) ->Result<Vec<u8>, rustxxx::XxxError> {
         if self.ecc_check_errors(cw_crc_ecc) == 0 {
             // let codeword_bits = self.codeword.view_bits_mut::<Msb0>();
