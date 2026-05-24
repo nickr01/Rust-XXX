@@ -7,9 +7,7 @@ use crate::rustxxx;
 use audioadapter_buffers::direct::InterleavedSlice;
 use ringbuf::traits::Consumer;
 use ringbuf::traits::Observer;
-use rubato::{
-    Resampler, Fft, FixedSync, Indexing
-};
+use rubato::{Resampler, Fft, FixedSync, Indexing};
 use rustfft::num_traits::ops::saturating;
 
 use std::collections::HashMap;

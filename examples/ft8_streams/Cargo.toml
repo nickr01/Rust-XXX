@@ -3,6 +3,11 @@ name = "ft8_streams"
 version.workspace = true
 edition.workspace = true
 
+[features]
+default = ["enable_tx", "enable_rx"]
+enable_rx = []
+enable_tx = []
+
 [dependencies]
 wav_io.workspace = true
 rustfft.workspace = true

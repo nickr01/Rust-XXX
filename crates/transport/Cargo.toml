@@ -4,13 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default =["enable_tx"]
+default = ["enable_rx"]
 enable_tx = []
 enable_rx = []
 audio_pass_test = []
 use_f32tan = []
 auto_freq_seg = []
 disable_gfsk = []
+disable_gfsk_ramp = []
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
