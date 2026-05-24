@@ -1,0 +1,32 @@
+[package]
+name = "ft8_streams"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+wav_io.workspace = true
+rustfft.workspace = true
+realfft.workspace = true
+libm.workspace = true
+plotters.workspace = true
+colorous.workspace = true
+crc.workspace = true
+bitvec.workspace = true
+bitstream-io.workspace = true
+bitvec_helpers.workspace = true
+trig.workspace = true
+hilbert_transform.workspace = true
+anyhow.workspace = true
+hound.workspace = true
+circular-buffer.workspace = true
+thiserror.workspace = true
+color-backtrace.workspace = true
+clap.workspace = true
+histogram.workspace = true
+cpal.workspace = true
+ringbuf.workspace = true
+rubato.workspace = true
+audioadapter-buffers.workspace = true
+audioadapter.workspace = true
+transport.workspace = true
+proto_ft8.workspace = true

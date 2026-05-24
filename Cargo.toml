@@ -1,27 +1,17 @@
-[package]
-name = "rustxxx"
+[workspace.package]
+#name = "rustxxx-workspace"
 version = "0.1.0"
 edition = "2021"
 
-[features]
-default =["gfsk_dump_wav", "window_blackman"]
-disable_gfsk_ramp = []
-disable_gfsk = []
-disable_gfsk_plot = []
-gfsk_dump_wav = []
-ldpc_bp = []
-ldpc_bitflip =[]
-audio_pass_test = []
-use_f32tan = []
-auto_freq_seg = []
-window_rect = []
-window_hann = []
-window_hamming = []
-window_blackman = []
+[workspace]
+resolver = "2"
+members = [
+    "crates/transport",
+    "crates/proto_ft8",
+    "examples/ft8_streams", 
+]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
+[workspace.dependencies]
 "wav_io" = "0.1"
 "rustfft" = "6"
 "realfft" = "3"
@@ -46,3 +36,5 @@ ringbuf = "0.5.0"
 rubato = "2.0.0"
 audioadapter-buffers = "3.0.0"
 audioadapter = "3.0.0"
+transport = { path = "crates/transport" }
+proto_ft8 = { path = "crates/proto_ft8" }

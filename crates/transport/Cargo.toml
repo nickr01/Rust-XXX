@@ -1,0 +1,50 @@
+[package]
+name = "transport"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default =["gfsk_dump_wav", "window_blackman"]
+disable_gfsk_ramp = []
+disable_gfsk = []
+disable_gfsk_plot = []
+gfsk_dump_wav = []
+ldpc_bp = []
+ldpc_bitflip =[]
+audio_pass_test = []
+use_f32tan = []
+auto_freq_seg = []
+window_rect = []
+window_hann = []
+window_hamming = []
+window_blackman = []
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+wav_io.workspace = true
+rustfft.workspace = true
+realfft.workspace = true
+libm.workspace = true
+plotters.workspace = true
+colorous.workspace = true
+crc.workspace = true
+bitvec.workspace = true
+bitstream-io.workspace = true
+bitvec_helpers.workspace = true
+trig.workspace = true
+hilbert_transform.workspace = true
+anyhow.workspace = true
+hound.workspace = true
+circular-buffer.workspace = true
+thiserror.workspace = true
+color-backtrace.workspace = true
+clap.workspace = true
+histogram.workspace = true
+cpal.workspace = true
+ringbuf.workspace = true
+rubato.workspace = true
+audioadapter-buffers.workspace = true
+audioadapter.workspace = true
+lazy_static = "1.5.0"
+
