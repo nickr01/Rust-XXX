@@ -364,8 +364,6 @@ fn rx_main() -> Result<(), anyhow::Error> {
     // let mut packed = [0u8; TEST_PROTOCOL.ldpc_k_bytes()];
     // let mut tones = [0usize; TEST_PROTOCOL.nn()];
 
-    let mut receive_pipeline= transport::pipeline::Pipeline::new(&proto_ft8::protocol::FT8, runtime);
-
     let audio_err_callback = move |err| {
         eprintln!("an error occurred on audio stream: {err}");
     };
@@ -393,6 +391,13 @@ fn rx_main() -> Result<(), anyhow::Error> {
     {
         audio_output_buff_reader = audio_input_buff_reader;
     };
+
+    let mut receive_pipeline= transport::pipeline::Pipeline::new(
+        &proto_ft8::protocol::FT8, 
+        runtime,
+        audio_input_from_channels, 
+        audio_input_from_rate, 
+    );
 
     let audio_input_stream = if let Some(audio_input_file_name) = opt.input_file {
         do_audio_file_input(*runtime, &mut audio_input_buff_writer, audio_input_file_name, &mut audio_input_from_channels, &mut audio_input_from_rate)?
@@ -519,7 +524,9 @@ fn rx_main() -> Result<(), anyhow::Error> {
 
     #[cfg(not(feature = "audio_pass_test"))] 
     {
-        receive_pipeline.write_sample_buffer(audio_input_from_channels, audio_input_from_rate, &mut audio_input_buff_reader)
+        receive_pipeline.write_sample_buffer(
+            &mut audio_input_buff_reader
+        )
             .context("Cannot run the receiver").unwrap();
         let _ = receive_pipeline.report_results();
         dbg!{"RECEIVE DONE"};
