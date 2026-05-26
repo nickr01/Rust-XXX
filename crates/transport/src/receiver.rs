@@ -207,7 +207,7 @@ impl Receiver {
                 buf.clear();
                 assert_eq!(buf.len(), 0);
             }     
-            buf.push(sample * detector.window_function_samples[buf.len()]); // NB window happens here
+            buf.push(sample * detector.window_function_samples[buf.len()]); // application of window happens here
         }
         sample_count
     }

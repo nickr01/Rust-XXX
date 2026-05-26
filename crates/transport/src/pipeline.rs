@@ -8,7 +8,7 @@ use audioadapter_buffers::direct::InterleavedSlice;
 use ringbuf::traits::Consumer;
 use ringbuf::traits::Observer;
 use rubato::{Resampler, Fft, FixedSync, Indexing};
-use rustfft::num_traits::ops::saturating;
+// use rustfft::num_traits::ops::saturating;
 
 use std::collections::HashMap;
 
@@ -101,14 +101,13 @@ impl Pipeline {
     pub fn write_sample_buffer(
         &mut self,
         reader: &mut rustxxx::ThreadedAudioReader,
-    ) -> Result<(), rustxxx::XxxError> {
+    ) -> Result<Vec<Vec<u8>>, rustxxx::XxxError> {
         // main receive loop = from file and device input
 
         dbg!(self.resampler.resample_ratio());
 
-        loop {
-            use std::arch::aarch64::uint32x2_t;
-
+        // loop 
+        {
             let mut mono_samples = Vec::new();
             if let Ok(mut guard) = reader.try_lock() {
                 let reader = guard.as_mut();
@@ -135,6 +134,7 @@ impl Pipeline {
                     }
                 }
             }
+
             // dbg!(count_to_load, mono_samples.len());
             // now do the sample_rate if necessary
             let samples_at_new_rate = if self.from_rate == self.receiver.runtime.target_input_sample_rate().0 as u32 {
@@ -186,40 +186,52 @@ impl Pipeline {
                 outdata
             };
 
-
+            // this potentially triggers decode processing into message_hash
             for sample in samples_at_new_rate {
                 self.write_sample(sample)?;
             }
+
+
+            // return the message_hash content if already returned
+            // mark as reported
+            // clean the message_hash - remove older than message length secs
         };
-        Ok(())
-    }
 
-    pub fn report_results(&self) -> Result<(), rustxxx::XxxError>
-    {
-        let messages = &self.message_hash;
-        dbg!(messages.len(), self.receiver.start_time.elapsed());
-
-        let mut msg_dfs: Vec<decoder::MessageDf> = Vec::new();
-
-        for msg_key in messages.keys() {
-            msg_dfs.push(messages.get(msg_key).unwrap().clone())
+        let mut ret: Vec<Vec<u8>> = Vec::new();
+        for codeword in self.message_hash.keys() {
+            ret.push(codeword.clone());
         }
 
-        msg_dfs.sort_by_key(|b| b.freq_hz.0 as i32);
-        // msg_dfs.sort_by_key(|b| std::cmp::Reverse(b.freq_hz as i32));
-
-        // let mut i = 1;
-        // for df in msg_dfs {            
-        for (i, df) in (1..).zip(msg_dfs) {            
-            dbg!(
-                i,
-                (df.freq_hz.0 * 10.0).round() / 10.0,
-                (df.time_secs.0 * 10.0).round() / 10.0,
-                df.c_score,
-                df.text
-            );
-            // i += 1;
-        }
-        Ok(())
+        Ok(ret)
     }
+
+    // pub fn report_results(&self) -> Result<(), rustxxx::XxxError>
+    // {
+    //     let messages = &self.message_hash;
+    //     dbg!(messages.len());
+    //     dbg!(self.receiver.start_time.elapsed());
+
+    //     let mut msg_dfs: Vec<decoder::MessageDf> = Vec::new();
+
+    //     for msg_key in messages.keys() {
+    //         msg_dfs.push(messages.get(msg_key).unwrap().clone())
+    //     }
+
+    //     msg_dfs.sort_by_key(|b| b.freq_hz.0 as i32);
+    //     // msg_dfs.sort_by_key(|b| std::cmp::Reverse(b.freq_hz as i32));
+
+    //     // let mut i = 1;
+    //     // for df in msg_dfs {            
+    //     for (i, df) in (1..).zip(msg_dfs) {            
+    //         dbg!(
+    //             i,
+    //             (df.freq_hz.0 * 10.0).round() / 10.0,
+    //             (df.time_secs.0 * 10.0).round() / 10.0,
+    //             df.c_score,
+    //             df.text
+    //         );
+    //         // i += 1;
+    //     }
+    //     Ok(())
+    // }
 }

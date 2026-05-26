@@ -524,11 +524,25 @@ fn rx_main() -> Result<(), anyhow::Error> {
 
     #[cfg(not(feature = "audio_pass_test"))] 
     {
-        receive_pipeline.write_sample_buffer(
+        use proto_ft8::protocol::FT8;
+
+        let codewords = receive_pipeline.write_sample_buffer(
             &mut audio_input_buff_reader
         )
             .context("Cannot run the receiver").unwrap();
-        let _ = receive_pipeline.report_results();
+
+        let mut ft8_messages: Vec<String> = Vec::new();
+        for codeword in codewords {
+            match proto_ft8::unpack_ft8::unpack77(&codeword) {
+                Some(msg) => {
+                    dbg!(&msg);
+                    ft8_messages.push(msg);
+                },
+                None => {
+                    dbg!("Bad unpack");
+                }
+            }
+        }
         dbg!{"RECEIVE DONE"};
     }
 

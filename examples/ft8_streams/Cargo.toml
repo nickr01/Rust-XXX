@@ -7,6 +7,7 @@ edition.workspace = true
 default = ["enable_tx", "enable_rx"]
 enable_rx = []
 enable_tx = []
+audio_pass_test = []
 
 [dependencies]
 wav_io.workspace = true
