@@ -13,6 +13,7 @@ impl rustxxx::Modem {
     /// @param[in] b Shape parameter (values defined for XX8/FT4)
     /// @param[out] pulse Output array of pulse samples
     ///
+    #[cfg(any(feature = "enable_tx", test))]
     pub fn _gfsk_pulse(&self, n_spsym: usize, pulse: &mut [f32]) {
 
         let mut symbol_bt = self.protocol._symbol_bt();
@@ -42,6 +43,7 @@ impl rustxxx::Modem {
     /// @param[in] signal_rate Sample rate of synthesized signal, Hertz
     /// @param[out] signal Output array of signal waveform samples (should have space for n_sym*n_spsym samples)
     ///
+    #[cfg(any(feature = "enable_tx", test))]
     fn _gfsk_synth(&self, l0_tones: &[u8]) -> Vec<f32> {
         // let sym_period = self.protocol.symbol_period();
         let n_spsym = (0.5 + self._runtime._target_output_sample_rate().0) as usize; // Samples per symbol
@@ -130,18 +132,21 @@ impl rustxxx::Modem {
         signal
     }
 
+    #[cfg(any(feature = "enable_rx", test))]
     fn _gfsk_decode(&self, _signal: &Vec<f32>) -> Result<Vec<u8>, rustxxx::XxxError> {
         // call monitor and receiver
         Err(rustxxx::XxxError::_ToDo)
     }
 
     // These are the action stubs
+    #[cfg(any(feature = "enable_tx", test))]
     pub fn _l0_gfsk_synth(&self, l0_tones: &[u8],
         // l0_tones: &[u8; XXX.nn()]
     ) -> Result<Vec<f32>, rustxxx::XxxError>{
         Ok(self._gfsk_synth(l0_tones))
     }
 
+    #[cfg(any(feature = "enable_rx", test))]
     pub fn _l0_gfsk_undo(&self, 
         signal: &Vec<f32>,
         // l0_tones: &[u8; XXX.nn()]
@@ -150,7 +155,7 @@ impl rustxxx::Modem {
         self._gfsk_decode(signal)
     }
 
-    #[cfg(test)]
+    #[cfg(any(test))]
     pub fn l0_outbound(&self, ttl: isize, l0_tones: &Vec<u8>) -> Result<Vec<u8>, rustxxx::XxxError> {
         let _signal = self._l0_gfsk_synth(l0_tones)?;
 
@@ -162,7 +167,7 @@ impl rustxxx::Modem {
         }
     }
 
-    #[cfg(test)]
+    #[cfg(any(test))]
     pub fn _l0_inbound(&self, signal: &Vec<f32>) ->Result<Vec<u8>, rustxxx::XxxError> {
         let l0_tones = self._l0_gfsk_undo(signal)?;
         self.l1_inbound(&l0_tones)

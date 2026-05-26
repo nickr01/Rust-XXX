@@ -5,6 +5,7 @@ use crate::rustxxx;
 // const _L5_0: [u8; FT8.ldpc_n_bytes()] = [ 0xff, 0xa5, 0x5a, 0x33, 0xfe, 0xff, 6, 7, 8, 9, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 impl rustxxx::Modem {
+    #[cfg(any(feature = "enable_tx", test))]
     fn _modulate(&self, cw:&[u8]) -> Result<Vec<f32>, rustxxx::XxxError> {
         let r4 = self._l4_crc_add(cw).expect("Failed to add crc");
         let r3 = self._l3_ecc_add(&r4).expect("Failed to add ecc");

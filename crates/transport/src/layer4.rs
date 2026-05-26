@@ -33,6 +33,7 @@ impl rustxxx::Modem {
         self.crc_calc.checksum(&payload)
     }
 
+    #[cfg(any(feature = "enable_tx", test))]
     fn _crc_store(&self, crc_arg: u16, payload: &[u8]) -> Vec<u8> {
         assert_eq!(payload.len(), self.protocol._ldpc_p_bytes().0);
         let mut crc = crc_arg;
@@ -46,6 +47,7 @@ impl rustxxx::Modem {
         cw_crc
     }
 
+    #[cfg(any(feature = "enable_rx", test))]
     pub fn _crc_read(&self, codeword: &[u8]) -> u16 {
         assert_eq!(codeword.len(), self.protocol._ldpc_k_bytes().0);
         let mut crc: u16 = 0;
@@ -59,6 +61,7 @@ impl rustxxx::Modem {
         crc
     }
 
+    #[cfg(any(feature = "enable_rx", test))]
     pub fn _crc_check(&self, codeword: &[u8]) -> bool {
         assert_eq!(codeword.len(), self.protocol._ldpc_k_bytes().0);
          let crc1 = self._crc_read(codeword);
@@ -66,17 +69,20 @@ impl rustxxx::Modem {
         crc1 == crc2
     }
 
+    #[cfg(any(feature = "enable_tx", test))]
     fn _crc_add(&self, codeword: &[u8]) -> Vec<u8> {
         let crc = self._crc_compute(codeword);
         self._crc_store(crc, codeword)
     }
 
     // these are the action stubs
+    #[cfg(any(feature = "enable_tx", test))]
     pub fn _l4_crc_add(&self, cw: &[u8]) -> Result<Vec<u8>, rustxxx::XxxError>{
         assert_eq!(cw.len(), self.protocol._ldpc_p_bytes().0);
         Ok(self._crc_add(cw))
     }
 
+    #[cfg(test)]
     pub fn _l4_crc_remove(&self, cw_crc: &Vec<u8>) -> Result<Vec<u8>, rustxxx::XxxError> {
         if self._crc_check(cw_crc) {
             let mut cw = cw_crc.to_owned();

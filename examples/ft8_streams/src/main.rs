@@ -154,6 +154,7 @@ struct Opt {
     // speed: Speed,
 }
 
+#[cfg(any(feature = "enable_rx", test))]
 fn do_audio_file_input(
     runtime: transport::rustxxx::Runtime, 
     input_buff_writer: &mut transport::rustxxx::ThreadedAudioWriter, 
@@ -296,6 +297,22 @@ fn do_audio_file_input(
 // type WavWriterHandle = Arc<Mutex<Option<hound::WavWriter<BufWriter<File>>>>>;
 
 fn main() -> Result<(), anyhow::Error> {
+    #[cfg(any(feature = "enable_tx", test))]
+    tx_main()?;
+
+    #[cfg(any(feature = "enable_rx", test))]
+    rx_main()?;
+    
+    Ok(())
+}
+
+#[cfg(any(feature = "enable_tx", test))]
+fn tx_main() -> Result<(), anyhow::Error> {
+    Ok(())
+}
+
+#[cfg(any(feature = "enable_rx", test))]
+fn rx_main() -> Result<(), anyhow::Error> {
     color_backtrace::install();
     
     let opt = Opt::parse();

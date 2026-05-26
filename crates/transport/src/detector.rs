@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 pub type DetectFFT = std::sync::Arc<dyn realfft::RealToComplex<f32>>;
 
+#[cfg(any(feature = "enable_rx", test))]
 pub struct Detector {
     // runtime: constant::Runtime,
     // protocol: constant::Protocol,
@@ -23,6 +24,7 @@ pub struct Detector {
     pub window_function_samples: Vec<f32>,
 }
 
+#[cfg(any(feature = "enable_rx", test))]
 fn build_window_function_samples(
     nfft: usize, 
     runtime: &rustxxx::Runtime
@@ -38,6 +40,7 @@ fn build_window_function_samples(
 
 pub type DetectorInputBuffs = Vec<Vec<f32>>;
 
+#[cfg(any(feature = "enable_rx", test))]
 impl Detector {
     pub fn new(
         runtime: rustxxx::Runtime, 

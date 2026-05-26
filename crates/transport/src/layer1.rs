@@ -4,6 +4,7 @@
 use crate::rustxxx;
 
 impl rustxxx::Modem {
+    #[cfg(any(feature = "enable_tx", test))]
     fn _sync_insert(
         &self, l2_tones: &[u8], // [u8; XXX.nd()], 
     ) -> Vec<u8> {
@@ -27,6 +28,7 @@ impl rustxxx::Modem {
         l0_tones
     }
 
+    #[cfg(any(feature = "enable_rx", test))]
     fn _sync_remove(&self, 
         l0_tones: &[u8], //  [u8; XXX.nn()], 
     ) -> Vec<u8> {
@@ -50,6 +52,7 @@ impl rustxxx::Modem {
     }
 
     // These are the action stubs
+    #[cfg(any(feature = "enable_tx", test))]
     pub fn _l1_sync_add(&self, 
         l2_tones: &[u8], // [u8; XXX.nd()]
     ) -> Result<Vec<u8>, rustxxx::XxxError>{
@@ -59,6 +62,7 @@ impl rustxxx::Modem {
         Ok(self._sync_insert(l2_tones))
     }
 
+    #[cfg(test)]
     pub fn _l1_sync_remove(&self, 
         l0_tones: &[u8], // [u8; XXX.nn()]
     ) ->Result<Vec<u8>, rustxxx::XxxError> {

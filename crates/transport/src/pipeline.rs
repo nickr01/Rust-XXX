@@ -7,13 +7,12 @@ use crate::rustxxx;
 use audioadapter_buffers::direct::InterleavedSlice;
 use ringbuf::traits::Consumer;
 use ringbuf::traits::Observer;
-use rubato::{
-    Resampler, Fft, FixedSync, Indexing
-};
+use rubato::{Resampler, Fft, FixedSync, Indexing};
 use rustfft::num_traits::ops::saturating;
 
 use std::collections::HashMap;
 
+#[cfg(any(feature = "enable_rx", test))]
 pub struct Pipeline {
     pub receiver: receiver::Receiver,
     rfft_nfft_f: detector::DetectFFT,
@@ -23,6 +22,7 @@ pub struct Pipeline {
     message_hash: decoder::DecodeHash,
 }
 
+#[cfg(any(feature = "enable_rx", test))]
 impl Pipeline {
     pub fn new(
         protocol: &'static rustxxx::Protocol,
