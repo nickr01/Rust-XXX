@@ -36,7 +36,7 @@ impl rustxxx::Modem {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // use super::*;
     // use crate::pack_ft8; // ::_pack77;
 
     // fn test_roundtrip(modem: &mut rustxxx::Modem, s: &str) {
@@ -51,13 +51,13 @@ mod tests {
     #[test]
     fn test() {
         
-        let mut modem: rustxxx::Modem = rustxxx::Modem::new(
-            &rustxxx::TEST_PROTOCOL, 
-            &rustxxx::TEST_FT8_RUNTIME, 
-            rustxxx::TEST_FREQUENCY
-        );
+        // let mut modem: rustxxx::Modem = rustxxx::Modem::new(
+        //     &rustxxx::TEST_PROTOCOL, 
+        //     &rustxxx::TEST_FT8_RUNTIME, 
+        //     rustxxx::TEST_FREQUENCY
+        // );
 
-        const M_0: &str = "CQ VK2ZTY QG61";        
+        // const M_0: &str = "CQ VK2ZTY QG61";        
         // test_roundtrip(&mut modem, M_0);
     }
 

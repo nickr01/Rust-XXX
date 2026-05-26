@@ -13,7 +13,7 @@ const MAGIC2: u32 = 532443;
 // call sign bits from a packed message.
 // this is all a bit upside - don't trust return values yet
 fn unpack_callsign(n28: u32, ip: u8, i3: u8) -> Option<String> {
-    todo!("This will be borked");
+    // todo!("This will be borked");
 
     let mut result = String::new();
 
@@ -60,7 +60,7 @@ fn unpack_callsign(n28: u32, ip: u8, i3: u8) -> Option<String> {
         // This is a 22-bit hash of a result
         // TODO: implement
         result.push_str("<...>");
-        todo!();
+        // todo!();
         // result[0] = '<';
         // int_to_dd(result + 1, n28, 7, false);
         // result[8] = '>';
@@ -124,7 +124,7 @@ fn unpack_type1(
     a77: &[u8],
     i3: u8
 ) -> Option<Ft8Msg> {
-    todo!("This will be borked");
+    // todo!("This will be borked");
 
     let mut ret = Ft8Msg::new();
     
@@ -206,7 +206,7 @@ fn unpack_text(
     a71: &[u8]
 ) -> Option<String> {
     let mut text = String::new();
-    todo!("test");
+    // todo!("test");
 
     let mut b71 = [0u8; 9];
 

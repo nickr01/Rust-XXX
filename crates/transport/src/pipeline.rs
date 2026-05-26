@@ -12,6 +12,13 @@ use rubato::{Resampler, Fft, FixedSync, Indexing};
 
 use std::collections::HashMap;
 
+#[cfg(any(feature = "enable_rx", feature = "enable_tx", test))]
+pub struct ResampleContext {
+    pub from_channels: usize,
+    pub from_rate: u32,
+    pub resampler: Fft::<f32>,
+}
+
 #[cfg(any(feature = "enable_rx", test))]
 pub struct Pipeline {
     pub receiver: receiver::Receiver,
@@ -20,9 +27,6 @@ pub struct Pipeline {
     correlator: correlator::Correlator,
     detector: detector::Detector,
     message_hash: decoder::DecodeHash,
-    resampler: Fft<f32>,
-    from_channels: usize,
-    from_rate: u32,
 }
 
 #[cfg(any(feature = "enable_rx", test))]
@@ -35,8 +39,6 @@ impl Pipeline {
     pub fn new(
         protocol: &'static rustxxx::Protocol,
         runtime: &'static rustxxx::Runtime,
-        from_channels: usize,
-        from_rate: u32,
     ) -> Pipeline {
         let receiver = receiver::Receiver::new(protocol, runtime);
         let nfft = receiver.nfft;
@@ -59,9 +61,22 @@ impl Pipeline {
             assert_eq!(buf.len(), init_size);
         }
 
-        // SAMPLE CHANNELS amd RATE CONVERSION SHOULD HAPPEN IN HERE
-        let to_rate = receiver.runtime.target_input_sample_rate().0;
+        Pipeline {
+            receiver,
+            rfft_nfft_f,
+            detector_input_bufs,
+            detector: detector::Detector::new(*runtime, rustxxx::RepeatCount(nfft),),
+            correlator: correlator::Correlator::new(protocol, runtime),
+            message_hash: HashMap::new(),
+        }
+    }
 
+    pub fn resample_context (
+        &self,        
+        from_channels: usize,
+        from_rate: u32,
+    ) -> ResampleContext {
+        let to_rate = self.receiver.runtime.target_input_sample_rate().0;
         dbg!(from_channels, from_rate, to_rate);
 
         let resampler = Fft::<f32>::new(
@@ -72,14 +87,10 @@ impl Pipeline {
                 Pipeline::CHANNELS, 
                 FixedSync::Both
             ).unwrap();
+ 
+        dbg!(resampler.resample_ratio());
 
-        Pipeline {
-            receiver,
-            rfft_nfft_f,
-            detector_input_bufs,
-            detector: detector::Detector::new(*runtime, rustxxx::RepeatCount(nfft),),
-            correlator: correlator::Correlator::new(protocol, runtime),
-            message_hash: HashMap::new(),
+        ResampleContext {
             resampler,
             from_channels,
             from_rate,
@@ -101,10 +112,9 @@ impl Pipeline {
     pub fn write_sample_buffer(
         &mut self,
         reader: &mut rustxxx::ThreadedAudioReader,
+        resample_context: &mut ResampleContext,
     ) -> Result<Vec<Vec<u8>>, rustxxx::XxxError> {
         // main receive loop = from file and device input
-
-        dbg!(self.resampler.resample_ratio());
 
         // loop 
         {
@@ -115,7 +125,7 @@ impl Pipeline {
                 // MUST rebuild the iterator each loop - see next() documentation
                 let count_to_load = reader.occupied_len() & !1; // force even consumption
                 assert_eq!(count_to_load & 1, 0);
-                let planned_load = Pipeline::BUFLEN * self.from_channels;
+                let planned_load = Pipeline::BUFLEN * resample_context.from_channels;
 
                 if count_to_load >= planned_load {
                     let count_to_load = planned_load; // coerce to controlled buffer size - maybe not necessary
@@ -123,7 +133,7 @@ impl Pipeline {
                     {
                         let mut count = 0;
                         for sample in samples_iter {
-                            if self.from_channels == 1 || count & 1 == 0 {
+                            if resample_context.from_channels == 1 || count & 1 == 0 {
                                 mono_samples.push(sample);
                             };
                             count += 1;
@@ -137,7 +147,7 @@ impl Pipeline {
 
             // dbg!(count_to_load, mono_samples.len());
             // now do the sample_rate if necessary
-            let samples_at_new_rate = if self.from_rate == self.receiver.runtime.target_input_sample_rate().0 as u32 {
+            let samples_at_new_rate = if resample_context.from_rate == self.receiver.runtime.target_input_sample_rate().0 as u32 {
                 mono_samples
             } else {
                 // let audio_clip = vec![0.0; 2*10000];
@@ -147,7 +157,7 @@ impl Pipeline {
                 let input_adapter = InterleavedSlice::new(&mono_samples, 1, nbr_input_frames).unwrap();
 
                 // create a buffer for the output
-                let out_len = (mono_samples.len() as f64 * self.resampler.resample_ratio()) as usize;
+                let out_len = (mono_samples.len() as f64 * resample_context.resampler.resample_ratio()) as usize;
                 // dbg!(mono_samples.len(), out_len);
                 let mut outdata: Vec<f32> = vec![0f32;out_len];
                 let outdata_capacity = outdata.len();
@@ -165,7 +175,7 @@ impl Pipeline {
                 };
 
                 let mut input_frames_left = nbr_input_frames;
-                let mut input_frames_next = self.resampler.input_frames_next();
+                let mut input_frames_next = resample_context.resampler.input_frames_next();
 
                 // Loop over all full chunks.
                 // There will be some unprocessed input frames left after the last full chunk.
@@ -174,14 +184,14 @@ impl Pipeline {
                 // It is also possible to use the `process_all_into_buffer` method
                 // to process the entire file (including any last partial chunk) with a single call.
                 while input_frames_left >= input_frames_next {
-                    let (frames_read, frames_written) = self.resampler
+                    let (frames_read, frames_written) = resample_context.resampler
                         .process_into_buffer(&input_adapter, &mut output_adapter, Some(&indexing))
                         .unwrap();
 
                     indexing.input_offset += frames_read;
                     indexing.output_offset += frames_written;
                     input_frames_left -= frames_read;
-                    input_frames_next = self.resampler.input_frames_next();
+                    input_frames_next = resample_context.resampler.input_frames_next();
                 }
                 outdata
             };

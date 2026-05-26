@@ -409,7 +409,7 @@ pub struct Modem {
     pub crc_calc: crc::Crc<u16>,
 }
 
-static mut crc_alg: crc::Algorithm<u16> = crc::Algorithm {
+static mut CRC_ALG: crc::Algorithm<u16> = crc::Algorithm {
     width: 0,
     poly: 0,
     init: 0,
@@ -440,7 +440,7 @@ impl Modem {
         // modem.signal.resize(n_wave, 0f32);
         // assert_eq!(modem.signal.len(), n_wave);
 
-        unsafe { crc_alg = crc::Algorithm {
+        unsafe { CRC_ALG = crc::Algorithm {
             width: protocol._crc_width().0 as u8,
             poly: protocol._crc_polynomial().0 as u16,
             init: protocol._crc_start() as u16,
@@ -451,7 +451,7 @@ impl Modem {
             residue: 0x0
         } };
 
-        let crc_calc: crc::Crc<u16> = crc::Crc::<u16>::new(unsafe { &crc_alg });
+        let crc_calc: crc::Crc<u16> = crc::Crc::<u16>::new(unsafe { &CRC_ALG });
 
         Modem {
             protocol,

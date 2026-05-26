@@ -10,14 +10,14 @@
 use anyhow::{Context, Result}; // - for user level
 
 // use monitor::Waterfall;
-use ringbuf::storage::Heap;
-use ringbuf::SharedRb;
+// use ringbuf::storage::Heap;
+// use ringbuf::SharedRb;
 // use std::env;
 // use std::fs::File;
-use std::sync::{Arc, Mutex};
-use std::sync::mpsc::*;
+// use std::sync::{Arc, Mutex};
+// use std::sync::mpsc::*;
 
-use std::thread::{JoinHandle, yield_now};
+// use std::thread::{JoinHandle, yield_now};
 // use std::thread;
 // use wav_io::header::*;
 // use wav_io::*;
@@ -26,14 +26,24 @@ use std::thread::{JoinHandle, yield_now};
 // needed for Traits
 use clap::Parser;
 
-use cpal::{StreamConfig, SupportedStreamConfig};
+use cpal::{
+    StreamConfig, 
+    // SupportedStreamConfig
+};
 // use cpal::{Sample, SupportedStreamConfig};
-use cpal::traits::{HostTrait, DeviceTrait, StreamTrait};
+use cpal::traits::{
+    // HostTrait, 
+    DeviceTrait, 
+    StreamTrait
+};
 
 // use crate::constant::{INPUT_BUFSIZE, InputBufWriter};
 // use crate::rustxxx::InputBufReader;
 // use crate::rustxxx::AudioSampleBuffer;
-use transport::rustxxx::{AudioSampleBuffer, Runtime};
+use transport::rustxxx::{
+    AudioSampleBuffer, 
+    // Runtime
+};
 // use crate::rustxxx::InputBufWriter;
 
 // use ringbuf::{traits::*, HeapRb, SharedRb};
@@ -41,8 +51,8 @@ use transport::rustxxx::{AudioSampleBuffer, Runtime};
 use ringbuf::traits::Consumer;
 use ringbuf::traits::Producer;
 use ringbuf::traits::Split;
-use ringbuf::wrap::caching::Caching;
-use ringbuf::CachingCons;
+// use ringbuf::wrap::caching::Caching;
+// use ringbuf::CachingCons;
 
 // use this for the audio pipes
 //use ringbuffer_spsc::ringbuffer;
@@ -317,7 +327,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
     
     let opt = Opt::parse();
 
-    let loop_back = opt.loop_back.unwrap();
+    // let loop_back = opt.loop_back.unwrap();
 
     let runtime: &'static transport::rustxxx::Runtime = &transport::rustxxx::TEST_FT8_RUNTIME;
 
@@ -373,19 +383,19 @@ fn rx_main() -> Result<(), anyhow::Error> {
     // which leaves the audio thread callbacks as light as possible
     let mut audio_input_from_channels = 0; 
     let mut audio_input_from_rate = 0;
-    let mut audio_output_to_channels = 0; 
-    let mut audio_output_to_rate = 0;
+    let mut _audio_output_to_channels = 0; 
+    let mut _audio_output_to_rate = 0;
 
     let audio_input_buffer: AudioSampleBuffer = ringbuf::HeapRb::<f32>::new(transport::rustxxx::AUDIO_INPUT_BUFSIZE);
     let audio_output_buffer: AudioSampleBuffer = ringbuf::HeapRb::<f32>::new(transport::rustxxx::AUDIO_OUTPUT_BUFSIZE);
 
-    let (mut audio_input_buff_writer, mut audio_input_buff_reader) = audio_input_buffer.split();
-    let mut audio_input_buff_writer: transport::rustxxx::ThreadedAudioWriter = std::sync::Arc::new(std::sync::Mutex::new(audio_input_buff_writer));
-    let mut audio_input_buff_reader: transport::rustxxx::ThreadedAudioReader = std::sync::Arc::new(std::sync::Mutex::new(audio_input_buff_reader));
+    let (mut _audio_input_buff_writer, mut _audio_input_buff_reader) = audio_input_buffer.split();
+    let mut audio_input_buff_writer: transport::rustxxx::ThreadedAudioWriter = std::sync::Arc::new(std::sync::Mutex::new(_audio_input_buff_writer));
+    let mut audio_input_buff_reader: transport::rustxxx::ThreadedAudioReader = std::sync::Arc::new(std::sync::Mutex::new(_audio_input_buff_reader));
 
-    let (mut audio_output_buff_writer, mut audio_output_buff_reader) = audio_output_buffer.split();
-    let mut audio_output_buff_writer: transport::rustxxx::ThreadedAudioWriter = std::sync::Arc::new(std::sync::Mutex::new(audio_output_buff_writer));
-    let mut audio_output_buff_reader: transport::rustxxx::ThreadedAudioReader = std::sync::Arc::new(std::sync::Mutex::new(audio_output_buff_reader));
+    let (mut _audio_output_buff_writer, mut _audio_output_buff_reader) = audio_output_buffer.split();
+    let mut _audio_output_buff_writer: transport::rustxxx::ThreadedAudioWriter = std::sync::Arc::new(std::sync::Mutex::new(_audio_output_buff_writer));
+    let mut audio_output_buff_reader: transport::rustxxx::ThreadedAudioReader = std::sync::Arc::new(std::sync::Mutex::new(_audio_output_buff_reader));
 
     #[cfg(feature = "audio_pass_test")]
     {
@@ -395,11 +405,9 @@ fn rx_main() -> Result<(), anyhow::Error> {
     let mut receive_pipeline= transport::pipeline::Pipeline::new(
         &proto_ft8::protocol::FT8, 
         runtime,
-        audio_input_from_channels, 
-        audio_input_from_rate, 
     );
 
-    let audio_input_stream = if let Some(audio_input_file_name) = opt.input_file {
+    let _audio_input_stream = if let Some(audio_input_file_name) = opt.input_file {
         do_audio_file_input(*runtime, &mut audio_input_buff_writer, audio_input_file_name, &mut audio_input_from_channels, &mut audio_input_from_rate)?
     } else if let Some(audio_input_device_name) = opt.input_device {
         dbg!(&audio_input_device_name);
@@ -462,7 +470,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
         None
     };
 
-    let audio_output_stream = if let Some(_output_audio_file_name) = opt.output_file {
+    let _audio_output_stream = if let Some(_output_audio_file_name) = opt.output_file {
         todo!();
         // do_file_output(*runtime, &mut input_buff_writer, input_file_name, &mut from_channels, &mut from_rate)?
         // None
@@ -475,10 +483,10 @@ fn rx_main() -> Result<(), anyhow::Error> {
         let audio_output_from_channels = runtime.channels().0;
         let audio_output_from_rate = runtime.target_input_sample_rate().0 as u32;
 
-        audio_output_to_channels = audio_output_config.channels() as usize;
-        audio_output_to_rate = audio_output_config.sample_rate();
+        _audio_output_to_channels = audio_output_config.channels() as usize;
+        _audio_output_to_rate = audio_output_config.sample_rate();
 
-        dbg!(audio_output_from_channels, audio_output_to_channels, audio_output_from_rate, audio_output_to_rate);
+        dbg!(audio_output_from_channels, _audio_output_to_channels, audio_output_from_rate, _audio_output_to_rate);
 
         fn audio_output_data_callback(output: &mut [f32], reader: &mut transport::rustxxx::ThreadedAudioReader) {
             if let Ok(mut guard) = reader.try_lock() {
@@ -524,27 +532,38 @@ fn rx_main() -> Result<(), anyhow::Error> {
 
     #[cfg(not(feature = "audio_pass_test"))] 
     {
-        use proto_ft8::protocol::FT8;
+        // use proto_ft8::protocol::FT8;
 
-        let codewords = receive_pipeline.write_sample_buffer(
-            &mut audio_input_buff_reader
-        )
-            .context("Cannot run the receiver").unwrap();
+        // could not init this until know the input info
+        let mut resample_context = receive_pipeline.resample_context(
+            audio_input_from_channels, 
+            audio_input_from_rate, 
+        );
 
-        let mut ft8_messages: Vec<String> = Vec::new();
-        for codeword in codewords {
-            match proto_ft8::unpack_ft8::unpack77(&codeword) {
-                Some(msg) => {
-                    dbg!(&msg);
-                    ft8_messages.push(msg);
-                },
-                None => {
-                    dbg!("Bad unpack");
+        // this will be our main event loop
+        loop {
+            let codewords = receive_pipeline.write_sample_buffer(
+                &mut audio_input_buff_reader,
+                &mut resample_context
+            )
+                .context("Cannot run the receiver").unwrap();
+
+            let mut ft8_messages: Vec<String> = Vec::new();
+            for codeword in codewords {
+                match proto_ft8::unpack_ft8::unpack77(&codeword) {
+                    Some(msg) => {
+                        dbg!(&msg);
+                        ft8_messages.push(msg);
+                    },
+                    None => {
+                        dbg!("Bad unpack");
+                    }
                 }
             }
-        }
-        dbg!{"RECEIVE DONE"};
+        }   
     }
+
+    dbg!{"RECEIVE DONE"};
 
     #[cfg(feature = "audio_pass_test")]
     {
@@ -552,13 +571,13 @@ fn rx_main() -> Result<(), anyhow::Error> {
         loop {};
     }
 
-    match audio_input_stream {
+    match _audio_input_stream {
         Some(_stream) => {
         },
         None => {}
     }
 
-    match audio_output_stream {
+    match _audio_output_stream {
         Some(_stream) => {
         },
         None => {}

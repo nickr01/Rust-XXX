@@ -117,7 +117,7 @@ impl Receiver {
                                         None => {
                                             true
                                         },
-                                        Some(stored_msg) => {
+                                        Some(_) => {
                                             false
                                             // if stored_msg.c_score < message.df.c_score {
                                             //     // dbg!("Upgraded message");
