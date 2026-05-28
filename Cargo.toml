@@ -38,3 +38,5 @@ audioadapter-buffers = "3.0.0"
 audioadapter = "3.0.0"
 transport = { path = "crates/transport" }
 proto_ft8 = { path = "crates/proto_ft8" }
+minifb = "0.28.0"
+

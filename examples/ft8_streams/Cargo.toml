@@ -36,4 +36,5 @@ audioadapter-buffers.workspace = true
 audioadapter.workspace = true
 transport.workspace = true
 proto_ft8.workspace = true
-minifb = "0.28.0"
+minifb.workspace = true
+lazy_static = "1.5.0"

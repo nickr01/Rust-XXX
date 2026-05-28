@@ -26,7 +26,33 @@ macro_rules! ddbg {
     };
 }
 
-pub fn _plot_spectrogram(
+pub fn plot_spectrogram_to_buffer(
+    spectrogram: &[waterfall::WflDataType],
+    width: usize, height: usize,
+) {
+    let mut buf = vec![0u8; width * height];
+    let bitmap_backend = BitMapBackend::with_buffer(&mut buf, (width as u32, height as u32));
+	let drawing_area= bitmap_backend.into_drawing_area();
+
+
+    let spectrogram_cells = drawing_area.split_evenly((height, width));
+
+    let windows_scaled = spectrogram.iter().map(|i| *i as f32).collect::<Vec<f32>>();
+    let highest_spectral_density = windows_scaled
+        .iter()
+        .max_by(|x, y| x.partial_cmp(y).unwrap())
+        .expect("Cannot calc spectrogram density");
+    let color_scale = colorous::MAGMA;
+
+    for (cell, spectral_density) in spectrogram_cells.iter().zip(windows_scaled.iter()) {
+        let spectral_density_scaled = spectral_density / highest_spectral_density;
+        let color = color_scale.eval_continuous(spectral_density_scaled as f64);
+        cell.fill(&RGBColor(color.r, color.g, color.b))
+        .expect("Cannot plot spectrogram");
+    }
+}
+
+pub fn _plot_spectrogram_to_file(
 	path: &str,
     spectrogram: &[waterfall::WflDataType],
     width: usize,
@@ -49,6 +75,7 @@ pub fn _plot_spectrogram(
         .expect("Cannot plot spectrogram");
     }
 }
+
 
 pub fn _plot_graph(
     path: &str,

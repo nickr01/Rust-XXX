@@ -530,7 +530,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
 
     dbg!();
 
-    #[cfg(not(feature = "audio_pass_test"))] 
+    // #[cfg(not(feature = "audio_pass_test"))] 
     {
         // use proto_ft8::protocol::FT8;
 
@@ -541,7 +541,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
         );
 
         // this will be our main event loop
-        loop {
+        while receive_pipeline.escape_request() {
             let codewords = receive_pipeline.write_sample_buffer(
                 &mut audio_input_buff_reader,
                 &mut resample_context

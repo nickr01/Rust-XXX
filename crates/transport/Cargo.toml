@@ -41,4 +41,5 @@ rubato.workspace = true
 audioadapter-buffers.workspace = true
 audioadapter.workspace = true
 lazy_static = "1.5.0"
+minifb.workspace = true
 

@@ -125,6 +125,10 @@ impl Waterfall {
         self.wflines.len()
     }
 
+    pub fn time_capacity(&self) -> usize {
+        self.wflines.capacity()
+    }
+
     pub fn symbols_stored(&self) -> usize {
         self.time_bins()/self.time_osr.0
     }

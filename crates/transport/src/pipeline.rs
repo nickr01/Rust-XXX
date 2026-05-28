@@ -19,6 +19,54 @@ pub struct ResampleContext {
     pub resampler: Fft::<f32>,
 }
 
+pub struct DebugPortal {
+    width: usize,
+    height: usize,
+    window: minifb::Window,
+    buffer: Vec<u32>,
+}
+
+impl DebugPortal {
+    // const DEBUG_WIDTH: usize = 640;
+    // const DEBUG_HEIGHT: usize = 360;
+
+
+    pub fn new(width: usize, height: usize) -> DebugPortal {
+        let mut window = minifb::Window::new(
+            "RusXXX - ESC to exit",
+            width,
+            height,
+            minifb::WindowOptions::default(),
+        )
+        .unwrap_or_else(|e| {
+            panic!("{}", e);
+        });
+
+        // Limit to max ~60 fps update rate
+        window.set_target_fps(60);
+
+        let bufsize = width * height;
+        dbg!(bufsize);
+        
+        DebugPortal {
+            width,
+            height,
+            window,
+            buffer: vec![0u32; bufsize],
+        }        
+    }
+
+    pub fn escape_request(&self) -> bool {
+        self.window.is_open() && !self.window.is_key_down(minifb::Key::Escape)
+    }
+
+    pub fn update(&mut self) -> Result<(), rustxxx::XxxError> {
+        self.window
+            .update_with_buffer(&self.buffer, self.width, self.height).unwrap();
+        Ok(())
+    }
+}
+
 #[cfg(any(feature = "enable_rx", test))]
 pub struct Pipeline {
     pub receiver: receiver::Receiver,
@@ -27,6 +75,7 @@ pub struct Pipeline {
     correlator: correlator::Correlator,
     detector: detector::Detector,
     message_hash: decoder::DecodeHash,
+    debug_portal: DebugPortal,
 }
 
 #[cfg(any(feature = "enable_rx", test))]
@@ -61,13 +110,19 @@ impl Pipeline {
             assert_eq!(buf.len(), init_size);
         }
 
+        let detector = detector::Detector::new(*runtime, rustxxx::RepeatCount(nfft));
+        let correlator = correlator::Correlator::new(protocol, runtime);
+
+        let debug_portal = DebugPortal::new(detector.wf.freq_bins(), detector.wf.time_capacity());
+
         Pipeline {
             receiver,
             rfft_nfft_f,
             detector_input_bufs,
-            detector: detector::Detector::new(*runtime, rustxxx::RepeatCount(nfft),),
-            correlator: correlator::Correlator::new(protocol, runtime),
+            detector,
+            correlator, 
             message_hash: HashMap::new(),
+            debug_portal: debug_portal,
         }
     }
 
@@ -107,6 +162,10 @@ impl Pipeline {
             &mut self.message_hash
         );
         Ok(())
+    }
+
+    pub fn escape_request(&self) -> bool {
+        self.debug_portal.escape_request()
     }
 
     pub fn write_sample_buffer(
@@ -201,6 +260,7 @@ impl Pipeline {
                 self.write_sample(sample)?;
             }
 
+            self.debug_portal.update();
 
             // return the message_hash content if already returned
             // mark as reported
