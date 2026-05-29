@@ -42,8 +42,7 @@ impl DebugPortal {
             panic!("{}", e);
         });
 
-        // Limit to max ~60 fps update rate
-        window.set_target_fps(60);
+        window.set_target_fps(10);
 
         let bufsize = width * height;
         dbg!(bufsize);
@@ -52,7 +51,7 @@ impl DebugPortal {
             width,
             height,
             window,
-            buffer: vec![0u32; bufsize],
+            buffer: vec![0u32; bufsize], // format is 0RGB
         }        
     }
 

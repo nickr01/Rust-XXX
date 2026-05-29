@@ -1,7 +1,7 @@
 [workspace.package]
 #name = "rustxxx-workspace"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [workspace]
 resolver = "2"
@@ -33,7 +33,7 @@ clap = { version = "4.6.1", features = ["derive"] }
 histogram = "1.2.0"
 cpal = "0.17.3"
 ringbuf = "0.5.0"
-rubato = "2.0.0"
+rubato = "3.0.0"
 audioadapter-buffers = "3.0.0"
 audioadapter = "3.0.0"
 transport = { path = "crates/transport" }

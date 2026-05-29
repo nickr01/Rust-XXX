@@ -274,7 +274,7 @@ impl Waterfall {
             }
         }
 
-        debug::_plot_spectrogram(path ,&spectr2, spectr2.len()/self.wflines.len(), self.wflines.len());
+        debug::_plot_spectrogram_to_file(path ,&spectr2, spectr2.len()/self.wflines.len(), self.wflines.len());
         // plot_spectrogram(path ,&spectr2, self.freq_indep_base_bins * self.freq_osr, wf.mag_time_blocks_num * wf.time_osr);
     }
 }
