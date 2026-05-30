@@ -5,7 +5,7 @@ use thiserror::Error;
 // use crate::rx_streamed::StreamReceiver; // - for library level errors
 
 pub const AUDIO_INPUT_BUFSIZE: usize = 2_usize.pow(21); // 22 for file // 20
-pub const WATERFALL_BUF_SIZE: usize = 2_usize.pow(9);
+pub const WATERFALL_BUF_SIZE: usize = 320; // This should be dynamic!!!  2_usize.pow(9);
 
 pub const AUDIO_OUTPUT_BUFSIZE: usize = 2_usize.pow(20);
 
