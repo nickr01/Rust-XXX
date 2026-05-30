@@ -1,5 +1,6 @@
 // needed for traits
-use plotters::{backend::RGBPixel, prelude::*};
+// use plotters::backend::RGBPixel; 
+use plotters::prelude::*; 
 
 use crate::waterfall;
 
@@ -28,7 +29,7 @@ macro_rules! ddbg {
 
 use std::borrow::{Borrow, BorrowMut};
 
-struct BufferWrapper(Vec<u32>);
+pub struct BufferWrapper(Vec<u32>);
 
 impl Borrow<[u8]> for BufferWrapper {
     fn borrow(&self) -> &[u8] {
@@ -68,12 +69,70 @@ impl BorrowMut<[u32]> for BufferWrapper {
     }
 }
 
+
+pub struct DebugPortal {
+    width: usize,
+    height: usize,
+    window: minifb::Window,
+    buf: BufferWrapper,
+}
+
+impl DebugPortal {
+    // const DEBUG_WIDTH: usize = 640;
+    // const DEBUG_HEIGHT: usize = 360;
+
+
+    pub fn new(width: usize, height: usize) -> DebugPortal {
+        let mut window = minifb::Window::new(
+            "RusXXX - ESC to exit",
+            width,
+            height,
+            minifb::WindowOptions::default(),
+        )
+        .unwrap_or_else(|e| {
+            panic!("{}", e);
+        });
+
+        window.set_target_fps(10);
+
+        let bufsize = width * height;
+        dbg!(bufsize);
+
+        let buf = BufferWrapper(vec![0u32; bufsize]);
+
+        DebugPortal {
+            width,
+            height,
+            window,
+            buf // format is 0RGB
+        }        
+    }
+
+    pub fn escape_request(&self) -> bool {
+        self.window.is_open() && !self.window.is_key_down(minifb::Key::Escape)
+    }
+
+    pub fn update(&mut self) {
+        self.window
+            .update_with_buffer(self.buf.borrow(), self.width, self.height)
+            .expect("Cannot update debug window");
+    }
+
+    pub fn _buf(&self) -> &BufferWrapper {
+        &self.buf
+    }
+
+    pub fn buf_as_mut(&mut self) -> &mut BufferWrapper {
+        &mut self.buf
+    }
+
+}
+
 pub fn plot_spectrogram_to_buffer(
+    buf: &mut BufferWrapper,
     spectrogram: &[waterfall::WflDataType],
     width: usize, height: usize,
 ) {    
-    let mut buf = BufferWrapper(vec![0u32; width * height]);
-
     let bitmap_backend = BitMapBackend::with_buffer(buf.borrow_mut(), (width as u32, height as u32));
     let drawing_area= bitmap_backend.into_drawing_area();
 

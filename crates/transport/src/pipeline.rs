@@ -3,6 +3,7 @@ use crate::decoder;
 use crate::detector;
 use crate::receiver;
 use crate::rustxxx;
+use crate::debug;
 
 use audioadapter_buffers::direct::InterleavedSlice;
 use ringbuf::traits::Consumer;
@@ -19,53 +20,6 @@ pub struct ResampleContext {
     pub resampler: Fft::<f32>,
 }
 
-pub struct DebugPortal {
-    width: usize,
-    height: usize,
-    window: minifb::Window,
-    buffer: Vec<u32>,
-}
-
-impl DebugPortal {
-    // const DEBUG_WIDTH: usize = 640;
-    // const DEBUG_HEIGHT: usize = 360;
-
-
-    pub fn new(width: usize, height: usize) -> DebugPortal {
-        let mut window = minifb::Window::new(
-            "RusXXX - ESC to exit",
-            width,
-            height,
-            minifb::WindowOptions::default(),
-        )
-        .unwrap_or_else(|e| {
-            panic!("{}", e);
-        });
-
-        window.set_target_fps(10);
-
-        let bufsize = width * height;
-        dbg!(bufsize);
-        
-        DebugPortal {
-            width,
-            height,
-            window,
-            buffer: vec![0u32; bufsize], // format is 0RGB
-        }        
-    }
-
-    pub fn escape_request(&self) -> bool {
-        self.window.is_open() && !self.window.is_key_down(minifb::Key::Escape)
-    }
-
-    pub fn update(&mut self) -> Result<(), rustxxx::XxxError> {
-        self.window
-            .update_with_buffer(&self.buffer, self.width, self.height).unwrap();
-        Ok(())
-    }
-}
-
 #[cfg(any(feature = "enable_rx", test))]
 pub struct Pipeline {
     pub receiver: receiver::Receiver,
@@ -74,7 +28,7 @@ pub struct Pipeline {
     correlator: correlator::Correlator,
     detector: detector::Detector,
     message_hash: decoder::DecodeHash,
-    debug_portal: DebugPortal,
+    debug_portal: debug::DebugPortal,
 }
 
 #[cfg(any(feature = "enable_rx", test))]
@@ -112,7 +66,7 @@ impl Pipeline {
         let detector = detector::Detector::new(*runtime, rustxxx::RepeatCount(nfft));
         let correlator = correlator::Correlator::new(protocol, runtime);
 
-        let debug_portal = DebugPortal::new(detector.wf.freq_bins(), detector.wf.time_capacity());
+        let debug_portal = debug::DebugPortal::new(detector.wf.freq_bins(), detector.wf.time_capacity());
 
         Pipeline {
             receiver,
@@ -149,6 +103,39 @@ impl Pipeline {
             from_channels,
             from_rate,
         }
+    }
+
+        // Dump mag4 spectrogram - should see separate blocks x freq_osr across x axis, and same for y
+     pub fn dump_spectrogram(&mut self) {
+        // // can reorder to show interleaving if required
+        // for y in 0..self.time_blocks_stored() {
+        //     for y_sub in 0..self.time_osr.0 {
+        //         let wfl = self.read_row(y, y_sub);
+        //         for x in 0..wfl.freq_blocks_stored() {
+        //             for x_sub in 0..self.freq_osr.0 {
+        //                 let m4 = wfl.read_col(x, x_sub);
+        //                 spectr2.push(m4);
+        //             }
+        //         }
+        //     }
+        // }
+
+        let mut spectr2 =Vec::new();
+        let wflines_iter = self.detector.wf.wflines().iter();
+        for wfl in wflines_iter {
+            let db_iter = wfl.mag_dbs.iter();
+            for db in db_iter {
+                spectr2.push(*db);
+            }
+        }
+
+        debug::plot_spectrogram_to_buffer(
+            self.debug_portal.buf_as_mut(), 
+            &spectr2,
+            spectr2.len()/self.detector.wf.wflines().len(), 
+            self.detector.wf.wflines().len()
+        );
+        // plot_spectrogram(path ,&spectr2, self.freq_indep_base_bins * self.freq_osr, wf.mag_time_blocks_num * wf.time_osr);
     }
 
     fn write_sample(&mut self, sample: f32) -> Result<(), rustxxx::XxxError> {
@@ -258,6 +245,7 @@ impl Pipeline {
             for sample in samples_at_new_rate {
                 self.write_sample(sample)?;
             }
+
 
             self.debug_portal.update();
 

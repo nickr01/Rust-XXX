@@ -1,6 +1,4 @@
 use crate::rustxxx;
-use crate::debug;
-// use crate::rx_streamed;
 
 #[derive(Debug)]
 pub struct FreqBinRange {
@@ -102,6 +100,10 @@ impl Waterfall {
 
     pub fn line(&self, wfl_num: usize) -> &WaterfallLine {
         &self.wflines[wfl_num]
+    }
+
+    pub fn wflines(&self) -> &WaterFallLines {
+        &self.wflines
     }
 
     pub fn _line_as_mut(&mut self, wfl_num: usize) -> &mut WaterfallLine {
@@ -250,32 +252,5 @@ impl Waterfall {
     //     m4
     // }
 
-    // Dump mag4 spectrogram - should see separate blocks x freq_osr across x axis, and same for y
-     pub fn _dump_spectrogram(&self, path: &str) {
-        // // can reorder to show interleaving if required
-        // for y in 0..self.time_blocks_stored() {
-        //     for y_sub in 0..self.time_osr.0 {
-        //         let wfl = self.read_row(y, y_sub);
-        //         for x in 0..wfl.freq_blocks_stored() {
-        //             for x_sub in 0..self.freq_osr.0 {
-        //                 let m4 = wfl.read_col(x, x_sub);
-        //                 spectr2.push(m4);
-        //             }
-        //         }
-        //     }
-        // }
-
-        let mut spectr2 =Vec::new();
-        let wflines_iter = self.wflines.iter();
-        for wfl in wflines_iter {
-            let db_iter = wfl.mag_dbs.iter();
-            for db in db_iter {
-                spectr2.push(*db);
-            }
-        }
-
-        debug::_plot_spectrogram_to_file(path ,&spectr2, spectr2.len()/self.wflines.len(), self.wflines.len());
-        // plot_spectrogram(path ,&spectr2, self.freq_indep_base_bins * self.freq_osr, wf.mag_time_blocks_num * wf.time_osr);
-    }
 }
 
