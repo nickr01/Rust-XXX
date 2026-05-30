@@ -440,7 +440,12 @@ fn rx_main() -> Result<(), anyhow::Error> {
                 // dbg!("WOOHOO: Summink to write");
                 for sample in input.iter() {
                     // dbg!(*sample);
-                    writer.try_push(*sample).expect("input_buf overrun");
+                    match writer.try_push(*sample) {
+                        Ok(()) => {},
+                        Err(_) => {
+                            // panic!("input_buf overrun");
+                        }
+                    }
                 }
             }
         }
@@ -541,25 +546,27 @@ fn rx_main() -> Result<(), anyhow::Error> {
         );
 
         // this will be our main event loop
-        while receive_pipeline.escape_request() {
+        while receive_pipeline.continue_run() {
             let codewords = receive_pipeline.write_sample_buffer(
                 &mut audio_input_buff_reader,
                 &mut resample_context
             )
                 .context("Cannot run the receiver").unwrap();
 
-            let mut ft8_messages: Vec<String> = Vec::new();
-            for codeword in codewords {
-                match proto_ft8::unpack_ft8::unpack77(&codeword) {
-                    Some(msg) => {
-                        dbg!(&msg);
-                        ft8_messages.push(msg);
-                    },
-                    None => {
-                        dbg!("Bad unpack");
-                    }
-                }
-            }
+            receive_pipeline.update_spectrogram();
+
+            // let mut ft8_messages: Vec<String> = Vec::new();
+            // for codeword in codewords {
+            //     match proto_ft8::unpack_ft8::unpack77(&codeword) {
+            //         Some(msg) => {
+            //             dbg!(&msg);
+            //             ft8_messages.push(msg);
+            //         },
+            //         None => {
+            //             dbg!("Bad unpack");
+            //         }
+            //     }
+            // }
         }   
     }
 

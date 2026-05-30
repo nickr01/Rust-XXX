@@ -74,6 +74,7 @@ impl Receiver {
         correlator: &mut correlator::Correlator,
         message_hash: &mut decoder::DecodeHash
     ) -> usize{
+        return 0;
         // dbg!("entry");
         // TODO: disable or remove this
         assert!(!self.runtime.auto_segment()); // blocking auto for the moment
@@ -191,8 +192,8 @@ impl Receiver {
         detector: &mut detector::Detector,
         correlator: &mut correlator::Correlator,
         message_hash: &mut decoder::DecodeHash,
-    ) -> u32 {
-        let sample_count = 1u32;
+    ) -> usize {
+        let mut bufs_consumed: usize = 0;
 
         for buf in detector_input_bufs.iter_mut()
         {
@@ -206,10 +207,11 @@ impl Receiver {
                 );
                 buf.clear();
                 assert_eq!(buf.len(), 0);
+                bufs_consumed += 1;
             }     
             buf.push(sample * detector.window_function_samples[buf.len()]); // application of window happens here
         }
-        sample_count
+        bufs_consumed
     }
 
 

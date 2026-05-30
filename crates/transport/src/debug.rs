@@ -1,6 +1,9 @@
 // needed for traits
 // use plotters::backend::RGBPixel; 
+use plotters::backend::BGRXPixel; 
 use plotters::prelude::*; 
+// use plotters_bitmap::bitmap_pixel::BGRXPixel;
+// use plotters_bitmap::BitMapBackend;
 
 use crate::waterfall;
 
@@ -69,10 +72,14 @@ impl BorrowMut<[u32]> for BufferWrapper {
     }
 }
 
+#[derive(Debug)]
+pub struct DrawSize {
+    pub width: usize,
+    pub height: usize,
+}
 
 pub struct DebugPortal {
-    width: usize,
-    height: usize,
+    draw_size: DrawSize,
     window: minifb::Window,
     buf: BufferWrapper,
 }
@@ -82,39 +89,40 @@ impl DebugPortal {
     // const DEBUG_HEIGHT: usize = 360;
 
 
-    pub fn new(width: usize, height: usize) -> DebugPortal {
+    pub fn new(draw_size: DrawSize) -> DebugPortal {
+        dbg!(&draw_size);
         let mut window = minifb::Window::new(
             "RusXXX - ESC to exit",
-            width,
-            height,
+            draw_size.width,
+            draw_size.height,
             minifb::WindowOptions::default(),
         )
         .unwrap_or_else(|e| {
             panic!("{}", e);
         });
 
-        window.set_target_fps(10);
+        window.set_target_fps(5);
 
-        let bufsize = width * height;
+        let bufsize = draw_size.width * draw_size.height;
         dbg!(bufsize);
 
         let buf = BufferWrapper(vec![0u32; bufsize]);
 
         DebugPortal {
-            width,
-            height,
+            draw_size,
             window,
-            buf // format is 0RGB
-        }        
+            buf
+         }        
     }
 
-    pub fn escape_request(&self) -> bool {
+    pub fn continue_run(&self) -> bool {
         self.window.is_open() && !self.window.is_key_down(minifb::Key::Escape)
     }
 
     pub fn update(&mut self) {
+        // dbg!("update debug portal");
         self.window
-            .update_with_buffer(self.buf.borrow(), self.width, self.height)
+            .update_with_buffer(self.buf.borrow(), self.draw_size.width, self.draw_size.height)
             .expect("Cannot update debug window");
     }
 
@@ -131,9 +139,12 @@ impl DebugPortal {
 pub fn plot_spectrogram_to_buffer(
     buf: &mut BufferWrapper,
     spectrogram: &[waterfall::WflDataType],
-    width: usize, height: usize,
-) {    
-    let bitmap_backend = BitMapBackend::with_buffer(buf.borrow_mut(), (width as u32, height as u32));
+    (width, height) : (usize, usize),
+) {
+    // return;
+    // dbg!("plot spectrogram", width, height); H 319
+    let bitmap_backend = BitMapBackend::<BGRXPixel>::with_buffer_and_format(buf.borrow_mut(), (width as u32, height as u32))
+        .expect("Cannot set up BitMap backend");
     let drawing_area= bitmap_backend.into_drawing_area();
 
     let spectrogram_cells = drawing_area.split_evenly((height, width));

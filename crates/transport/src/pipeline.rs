@@ -66,7 +66,10 @@ impl Pipeline {
         let detector = detector::Detector::new(*runtime, rustxxx::RepeatCount(nfft));
         let correlator = correlator::Correlator::new(protocol, runtime);
 
-        let debug_portal = debug::DebugPortal::new(detector.wf.freq_bins(), detector.wf.time_capacity());
+        let debug_portal = debug::DebugPortal::new(debug::DrawSize { 
+            width: detector.wf.freq_bins(), 
+            height: detector.wf.time_capacity() 
+        }, );
 
         Pipeline {
             receiver,
@@ -106,7 +109,7 @@ impl Pipeline {
     }
 
         // Dump mag4 spectrogram - should see separate blocks x freq_osr across x axis, and same for y
-     pub fn dump_spectrogram(&mut self) {
+    pub fn draw_spectrogram(&mut self) {
         // // can reorder to show interleaving if required
         // for y in 0..self.time_blocks_stored() {
         //     for y_sub in 0..self.time_osr.0 {
@@ -129,17 +132,23 @@ impl Pipeline {
             }
         }
 
-        debug::plot_spectrogram_to_buffer(
-            self.debug_portal.buf_as_mut(), 
-            &spectr2,
-            spectr2.len()/self.detector.wf.wflines().len(), 
-            self.detector.wf.wflines().len()
-        );
-        // plot_spectrogram(path ,&spectr2, self.freq_indep_base_bins * self.freq_osr, wf.mag_time_blocks_num * wf.time_osr);
+        let spectrogram_height = self.detector.wf.wflines().len();
+        if spectrogram_height > 0 {
+            debug::plot_spectrogram_to_buffer(
+                self.debug_portal.buf_as_mut(), 
+                &spectr2,
+                (spectr2.len()/spectrogram_height, spectrogram_height)
+            );
+        }
+    }
+
+    pub fn update_spectrogram(&mut self) {
+        self.draw_spectrogram();
+        self.debug_portal.update();
     }
 
     fn write_sample(&mut self, sample: f32) -> Result<(), rustxxx::XxxError> {
-        let _ = self.receiver.load_sample_into_waterfall_lines(
+        let buf_consumed = self.receiver.load_sample_into_waterfall_lines(
             sample,
             &mut self.rfft_nfft_f,
             &mut self.detector_input_bufs,
@@ -147,11 +156,14 @@ impl Pipeline {
             &mut self.correlator,
             &mut self.message_hash
         );
+        // if buf_consumed > 0 {
+        //     self.update_spectrogram();
+        // }
         Ok(())
     }
 
-    pub fn escape_request(&self) -> bool {
-        self.debug_portal.escape_request()
+    pub fn continue_run(&self) -> bool {
+        self.debug_portal.continue_run()
     }
 
     pub fn write_sample_buffer(
@@ -159,9 +171,6 @@ impl Pipeline {
         reader: &mut rustxxx::ThreadedAudioReader,
         resample_context: &mut ResampleContext,
     ) -> Result<Vec<Vec<u8>>, rustxxx::XxxError> {
-        // main receive loop = from file and device input
-
-        // loop 
         {
             let mut mono_samples = Vec::new();
             if let Ok(mut guard) = reader.try_lock() {
@@ -241,13 +250,10 @@ impl Pipeline {
                 outdata
             };
 
-            // this potentially triggers decode processing into message_hash
+            // this is occasionally expensive triggering decode processing into message_hash
             for sample in samples_at_new_rate {
                 self.write_sample(sample)?;
             }
-
-
-            self.debug_portal.update();
 
             // return the message_hash content if already returned
             // mark as reported
@@ -255,9 +261,9 @@ impl Pipeline {
         };
 
         let mut ret: Vec<Vec<u8>> = Vec::new();
-        for codeword in self.message_hash.keys() {
-            ret.push(codeword.clone());
-        }
+        // for codeword in self.message_hash.keys() {
+        //     ret.push(codeword.clone());
+        // }
 
         Ok(ret)
     }
