@@ -167,7 +167,7 @@ struct Opt {
 #[cfg(any(feature = "enable_rx", test))]
 fn do_audio_file_input(
     runtime: transport::rustxxx::Runtime, 
-    input_buff_writer: &mut transport::rustxxx::ThreadedAudioWriter, 
+    input_buff_writer: &mut transport::rustxxx::AudioBufWriter, 
     input_file: String,
     from_channels: &mut usize,
     from_rate: &mut u32
@@ -226,10 +226,11 @@ fn do_audio_file_input(
 
     // let input_buf = ringbuf::HeapRb::<f32>::new(signal.len());
     // for testing we'll preload a buffer block
-    if let Ok(mut guard) = input_buff_writer.try_lock() {
-        let writer = guard.as_mut();
+    // if let Ok(mut guard) = input_buff_writer.try_lock() 
+    {
+        // let input_buff_writer = guard.as_mut();
         for sample in signal.iter() {
-            writer.try_push(*sample).expect("input_buf overrun");
+            input_buff_writer.try_push(*sample).expect("input_buf overrun");
         }
     }
     
@@ -389,13 +390,13 @@ fn rx_main() -> Result<(), anyhow::Error> {
     let audio_input_buffer: AudioSampleBuffer = ringbuf::HeapRb::<f32>::new(transport::rustxxx::AUDIO_INPUT_BUFSIZE);
     let audio_output_buffer: AudioSampleBuffer = ringbuf::HeapRb::<f32>::new(transport::rustxxx::AUDIO_OUTPUT_BUFSIZE);
 
-    let (mut _audio_input_buff_writer, mut _audio_input_buff_reader) = audio_input_buffer.split();
-    let mut audio_input_buff_writer: transport::rustxxx::ThreadedAudioWriter = std::sync::Arc::new(std::sync::Mutex::new(_audio_input_buff_writer));
-    let mut audio_input_buff_reader: transport::rustxxx::ThreadedAudioReader = std::sync::Arc::new(std::sync::Mutex::new(_audio_input_buff_reader));
+    let (mut audio_input_buff_writer, mut audio_input_buff_reader) = audio_input_buffer.split();
+    // let mut audio_input_buff_writer: transport::rustxxx::ThreadedAudioBufWriter = std::sync::Arc::new(std::sync::Mutex::new(_audio_input_buff_writer));
+    // let mut audio_input_buff_reader: transport::rustxxx::ThreadedAudioBufReader = std::sync::Arc::new(std::sync::Mutex::new(_audio_input_buff_reader));
 
-    let (mut _audio_output_buff_writer, mut _audio_output_buff_reader) = audio_output_buffer.split();
-    let mut _audio_output_buff_writer: transport::rustxxx::ThreadedAudioWriter = std::sync::Arc::new(std::sync::Mutex::new(_audio_output_buff_writer));
-    let mut audio_output_buff_reader: transport::rustxxx::ThreadedAudioReader = std::sync::Arc::new(std::sync::Mutex::new(_audio_output_buff_reader));
+    let (mut _audio_output_buff_writer, mut audio_output_buff_reader) = audio_output_buffer.split();
+    // let mut _audio_output_buff_writer: transport::rustxxx::ThreadedAudioBufWriter = std::sync::Arc::new(std::sync::Mutex::new(_audio_output_buff_writer));
+    // let mut audio_output_buff_reader: transport::rustxxx::ThreadedAudioBufReader = std::sync::Arc::new(std::sync::Mutex::new(_audio_output_buff_reader));
 
     #[cfg(feature = "audio_pass_test")]
     {
@@ -433,17 +434,18 @@ fn rx_main() -> Result<(), anyhow::Error> {
 
         fn audio_input_data_callback(
             input: &[f32], 
-            writer: &mut transport::rustxxx::ThreadedAudioWriter,
+            writer: &mut transport::rustxxx::AudioBufWriter,
         ) {
-            if let Ok(mut guard) = writer.try_lock() {
-                let writer = guard.as_mut();
+            // if let Ok(mut guard) = writer.try_lock() 
+            {
+                // let writer = guard.as_mut();
                 // dbg!("WOOHOO: Summink to write");
                 for sample in input.iter() {
                     // dbg!(*sample);
                     match writer.try_push(*sample) {
                         Ok(()) => {},
                         Err(_) => {
-                            // panic!("input_buf overrun");
+                            dbg!("input_buf overrun - discarding samples");
                         }
                     }
                 }
@@ -493,9 +495,10 @@ fn rx_main() -> Result<(), anyhow::Error> {
 
         dbg!(audio_output_from_channels, _audio_output_to_channels, audio_output_from_rate, _audio_output_to_rate);
 
-        fn audio_output_data_callback(output: &mut [f32], reader: &mut transport::rustxxx::ThreadedAudioReader) {
-            if let Ok(mut guard) = reader.try_lock() {
-                let reader = guard.as_mut();
+        fn audio_output_data_callback(output: &mut [f32], reader: &mut transport::rustxxx::AudioBufReader) {
+            // if let Ok(mut guard) = reader.try_lock() 
+            {
+                // let reader = guard.as_mut();
                 let mut output_fell_behind = false;
                 for sample in output {
                     *sample = match reader.try_pop() {
@@ -555,18 +558,18 @@ fn rx_main() -> Result<(), anyhow::Error> {
 
             receive_pipeline.update_spectrogram();
 
-            // let mut ft8_messages: Vec<String> = Vec::new();
-            // for codeword in codewords {
-            //     match proto_ft8::unpack_ft8::unpack77(&codeword) {
-            //         Some(msg) => {
-            //             dbg!(&msg);
-            //             ft8_messages.push(msg);
-            //         },
-            //         None => {
-            //             dbg!("Bad unpack");
-            //         }
-            //     }
-            // }
+            let mut ft8_messages: Vec<String> = Vec::new();
+            for codeword in codewords {
+                match proto_ft8::unpack_ft8::unpack77(&codeword) {
+                    Some(msg) => {
+                        dbg!(&msg);
+                        ft8_messages.push(msg);
+                    },
+                    None => {
+                        dbg!("Bad unpack");
+                    }
+                }
+            }
         }   
     }
 

@@ -74,7 +74,6 @@ impl Receiver {
         correlator: &mut correlator::Correlator,
         message_hash: &mut decoder::DecodeHash
     ) -> usize{
-        return 0;
         // dbg!("entry");
         // TODO: disable or remove this
         assert!(!self.runtime.auto_segment()); // blocking auto for the moment
@@ -89,7 +88,7 @@ impl Receiver {
             match correlator.find_freq_candidates(&detector.wf, &freq_bin_range) {
                 Some(mut candidates) => {
                     if candidates.len() > 0 {
-                        // dbg!(candidates.len());
+                        dbg!(candidates.len());
                         // dbg!(&candidates);
 
                         let mut modem: rustxxx::Modem = rustxxx::Modem::new(
@@ -178,7 +177,7 @@ impl Receiver {
             // TODO: push _wfl into subtractor queue
             if pass_decodes > 0 
             {
-                // dbg!(pass_decodes);
+                dbg!(pass_decodes);
             };
         }
         pass_decodes

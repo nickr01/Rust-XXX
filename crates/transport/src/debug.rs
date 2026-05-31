@@ -97,7 +97,7 @@ impl DebugPortal {
             panic!("{}", e);
         });
 
-        window.set_target_fps(5);
+        window.set_target_fps(20);
 
         let bufsize = draw_size.width * draw_size.height;
         dbg!(bufsize);

@@ -47,10 +47,12 @@ pub const fn bits2bytes(bits: BitCount) -> ByteCount {
 }
 
 pub type AudioSampleBuffer = ringbuf::SharedRb<ringbuf::storage::Heap<f32>>; // SharedRb<ringbuf::storage::Heap<f32>>;
+
 pub type AudioBufWriter = ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, true, false>; 
 pub type AudioBufReader = ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, false, true>;
-pub type ThreadedAudioReader = std::sync::Arc<std::sync::Mutex<ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, false, true>>>;
-pub type ThreadedAudioWriter = std::sync::Arc<std::sync::Mutex<ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, true, false>>>;
+
+// pub type AudioBufReader = std::sync::Arc<std::sync::Mutex<ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, false, true>>>;
+// pub type AudioBufWriter = std::sync::Arc<std::sync::Mutex<ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, true, false>>>;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub struct CrcParams {

@@ -33,8 +33,8 @@ pub struct Pipeline {
 
 #[cfg(any(feature = "enable_rx", test))]
 impl Pipeline {
-    const CHUNK_SIZE: usize = 2048;
-    const SUB_CHUNK: usize = 1;
+    const CHUNK_SIZE: usize = 8192 ; // 2048 is too little to keep up with 48K audio stream
+    const SUB_CHUNK: usize = 1;  // maybe can tune this
     const CHANNELS: usize = 1;
     const BUFLEN: usize = Pipeline::CHUNK_SIZE;
 
@@ -126,7 +126,7 @@ impl Pipeline {
         // }
 
         let mut spectr2 =Vec::new();
-        let wflines_iter = self.detector.wf.wflines().iter();
+        let wflines_iter = self.detector.wf.wflines().iter().rev();
         for wfl in wflines_iter {
             let db_iter = wfl.mag_dbs.iter();
             for db in db_iter {
@@ -152,7 +152,7 @@ impl Pipeline {
     }
 
     fn write_sample(&mut self, sample: f32) -> Result<(), rustxxx::XxxError> {
-        let buf_consumed = self.receiver.load_sample_into_waterfall_lines(
+        let _buf_consumed = self.receiver.load_sample_into_waterfall_lines(
             sample,
             &mut self.rfft_nfft_f,
             &mut self.detector_input_bufs,
@@ -160,9 +160,6 @@ impl Pipeline {
             &mut self.correlator,
             &mut self.message_hash
         );
-        // if buf_consumed > 0 {
-        //     self.update_spectrogram();
-        // }
         Ok(())
     }
 
@@ -172,22 +169,19 @@ impl Pipeline {
 
     pub fn write_sample_buffer(
         &mut self,
-        reader: &mut rustxxx::ThreadedAudioReader,
+        reader: &mut rustxxx::AudioBufReader,
         resample_context: &mut ResampleContext,
     ) -> Result<Vec<Vec<u8>>, rustxxx::XxxError> {
         {
             let mut mono_samples = Vec::new();
-            if let Ok(mut guard) = reader.try_lock() {
-                let reader = guard.as_mut();
+            // if let Ok(mut guard) = reader.try_lock() 
+            {
+                // let reader = guard.as_mut();
 
-                dbg!(reader.occupied_len());
-                
-                // MUST rebuild the iterator each loop - see next() documentation
-                let count_to_load = reader.occupied_len() & !1; // force even consumption
-                assert_eq!(count_to_load & 1, 0);
+                // dbg!(reader.occupied_len());
+
                 let planned_load = Pipeline::BUFLEN * resample_context.from_channels;
-
-                if count_to_load >= planned_load {
+                if reader.occupied_len() & !1 >= planned_load { // force even consumption
                     let count_to_load = planned_load; // coerce to controlled buffer size - maybe not necessary
                     let samples_iter = reader.pop_iter();
                     {
@@ -203,6 +197,7 @@ impl Pipeline {
                         }
                     }
                 }
+                // assert_eq!(reader.occupied_len(),  count_to_load - planned_load);
             }
 
             // dbg!(count_to_load, mono_samples.len());
@@ -267,9 +262,9 @@ impl Pipeline {
         };
 
         let mut ret: Vec<Vec<u8>> = Vec::new();
-        // for codeword in self.message_hash.keys() {
-        //     ret.push(codeword.clone());
-        // }
+        for codeword in self.message_hash.keys() {
+            ret.push(codeword.clone());
+        }
 
         Ok(ret)
     }
