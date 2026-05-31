@@ -445,7 +445,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
                     match writer.try_push(*sample) {
                         Ok(()) => {},
                         Err(_) => {
-                            dbg!("input_buf overrun - discarding samples");
+                            panic!("input_buf overrun - discarding samples");
                         }
                     }
                 }

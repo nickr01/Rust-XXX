@@ -81,24 +81,28 @@ impl Decoder {
             if !r.is_err() {
                 dbg!("ecc_decode_bitflip contributed");
             }
+        } else {
+            dbg!("primary ecc_decode_bp decode");
         }
         match r {
             Ok(codeword) => {
-                // dbg!("got past ecc");
+                dbg!("got past ecc");
                 // assert_eq!(modem.protocol, &proto_ft8::FT8);
                 // if unpack_ft8::unpack77(&codeword, &mut message.df.text) < 0 {
                 //     // dbg!("Bad unpack");
                 //     return None;
                 // }
                 if message.df.text.is_empty() {
+                    dbg!("Blank message :(");
                     None
                 } else {
+                    dbg!("Non-blank message");
                     message.codeword = codeword; // this is messy
                     Some(message)
                 }
             }
             Err(_) => {
-                // dbg!("Bad ECC");
+                dbg!("Bad ECC");
                 None
             }
         }

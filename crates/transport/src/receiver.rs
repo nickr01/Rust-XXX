@@ -88,7 +88,7 @@ impl Receiver {
             match correlator.find_freq_candidates(&detector.wf, &freq_bin_range) {
                 Some(mut candidates) => {
                     if candidates.len() > 0 {
-                        dbg!(candidates.len());
+                        // dbg!(candidates.len());
                         // dbg!(&candidates);
 
                         let mut modem: rustxxx::Modem = rustxxx::Modem::new(
