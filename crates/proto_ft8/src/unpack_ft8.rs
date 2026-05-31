@@ -1,6 +1,6 @@
 use crate::text;
 
-const MAX22: u32 = 4194304;
+const MAX22: u32 = 0x400000; // 4194304;
 const NTOKENS: u32 = 2063592;
 const MAXGRID4: u16 = 32400;
 
@@ -8,38 +8,60 @@ const MAGIC0: u32 = 2;
 const MAGIC1: u32 = 1002;
 const MAGIC2: u32 = 532443;
 
+#[derive(PartialEq, Debug, Clone)]
+pub struct CallId {
+    pub id: String,
+    special: bool,          
+}
 
-// n28 is a 28-bit integer, e.g. n28a or n28b, containing all the
-// call sign bits from a packed message.
-// this is all a bit upside - don't trust return values yet
-fn unpack_callsign(n28: u32, ip: u8, i3: u8) -> Option<String> {
-    // todo!("This will be borked");
-
-    let mut result = String::new();
-
-    // Check for special tokens DE, QRZ, CQ, CQ_nnn, CQ_aaaa
-    if n28 < NTOKENS {
-        if n28 <= MAGIC0 {
-            if n28 == 0 {
-                result.push_str("DE");
-            }
-            if n28 == 1 {
-                result.push_str("QRZ");
-            }
-            if n28 == 2 {
-                result.push_str("CQ");
-            }
-            return Some(result);
+impl CallId {
+    pub fn new() -> CallId {
+        CallId {
+            id: String::new(),
+            special: false,          
         }
-        if n28 <= MAGIC1 {
+    }
+}
+
+struct Ft8Msg {
+    pub call_to: CallId,
+    pub call_from: CallId,
+    pub extra: String,
+}
+
+impl Ft8Msg {
+    pub fn new() -> Ft8Msg {
+        Ft8Msg{
+            call_to: CallId::new(),
+            call_from: CallId::new(),
+            extra: String::new(),
+        }
+    }
+}
+
+fn unpack_special(c28: u32) -> Option<CallId> {
+    if c28 < NTOKENS {
+        let mut result = CallId::new();
+
+        // Check for special ids DE, QRZ, CQ, CQ_nnn, CQ_aaaa
+        result.special = true;
+        if c28 <= MAGIC0 {
+            if c28 == 0 {
+                result.id.push_str("DE");
+            }
+            if c28 == 1 {
+                result.id.push_str("QRZ");
+            }
+            if c28 == 2 {
+                result.id.push_str("CQ");
+            }
+        } else if c28 <= MAGIC1 {
             // CQ_nnn with 3 digits
-            result.push_str("CQ ");
-            text::int_to_dd(&mut result, n28 as i32 - 3, false);
-            return Some(result); // Success
-        }
-        if n28 <= MAGIC2 {
+            result.id.push_str("CQ ");
+            text::int_to_dd(&mut result.id, c28 as i32 - 3, false);
+        } else if c28 <= MAGIC2 {
             // CQ_aaaa with 4 alphanumeric symbols
-            let mut n = n28 - 1003;
+            let mut n = c28 - 1003;
             let mut aaaa = String::new();
 
             for _i in (0..4).rev() {
@@ -47,19 +69,36 @@ fn unpack_callsign(n28: u32, ip: u8, i3: u8) -> Option<String> {
                 n /= 27;
             }
 
-            result.push_str("CQ ");
-            result.push_str(aaaa.chars().rev().collect::<String>().trim());
-            return Some(result); // Success
+            result.id.push_str("CQ ");
+            result.id.push_str(aaaa.chars().rev().collect::<String>().trim());
+        } else {
+            // todo!("unspecified in the WSJT-X code");
+            return None;
         }
-        // ? TODO: unspecified in the WSJT-X code
-        todo!();
+        return Some(result);
+    } else {
+        None
     }
+}
 
-    let n28 = n28 - NTOKENS;
+// n28 is a 28-bit integer, e.g. n28a or n28b, containing all the
+// call sign bits from a packed message.
+// this is all a bit upside - don't trust return values yet
+// orig was return false for success
+fn unpack_callsign(
+    c28: u32, 
+    ip: u8, 
+    i3: u8
+) -> Option<CallId> {
+    let mut result = CallId::new();
+
+    assert!(c28 >= NTOKENS);
+
+    let n28 = c28 - NTOKENS;
     if n28 < MAX22 {
         // This is a 22-bit hash of a result
         // TODO: implement
-        result.push_str("<...>");
+        result.id.push_str("<...>");
         // todo!();
         // result[0] = '<';
         // int_to_dd(result + 1, n28, 7, false);
@@ -86,37 +125,20 @@ fn unpack_callsign(n28: u32, ip: u8, i3: u8) -> Option<String> {
     callsign.push(text::charn((n % 37) as u8, 1));
 
     // Skip trailing and leading whitespace in case of a short callsign
-    result.push_str(callsign.chars().rev().collect::<String>().trim());
+    result.id.push_str(callsign.chars().rev().collect::<String>().trim());
 
-    if result.is_empty() {
-        return None;
-    }
-
-    // Check if we should append /R or /P suffix
-    if ip != 0 {
-        if i3 == 1 {
-            result.push_str("/R");
-        } else if i3 == 2 {
-            result.push_str("/P");
+    if result.id.is_empty() {
+        return None
+    } else {
+        // Check if we should append /R or /P suffix
+        if ip != 0 {
+            if i3 == 1 {
+                result.id.push_str("/R");
+            } else if i3 == 2 {
+                result.id.push_str("/P");
+            }
         }
-    }
-
-    Some(result)
-}
-
-struct Ft8Msg {
-    pub call_to: String,
-    pub call_de: String,
-    pub extra: String,
-}
-
-impl Ft8Msg {
-    pub fn new() -> Ft8Msg {
-        Ft8Msg{
-            call_to: String::new(),
-            call_de: String::new(),
-            extra: String::new(),
-        }
+        Some(result)
     }
 }
 
@@ -145,6 +167,14 @@ fn unpack_type1(
     igrid4 |= (a77[8] as u16) << 2;
     igrid4 |= (a77[9] as u16) >> 6;
 
+    match unpack_special(n28a >> 1) {
+        Some(call) => {
+            ret.call_to = call;
+            return Some(ret);
+        }
+        None => {}
+    }
+
     match unpack_callsign(n28a >> 1, n28a as u8 & 0x01, i3) {
         Some(call) => {
             ret.call_to = call;
@@ -153,9 +183,10 @@ fn unpack_type1(
         None => {},
     }
 
+    // expect no special as call_from
     match unpack_callsign(n28b >> 1, n28b as u8 & 0x01, i3) {
         Some(call) => {
-            ret.call_de = call;
+            ret.call_from = call;
             return Some(ret);
         }
         None => {}
@@ -317,7 +348,7 @@ fn unpack_nonstandard(
     //save_hash_call(c11_trimmed);
 
     if icq == 0 {
-        ret.call_to.push_str(call_1.as_str());
+        ret.call_to.id.push_str(call_1.as_str());
         if nrpt == 1 {
             ret.extra.push_str("RRR");
         } else if nrpt == 2 {
@@ -326,10 +357,10 @@ fn unpack_nonstandard(
             ret.extra.push_str("73");
         }
     } else {
-        ret.call_to.push_str("CQ");
+        ret.call_to.id.push_str("CQ");
     }
 
-    ret.call_de.push_str(call_2.as_str());
+    ret.call_from.id.push_str(call_2.as_str());
 
     Some(ret)
 }
@@ -397,11 +428,11 @@ pub fn unpack77(
     // assert_eq!(a77.len(), FT8.ldpc_k_bytes());
     let mut message = String::new();
 
-    let mut ret = Ft8Msg::new();
+    let mut ft8_msg = Ft8Msg::new();
 
     match unpack77_fields(a77) {
         Some(fields) => {
-            ret = fields;
+            ft8_msg = fields;
         },
         None => {},
     }
@@ -410,16 +441,16 @@ pub fn unpack77(
     // }
 
     // int msg_sz = strlen(call_to) + strlen(call_de) + strlen(extra) + 2;
-    if !ret.call_to.is_empty() {
-        message.push_str(&ret.call_to);
+    if !ft8_msg.call_to.id.is_empty() {
+        message.push_str(&ft8_msg.call_to.id);
         message.push(' ');
     }
-    if !ret.call_de.is_empty() {
-        message.push_str(&ret.call_de);
+    if !ft8_msg.call_from.id.is_empty() {
+        message.push_str(&ft8_msg.call_from.id);
         message.push(' ');
     }
-    if !ret.extra.is_empty() {
-        message.push_str(&ret.extra);
+    if !ft8_msg.extra.is_empty() {
+        message.push_str(&ft8_msg.extra);
     }
 
     Some(message)
