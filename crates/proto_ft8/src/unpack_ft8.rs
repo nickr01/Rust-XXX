@@ -1,12 +1,46 @@
 use crate::text;
 
-const MAX22: u32 = 0x400000; // 4194304;
-const NTOKENS: u32 = 2063592;
+const C28_DE: u32 = 0;
+const C28_QRZ: u32 = 1;
+const C28_CQ: u32 = 2;
+
+const C28_CQ_DDD: u32 = 3;
+const C28_CQ_DDD_BLOCK: u32 = 1002-3+1;
+const C28_CQ_DDD_UNDEF:u32 = C28_CQ_DDD + C28_CQ_DDD_BLOCK;
+const C28_CQ_DDD_UNDEF_BLOCK: u32 = 1004 - C28_CQ_DDD_UNDEF;
+
+const C28_CQ_A: u32 = C28_CQ_DDD + C28_CQ_DDD_BLOCK + C28_CQ_DDD_UNDEF_BLOCK;
+const C28_CQ_A_BLOCK: u32 = 1029-1004+1;
+const C28_CQ_A_UNDEF: u32 = C28_CQ_A + C28_CQ_A_BLOCK;
+const C28_CQ_A_UNDEF_BLOCK: u32 = 1031 - C28_CQ_A_UNDEF;
+
+const C28_CQ_AA: u32 = C28_CQ_A_UNDEF + C28_CQ_A_UNDEF_BLOCK;
+const C28_CQ_AA_BLOCK: u32 = 1731-1031+1;
+const C28_CQ_AA_UNDEF: u32 = C28_CQ_AA + C28_CQ_AA_BLOCK;
+const C28_CQ_AA_UNDEF_BLOCK: u32 = 1760 - C28_CQ_AA_UNDEF;
+
+const C28_CQ_AAA: u32 = C28_CQ_AA_UNDEF + C28_CQ_AA_UNDEF_BLOCK;
+const C28_CQ_AAA_BLOCK: u32 = 20685 - 1760 + 1;
+const C28_CQ_AAA_UNDEF: u32 = C28_CQ_AAA + C28_CQ_AAA_BLOCK;
+const C28_CQ_AAA_UNDEF_BLOCK: u32 = 21443 - C28_CQ_AAA_UNDEF;
+
+const C28_CQ_AAAA: u32 = C28_CQ_AAA_UNDEF + C28_CQ_AAA_UNDEF_BLOCK;
+const C28_CQ_AAAA_BLOCK: u32 = 532443 - 21443 + 1;
+const C28_CQ_AAAA_UNDEF: u32 = C28_CQ_AAAA + C28_CQ_AAAA_BLOCK;
+const C28_CQ_AAAA_UNDEF_BLOCK: u32 = 2063592 - C28_CQ_AAAA_UNDEF;
+
+const C28_HASH_CALL: u32 = C28_CQ_AAAA_UNDEF + C28_CQ_AAAA_UNDEF_BLOCK;
+const C28_HASH_CALL_BLOCK: u32 = 0x400000; // 4194304;
+const C28_HASH_CALL_UNDEF: u32 = C28_HASH_CALL + C28_HASH_CALL_BLOCK;
+const C28_HASH_CALL_UNDEF_BLOCK: u32 = 6257896 - C28_HASH_CALL_UNDEF;
+
+const C28_STD_CALLS: u32 = C28_HASH_CALL_UNDEF + C28_HASH_CALL_UNDEF_BLOCK; // 6257896;
+
 const MAXGRID4: u16 = 32400;
 
-const MAGIC0: u32 = 2;
-const MAGIC1: u32 = 1002;
-const MAGIC2: u32 = 532443;
+const MAGIC0: u32 = 2 + 1;
+const MAGIC1: u32 = 1002 + 1;
+const MAGIC2: u32 = 532443 + 1;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct CallId {
@@ -23,7 +57,7 @@ impl CallId {
     }
 }
 
-struct Ft8Msg {
+pub struct Ft8Msg {
     pub call_to: CallId,
     pub call_from: CallId,
     pub extra: String,
@@ -37,31 +71,119 @@ impl Ft8Msg {
             extra: String::new(),
         }
     }
+
+    pub fn to_string(&self) -> Option<String> {
+        let mut stg = String::new();
+        if !self.call_to.id.is_empty() {
+            stg.push_str(&self.call_to.id);
+            stg.push(' ');
+        }
+        if !self.call_from.id.is_empty() {
+            stg.push_str(&self.call_from.id);
+            stg.push(' ');
+        }
+        if !self.extra.is_empty() {
+            stg.push_str(&self.extra);
+        }
+        if stg.is_empty() {
+            dbg!("FT8 unpacked to empty string");
+            None
+        } else {
+            Some(stg)
+        }
+    }
 }
 
-fn unpack_special(c28: u32) -> Option<CallId> {
-    if c28 < NTOKENS {
-        let mut result = CallId::new();
+// n28 is a 28-bit integer, e.g. n28a or n28b, containing all the
+// call sign bits from a packed message.
+fn unpack_callsign(
+    c28: u32, 
+    ip: u8, 
+    i3: u8
+) -> Option<CallId> {
+    let mut result = CallId::new();
 
-        // Check for special ids DE, QRZ, CQ, CQ_nnn, CQ_aaaa
-        result.special = true;
-        if c28 <= MAGIC0 {
-            if c28 == 0 {
-                result.id.push_str("DE");
-            }
-            if c28 == 1 {
-                result.id.push_str("QRZ");
-            }
-            if c28 == 2 {
-                result.id.push_str("CQ");
-            }
-        } else if c28 <= MAGIC1 {
+    match c28 {
+        C28_DE => {
+            result.id.push_str("DE");
+            result.special = true;
+        },
+        C28_QRZ => {
+            result.id.push_str("QRZ");
+            result.special = true;
+        },
+        C28_CQ => {
+            result.id.push_str("CQ");
+            result.special = true;
+        },
+        C28_CQ_DDD..C28_CQ_DDD_UNDEF => {
             // CQ_nnn with 3 digits
             result.id.push_str("CQ ");
             text::int_to_dd(&mut result.id, c28 as i32 - 3, false);
-        } else if c28 <= MAGIC2 {
+            result.special = true;
+        },
+        C28_CQ_DDD_UNDEF..C28_CQ_A => {
+            dbg!("undefined cq_ddd");
+        },
+        C28_CQ_A..C28_CQ_A_UNDEF => {
             // CQ_aaaa with 4 alphanumeric symbols
-            let mut n = c28 - 1003;
+            let mut n = c28 - (C28_CQ_A - 1); // - 1003;
+            let mut aaaa = String::new();
+
+            for _i in (0..1).rev() {
+                aaaa.push(text::charn((n % 27) as u8, 4));
+                n /= 27;
+            }
+
+            result.id.push_str("CQ ");
+            result.id.push_str(aaaa.chars().rev().collect::<String>().trim());
+            result.special = true;
+        },
+        C28_CQ_A_UNDEF..C28_CQ_AA => {
+            dbg!("undefined cq_a");
+        },
+        C28_CQ_AA..C28_CQ_AA_UNDEF => {
+            // CQ_aaaa with 4 alphanumeric symbols
+            let mut n = c28 - (C28_CQ_AA - 1); // - 1003;
+            let mut aaaa = String::new();
+
+            for _i in (0..2).rev() {
+                aaaa.push(text::charn((n % 27) as u8, 4));
+                n /= 27;
+            }
+
+            result.id.push_str("CQ ");
+            result.id.push_str(aaaa.chars().rev().collect::<String>().trim());
+            result.special = true;
+
+        },
+        C28_CQ_AA_UNDEF..C28_CQ_AAA => {
+            dbg!("undefined cq_aa");
+        },
+
+        C28_CQ_AAA..C28_CQ_AAA_UNDEF => {
+            // CQ_aaaa with 4 alphanumeric symbols
+            let mut n = c28 - (C28_CQ_AAA - 1); // - 1003;
+            let mut aaaa = String::new();
+
+            for _i in (0..3).rev() {
+                aaaa.push(text::charn((n % 27) as u8, 4));
+                n /= 27;
+            }
+
+            result.id.push_str("CQ ");
+            result.id.push_str(aaaa.chars().rev().collect::<String>().trim());
+            result.special = true;
+
+        },
+
+        C28_CQ_AAA_UNDEF..C28_CQ_AAAA => {
+            dbg!("undefined cq_aaa");
+        },
+
+        C28_CQ_AAAA..C28_CQ_AAAA_UNDEF => {
+            // CQ_aaaa with 4 alphanumeric symbols
+            let mut n = c28 - (C28_CQ_AAAA - 1); // - 1003;
             let mut aaaa = String::new();
 
             for _i in (0..4).rev() {
@@ -71,73 +193,62 @@ fn unpack_special(c28: u32) -> Option<CallId> {
 
             result.id.push_str("CQ ");
             result.id.push_str(aaaa.chars().rev().collect::<String>().trim());
-        } else {
-            // todo!("unspecified in the WSJT-X code");
-            return None;
-        }
-        return Some(result);
-    } else {
-        None
-    }
-}
+            result.special = true;
 
-// n28 is a 28-bit integer, e.g. n28a or n28b, containing all the
-// call sign bits from a packed message.
-// this is all a bit upside - don't trust return values yet
-// orig was return false for success
-fn unpack_callsign(
-    c28: u32, 
-    ip: u8, 
-    i3: u8
-) -> Option<CallId> {
-    let mut result = CallId::new();
+        },
 
-    assert!(c28 >= NTOKENS);
+        C28_CQ_AAAA_UNDEF..C28_HASH_CALL => {
+            dbg!("undefined cq_a");
+        },
 
-    let n28 = c28 - NTOKENS;
-    if n28 < MAX22 {
-        // This is a 22-bit hash of a result
-        // TODO: implement
-        result.id.push_str("<...>");
-        // todo!();
-        // result[0] = '<';
-        // int_to_dd(result + 1, n28, 7, false);
-        // result[8] = '>';
-        // result[9] = '\0';
-        return Some(result);
-    }
+        C28_HASH_CALL..C28_HASH_CALL_UNDEF => {
+            // This is a 22-bit hash of a result
+            // TODO: implement
+            result.id.push_str("<...>");
+            // todo!();
+            // result[0] = '<';
+            // int_to_dd(result + 1, n28, 7, false);
+            // result[8] = '>';
+            // result[9] = '\0';
+            return Some(result);
+        },
 
-    // Standard callsign
-    let mut n = n28 - MAX22;
+        C28_STD_CALLS..=u32::MAX => {
+            // Standard callsign
+            let mut n = c28 - C28_STD_CALLS;
 
-    let mut callsign = String::new();
+            let mut callsign = String::new();
 
-    callsign.push(text::charn((n % 27) as u8, 4));
-    n /= 27;
-    callsign.push(text::charn((n % 27) as u8, 4));
-    n /= 27;
-    callsign.push(text::charn((n % 27) as u8, 4));
-    n /= 27;
-    callsign.push(text::charn((n % 10) as u8, 3));
-    n /= 10;
-    callsign.push(text::charn((n % 36) as u8, 2));
-    n /= 36;
-    callsign.push(text::charn((n % 37) as u8, 1));
+            callsign.push(text::charn((n % 27) as u8, 4));
+            n /= 27;
+            callsign.push(text::charn((n % 27) as u8, 4));
+            n /= 27;
+            callsign.push(text::charn((n % 27) as u8, 4));
+            n /= 27;
+            callsign.push(text::charn((n % 10) as u8, 3));
+            n /= 10;
+            callsign.push(text::charn((n % 36) as u8, 2));
+            n /= 36;
+            callsign.push(text::charn((n % 37) as u8, 1));
 
-    // Skip trailing and leading whitespace in case of a short callsign
-    result.id.push_str(callsign.chars().rev().collect::<String>().trim());
+            // Skip trailing and leading whitespace in case of a short callsign
+            result.id.push_str(callsign.chars().rev().collect::<String>().trim());
 
-    if result.id.is_empty() {
-        return None
-    } else {
-        // Check if we should append /R or /P suffix
-        if ip != 0 {
-            if i3 == 1 {
-                result.id.push_str("/R");
-            } else if i3 == 2 {
-                result.id.push_str("/P");
+            if !result.id.is_empty() {
+                // Check if should append /R or /P suffix
+                if ip != 0 {
+                    if i3 == 1 {
+                        result.id.push_str("/R");
+                    } else if i3 == 2 {
+                        result.id.push_str("/P");
+                    }
+                }
             }
         }
+    }
+    if result.id.is_empty() {
+        None
+    } else {
         Some(result)
     }
 }
@@ -166,14 +277,6 @@ fn unpack_type1(
     let mut igrid4 = ((a77[7] & 0x1F) as u16) << 10;
     igrid4 |= (a77[8] as u16) << 2;
     igrid4 |= (a77[9] as u16) >> 6;
-
-    match unpack_special(n28a >> 1) {
-        Some(call) => {
-            ret.call_to = call;
-            return Some(ret);
-        }
-        None => {}
-    }
 
     match unpack_callsign(n28a >> 1, n28a as u8 & 0x01, i3) {
         Some(call) => {
@@ -365,9 +468,9 @@ fn unpack_nonstandard(
     Some(ret)
 }
 
-fn unpack77_fields(
-    a77: &[u8], 
-) -> Option<Ft8Msg> {
+pub fn ft8_unpack_to_msg(a77: &[u8]) -> Option<Ft8Msg> {
+    // assert_eq!(a77.len(), FT8.ldpc_k_bytes());
+
     // Extract i3 (bits 74..76)
     let i3 = (a77[9] >> 3) & 0x07;
 
@@ -422,36 +525,11 @@ fn unpack77_fields(
     None // -1
 }
 
-pub fn unpack77(
-    a77: &[u8], 
-) -> Option<String> {
-    // assert_eq!(a77.len(), FT8.ldpc_k_bytes());
-    let mut message = String::new();
-
-    let mut ft8_msg = Ft8Msg::new();
-
-    match unpack77_fields(a77) {
-        Some(fields) => {
-            ft8_msg = fields;
+pub fn ft8_unpack_to_string(a77: &[u8]) -> Option<String> {
+    match ft8_unpack_to_msg(a77) {
+        Some(ft8_msg) => {
+            ft8_msg.to_string()
         },
-        None => {},
+        None => { None },
     }
-    // if rc < 0 {
-    //     return None;
-    // }
-
-    // int msg_sz = strlen(call_to) + strlen(call_de) + strlen(extra) + 2;
-    if !ft8_msg.call_to.id.is_empty() {
-        message.push_str(&ft8_msg.call_to.id);
-        message.push(' ');
-    }
-    if !ft8_msg.call_from.id.is_empty() {
-        message.push_str(&ft8_msg.call_from.id);
-        message.push(' ');
-    }
-    if !ft8_msg.extra.is_empty() {
-        message.push_str(&ft8_msg.extra);
-    }
-
-    Some(message)
 }

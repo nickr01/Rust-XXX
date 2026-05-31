@@ -560,7 +560,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
 
             let mut ft8_messages: Vec<String> = Vec::new();
             for codeword in codewords {
-                match proto_ft8::unpack_ft8::unpack77(&codeword) {
+                match proto_ft8::unpack_ft8::ft8_unpack_to_string(&codeword) {
                     Some(msg) => {
                         dbg!(&msg);
                         ft8_messages.push(msg);
