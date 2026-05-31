@@ -44,7 +44,7 @@ pub type DetectorInputBuffs = Vec<Vec<f32>>;
 impl Detector {
     pub fn new(
         runtime: rustxxx::Runtime, 
-        // protocol: constant::Protocol,
+        protocol: rustxxx::Protocol,
 
         // real_fft: &mut realfft::RealFftPlanner<f32>,
         nfft: RepeatCount,
@@ -55,6 +55,7 @@ impl Detector {
         );
 
         let wf = waterfall::Waterfall::new(
+            protocol.total_symbols_nn().0 * runtime.rx_symbol_osr().0, 
             nfft.0/(4 * runtime.rx_freq_osr().0), // the sample rate is up because of osr but useful bin proportion is less
             runtime.rx_symbol_osr(), 
             runtime.rx_freq_osr(),

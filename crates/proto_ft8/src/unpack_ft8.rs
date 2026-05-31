@@ -4,12 +4,22 @@ const MAX22: u32 = 4194304;
 const NTOKENS: u32 = 2063592;
 const MAXGRID4: u16 = 32400;
 
+const MAGIC0: u32 = 2;
+const MAGIC1: u32 = 1002;
+const MAGIC2: u32 = 532443;
+
+
 // n28 is a 28-bit integer, e.g. n28a or n28b, containing all the
 // call sign bits from a packed message.
-fn unpack_callsign(n28: u32, ip: u8, i3: u8, result: &mut String) -> bool {
+// this is all a bit upside - don't trust return values yet
+fn unpack_callsign(n28: u32, ip: u8, i3: u8) -> Option<String> {
+    // todo!("This will be borked");
+
+    let mut result = String::new();
+
     // Check for special tokens DE, QRZ, CQ, CQ_nnn, CQ_aaaa
     if n28 < NTOKENS {
-        if n28 <= 2 {
+        if n28 <= MAGIC0 {
             if n28 == 0 {
                 result.push_str("DE");
             }
@@ -19,15 +29,15 @@ fn unpack_callsign(n28: u32, ip: u8, i3: u8, result: &mut String) -> bool {
             if n28 == 2 {
                 result.push_str("CQ");
             }
-            return false;
+            return Some(result);
         }
-        if n28 <= 1002 {
+        if n28 <= MAGIC1 {
             // CQ_nnn with 3 digits
             result.push_str("CQ ");
-            text::int_to_dd(result, n28 as i32 - 3, false);
-            return false; // Success
+            text::int_to_dd(&mut result, n28 as i32 - 3, false);
+            return Some(result); // Success
         }
-        if n28 <= 532443 {
+        if n28 <= MAGIC2 {
             // CQ_aaaa with 4 alphanumeric symbols
             let mut n = n28 - 1003;
             let mut aaaa = String::new();
@@ -39,10 +49,10 @@ fn unpack_callsign(n28: u32, ip: u8, i3: u8, result: &mut String) -> bool {
 
             result.push_str("CQ ");
             result.push_str(aaaa.chars().rev().collect::<String>().trim());
-            return false; // Success
+            return Some(result); // Success
         }
         // ? TODO: unspecified in the WSJT-X code
-        return true;
+        todo!();
     }
 
     let n28 = n28 - NTOKENS;
@@ -50,11 +60,12 @@ fn unpack_callsign(n28: u32, ip: u8, i3: u8, result: &mut String) -> bool {
         // This is a 22-bit hash of a result
         // TODO: implement
         result.push_str("<...>");
+        // todo!();
         // result[0] = '<';
         // int_to_dd(result + 1, n28, 7, false);
         // result[8] = '>';
         // result[9] = '\0';
-        return false;
+        return Some(result);
     }
 
     // Standard callsign
@@ -78,7 +89,7 @@ fn unpack_callsign(n28: u32, ip: u8, i3: u8, result: &mut String) -> bool {
     result.push_str(callsign.chars().rev().collect::<String>().trim());
 
     if result.is_empty() {
-        return true;
+        return None;
     }
 
     // Check if we should append /R or /P suffix
@@ -90,16 +101,33 @@ fn unpack_callsign(n28: u32, ip: u8, i3: u8, result: &mut String) -> bool {
         }
     }
 
-    false
+    Some(result)
+}
+
+struct Ft8Msg {
+    pub call_to: String,
+    pub call_de: String,
+    pub extra: String,
+}
+
+impl Ft8Msg {
+    pub fn new() -> Ft8Msg {
+        Ft8Msg{
+            call_to: String::new(),
+            call_de: String::new(),
+            extra: String::new(),
+        }
+    }
 }
 
 fn unpack_type1(
     a77: &[u8],
-    i3: u8,
-    call_to: &mut String,
-    call_de: &mut String,
-    extra: &mut String,
-) -> i32 {
+    i3: u8
+) -> Option<Ft8Msg> {
+    // todo!("This will be borked");
+
+    let mut ret = Ft8Msg::new();
+    
     // Extract packed fields
     let mut n28a = (a77[0] as u32) << 21;
     n28a |= (a77[1] as u32) << 13;
@@ -117,20 +145,27 @@ fn unpack_type1(
     igrid4 |= (a77[8] as u16) << 2;
     igrid4 |= (a77[9] as u16) >> 6;
 
-    // Unpack both callsigns
-    if unpack_callsign(n28a >> 1, n28a as u8 & 0x01, i3, call_to) {
-        return -1;
+    match unpack_callsign(n28a >> 1, n28a as u8 & 0x01, i3) {
+        Some(call) => {
+            ret.call_to = call;
+            return Some(ret);
+        }
+        None => {},
     }
 
-    if unpack_callsign(n28b >> 1, n28b as u8 & 0x01, i3, call_de) {
-        return -2;
+    match unpack_callsign(n28b >> 1, n28b as u8 & 0x01, i3) {
+        Some(call) => {
+            ret.call_de = call;
+            return Some(ret);
+        }
+        None => {}
     }
 
     if igrid4 <= MAXGRID4 {
         // Extract 4 symbol grid locator
         if ir > 0 {
             // In case of ir=1 add an "R" before grid
-            extra.push_str("R ");
+            ret.extra.push_str("R ");
         }
 
         let mut n = igrid4;
@@ -144,34 +179,35 @@ fn unpack_type1(
         n /= 18;
         dst.push((b'A' + (n % 18) as u8) as char);
 
-        extra.push_str(dst.chars().rev().collect::<String>().trim());
+        ret.extra.push_str(dst.chars().rev().collect::<String>().trim());
     } else {
         // Extract report
         let irpt = igrid4 - MAXGRID4;
 
         // Check special cases first (irpt > 0 always)
         match irpt {
-            1 => extra.push_str(""),
-            2 => extra.push_str("RRR"),
-            3 => extra.push_str("RR73"),
-            4 => extra.push_str("73"),
+            1 => ret.extra.push_str(""),
+            2 => ret.extra.push_str("RRR"),
+            3 => ret.extra.push_str("RR73"),
+            4 => ret.extra.push_str("73"),
             _ => {
                 // Extract signal report as a two digit number with a + or - sign
                 if ir > 0 {
-                    extra.push('R')
+                    ret.extra.push('R')
                 }
-                text::int_to_dd(extra, irpt as i32 - 35, true);
+                text::int_to_dd(&mut ret.extra, irpt as i32 - 35, true);
             }
         }
     }
-    0 // Success
+    return Some(ret);
 }
 
 fn unpack_text(
-    a71: &[u8], 
-    text: &mut String
-) -> i32 {
-    // TODO: test
+    a71: &[u8]
+) -> Option<String> {
+    let mut text = String::new();
+    // todo!("test");
+
     let mut b71 = [0u8; 9];
 
     // Shift 71 bits right by 1 bit, so that it's right-aligned in the byte array
@@ -195,13 +231,14 @@ fn unpack_text(
     }
 
     text.push_str(c14.chars().rev().collect::<String>().trim());
-    0 // Success
+    
+    Some(text) // Success
 }
 
 fn unpack_telemetry(
     a71: &[u8], 
-    telemetry: &mut String
-) -> i32 {
+) -> Option<String> {
+    let mut telemetry = String::new();
     let mut b71 = [0u8; 9];
 
     // Shift bits in a71 right by 1 bit
@@ -229,17 +266,16 @@ fn unpack_telemetry(
         telemetry.push(c2);
     }
 
-    0
+    Some(telemetry)
 }
 
 //none standard for wsjt-x 2.0
 //by KD8CEC
 fn unpack_nonstandard(
     a77: &[u8], 
-    call_to: &mut String,
-    call_de: &mut String,
-    extra: &mut String,
-) -> i32 {
+) -> Option<Ft8Msg> {
+    let mut ret = Ft8Msg::new();
+
     //let mut n12 = (a77[0] << 4) as u32; //11 ~4  : 8
     //n12 |= (a77[1] as u32) >> 4; //3~0 : 12
 
@@ -281,29 +317,26 @@ fn unpack_nonstandard(
     //save_hash_call(c11_trimmed);
 
     if icq == 0 {
-        call_to.push_str(call_1.as_str());
+        ret.call_to.push_str(call_1.as_str());
         if nrpt == 1 {
-            extra.push_str("RRR");
+            ret.extra.push_str("RRR");
         } else if nrpt == 2 {
-            extra.push_str("RR73");
+            ret.extra.push_str("RR73");
         } else if nrpt == 3 {
-            extra.push_str("73");
+            ret.extra.push_str("73");
         }
     } else {
-        call_to.push_str("CQ");
+        ret.call_to.push_str("CQ");
     }
 
-    call_de.push_str(call_2.as_str());
+    ret.call_de.push_str(call_2.as_str());
 
-    0
+    Some(ret)
 }
 
 fn unpack77_fields(
     a77: &[u8], 
-    call_to: &mut String,
-    call_de: &mut String,
-    extra: &mut String,
-) -> i32 {
+) -> Option<Ft8Msg> {
     // Extract i3 (bits 74..76)
     let i3 = (a77[9] >> 3) & 0x07;
 
@@ -312,50 +345,82 @@ fn unpack77_fields(
         let n3 = ((a77[8] << 2) & 0x04) | ((a77[9] >> 6) & 0x03);
 
         if n3 == 0 {
-            // 0.0  Free text
-            return unpack_text(a77, extra);
+            match unpack_text(a77) {
+                Some(field) => {
+                    let mut ret = Ft8Msg::new();
+                    ret.extra = field;
+                    return Some(ret);
+                },
+                None => {},
+            };
         } else if n3 == 5 {
-            return unpack_telemetry(a77, extra);
+            match unpack_telemetry(a77) {
+                Some(field) => {
+                    let mut ret = Ft8Msg::new();
+                    ret.extra = field;
+                    return Some(ret);
+                },
+                None => {},
+            };
         }
     } else if i3 == 1 || i3 == 2 {
         // Type 1 (standard message) or Type 2 ("/P" form for EU VHF contest)
-        return unpack_type1(a77, i3, call_to, call_de, extra);
+        match unpack_type1(a77, i3) {
+            Some(fields) => {
+                return Some(fields);
+            },
+            None => {}
+        }
     } else if i3 == 4 {
         //     // Type 4: Nonstandard calls, e.g. <WA9XYZ> PJ4/KA1ABC RR73
         //     // One hashed call or "CQ"; one compound or nonstandard call with up
         //     // to 11 characters; and (if not "CQ") an optional RRR, RR73, or 73.
-        return unpack_nonstandard(a77, call_to, call_de, extra);
+        match unpack_type1(a77, i3) {
+            Some(fields) => {
+                return Some(fields);
+            },
+            None => {}
+        }
+        match unpack_nonstandard(a77) {
+            Some(fields) => {
+                return Some(fields);
+            },
+            None => {}
+        }
     }
-    -1
+    None // -1
 }
 
 pub fn unpack77(
     a77: &[u8], 
-    message: &mut String
-) -> i32 {
+) -> Option<String> {
     // assert_eq!(a77.len(), FT8.ldpc_k_bytes());
+    let mut message = String::new();
 
-    let mut call_to = String::new();
-    let mut call_de = String::new();
-    let mut extra = String::new();
+    let mut ret = Ft8Msg::new();
 
-    let rc = unpack77_fields(a77, &mut call_to, &mut call_de, &mut extra);
-    if rc < 0 {
-        return rc;
+    match unpack77_fields(a77) {
+        Some(fields) => {
+            ret = fields;
+        },
+        None => {},
     }
+    // if rc < 0 {
+    //     return None;
+    // }
 
     // int msg_sz = strlen(call_to) + strlen(call_de) + strlen(extra) + 2;
-    if !call_to.is_empty() {
-        message.push_str(&call_to);
+    if !ret.call_to.is_empty() {
+        message.push_str(&ret.call_to);
         message.push(' ');
     }
-    if !call_de.is_empty() {
-        message.push_str(&call_de);
+    if !ret.call_de.is_empty() {
+        message.push_str(&ret.call_de);
         message.push(' ');
     }
-    if !extra.is_empty() {
-        message.push_str(&extra);
+    if !ret.extra.is_empty() {
+        message.push_str(&ret.extra);
     }
 
-    0
+    Some(message)
 }

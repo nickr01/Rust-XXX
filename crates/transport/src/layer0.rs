@@ -176,7 +176,7 @@ impl rustxxx::Modem {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // use super::*;
 
     // Https://docs.rs/jack/latest/jack/
 

@@ -89,7 +89,7 @@ impl Correlator {
                 let sync_symbol_index = (sync_block_index + costas_index) * wf.time_osr.0;
 
                 let time_index = rustxxx::TimeIndex(sync_symbol_index); 
-                if time_index.0 > wf.time_bins() { // } - wf.time_osr.0 {
+                if time_index.0 > wf.time_bins_stored() { // } - wf.time_osr.0 {
                     dbg!("run out of lines", time_index.0);
                     continue;
                 }

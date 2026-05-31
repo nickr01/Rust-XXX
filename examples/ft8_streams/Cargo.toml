@@ -7,6 +7,7 @@ edition.workspace = true
 default = ["enable_tx", "enable_rx"]
 enable_rx = []
 enable_tx = []
+audio_pass_test = []
 
 [dependencies]
 wav_io.workspace = true
@@ -35,3 +36,5 @@ audioadapter-buffers.workspace = true
 audioadapter.workspace = true
 transport.workspace = true
 proto_ft8.workspace = true
+minifb.workspace = true
+lazy_static = "1.5.0"

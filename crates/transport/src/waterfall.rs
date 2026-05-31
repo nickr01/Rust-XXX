@@ -1,6 +1,4 @@
 use crate::rustxxx;
-use crate::debug;
-// use crate::rx_streamed;
 
 #[derive(Debug)]
 pub struct FreqBinRange {
@@ -70,6 +68,10 @@ impl WaterfallLine {
 type WaterFallLines = Box<circular_buffer::CircularBuffer::<{rustxxx::WATERFALL_BUF_SIZE}, WaterfallLine>>;
 pub struct Waterfall {
     pub load_base: u32,
+
+    pub time_bins: usize,
+    pub symbol_pad: usize, // is extra loaded symbols in wflines
+
     pub freq_bins: usize,
 
     pub time_osr: rustxxx::OverSampleMultiplier,   // number of time subdivisions
@@ -81,6 +83,7 @@ pub struct Waterfall {
 
 impl Waterfall {
     pub fn new(
+        time_bins: usize,
         freq_bins: usize,
         time_osr: rustxxx::OverSampleMultiplier,
         freq_osr: rustxxx::OverSampleMultiplier,
@@ -90,6 +93,10 @@ impl Waterfall {
 
         Waterfall {
             load_base: 0,
+
+            time_bins,
+            symbol_pad: 1,
+
             freq_bins,
 
             time_osr,
@@ -102,6 +109,10 @@ impl Waterfall {
 
     pub fn line(&self, wfl_num: usize) -> &WaterfallLine {
         &self.wflines[wfl_num]
+    }
+
+    pub fn wflines(&self) -> &WaterFallLines {
+        &self.wflines
     }
 
     pub fn _line_as_mut(&mut self, wfl_num: usize) -> &mut WaterfallLine {
@@ -118,15 +129,31 @@ impl Waterfall {
     }
 
     pub fn time_base(&self) -> u32 {
-        self.load_base-self.time_bins() as u32
+        self.load_base-self.time_bins_stored() as u32
     }
 
     pub fn time_bins(&self) -> usize {
+        self.time_bins
+    }
+    
+    pub fn symbol_pad(&self) -> usize {
+        self.symbol_pad
+    }
+    
+    pub fn time_bins_stored(&self) -> usize {
         self.wflines.len()
     }
 
+    pub fn time_capacity(&self) -> usize {
+        self.wflines.capacity()
+    }
+
+    pub fn time_buf_capacity(&self) -> usize {
+        self.wflines.capacity()
+    }
+
     pub fn symbols_stored(&self) -> usize {
-        self.time_bins()/self.time_osr.0
+        self.time_bins_stored()/self.time_osr.0
     }
 
     pub fn freq_bins(&self) -> usize {
@@ -246,32 +273,5 @@ impl Waterfall {
     //     m4
     // }
 
-    // Dump mag4 spectrogram - should see separate blocks x freq_osr across x axis, and same for y
-     pub fn _dump_spectrogram(&self, path: &str) {
-        // // can reorder to show interleaving if required
-        // for y in 0..self.time_blocks_stored() {
-        //     for y_sub in 0..self.time_osr.0 {
-        //         let wfl = self.read_row(y, y_sub);
-        //         for x in 0..wfl.freq_blocks_stored() {
-        //             for x_sub in 0..self.freq_osr.0 {
-        //                 let m4 = wfl.read_col(x, x_sub);
-        //                 spectr2.push(m4);
-        //             }
-        //         }
-        //     }
-        // }
-
-        let mut spectr2 =Vec::new();
-        let wflines_iter = self.wflines.iter();
-        for wfl in wflines_iter {
-            let db_iter = wfl.mag_dbs.iter();
-            for db in db_iter {
-                spectr2.push(*db);
-            }
-        }
-
-        debug::_plot_spectrogram(path ,&spectr2, spectr2.len()/self.wflines.len(), self.wflines.len());
-        // plot_spectrogram(path ,&spectr2, self.freq_indep_base_bins * self.freq_osr, wf.mag_time_blocks_num * wf.time_osr);
-    }
 }
 

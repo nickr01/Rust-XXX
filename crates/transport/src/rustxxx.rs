@@ -1,10 +1,12 @@
+use std::sync::OnceLock;
+
 use thiserror::Error;
 
 // use crate::rx_streamed::StreamReceiver; // - for library level errors
 
-pub const AUDIO_INPUT_BUFSIZE: usize = 2_usize.pow(22); // 20
-pub const WATERFALL_BUF_SIZE: usize = 2_usize.pow(10);
-
+// These all should be powers of 2 for ringbuf
+pub const AUDIO_INPUT_BUFSIZE: usize = 2_usize.pow(21); // 22 for file // 20
+pub const WATERFALL_BUF_SIZE: usize = 2_usize.pow(9); // This really should be dynamic
 pub const AUDIO_OUTPUT_BUFSIZE: usize = 2_usize.pow(20);
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -45,10 +47,12 @@ pub const fn bits2bytes(bits: BitCount) -> ByteCount {
 }
 
 pub type AudioSampleBuffer = ringbuf::SharedRb<ringbuf::storage::Heap<f32>>; // SharedRb<ringbuf::storage::Heap<f32>>;
+
 pub type AudioBufWriter = ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, true, false>; 
 pub type AudioBufReader = ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, false, true>;
-pub type ThreadedAudioReader = std::sync::Arc<std::sync::Mutex<ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, false, true>>>;
-pub type ThreadedAudioWriter = std::sync::Arc<std::sync::Mutex<ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, true, false>>>;
+
+// pub type AudioBufReader = std::sync::Arc<std::sync::Mutex<ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, false, true>>>;
+// pub type AudioBufWriter = std::sync::Arc<std::sync::Mutex<ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, true, false>>>;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub struct CrcParams {
@@ -409,16 +413,23 @@ pub struct Modem {
     pub crc_calc: crc::Crc<u16>,
 }
 
-static mut crc_alg: crc::Algorithm<u16> = crc::Algorithm {
-    width: 0,
-    poly: 0,
-    init: 0,
-    refin: false,
-    refout: false,
-    xorout: 0,
-    check: 0,
-    residue: 0
-};
+static CRC_ALG: OnceLock<crc::Algorithm<u16>> = std::sync::OnceLock::new();
+
+fn get_crc_alg(protocol:&'static Protocol) -> &'static crc::Algorithm<u16> {
+    CRC_ALG.get_or_init(|| {
+        // Initialize on first call
+        crc::Algorithm {
+            width: protocol._crc_width().0 as u8,
+            poly: protocol._crc_polynomial().0 as u16,
+            init: protocol._crc_start() as u16,
+            refin: false,
+            refout: false,
+            xorout: protocol._crc_xor() as u16,
+            check: 0x0,
+            residue: 0x0
+        }
+    })
+}
 
 impl Modem {
     pub fn new(protocol:&'static Protocol, runtime: &'static Runtime, freq_hz: f32) -> Modem {
@@ -440,18 +451,8 @@ impl Modem {
         // modem.signal.resize(n_wave, 0f32);
         // assert_eq!(modem.signal.len(), n_wave);
 
-        unsafe { crc_alg = crc::Algorithm {
-            width: protocol._crc_width().0 as u8,
-            poly: protocol._crc_polynomial().0 as u16,
-            init: protocol._crc_start() as u16,
-            refin: false,
-            refout: false,
-            xorout: protocol._crc_xor() as u16,
-            check: 0x0,
-            residue: 0x0
-        } };
-
-        let crc_calc: crc::Crc<u16> = crc::Crc::<u16>::new(unsafe { &crc_alg });
+        let crc_alg = get_crc_alg(protocol);
+        let crc_calc = crc::Crc::<u16>::new(&crc_alg );
 
         Modem {
             protocol,

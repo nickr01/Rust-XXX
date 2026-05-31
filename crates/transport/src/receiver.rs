@@ -117,7 +117,7 @@ impl Receiver {
                                         None => {
                                             true
                                         },
-                                        Some(stored_msg) => {
+                                        Some(_) => {
                                             false
                                             // if stored_msg.c_score < message.df.c_score {
                                             //     // dbg!("Upgraded message");
@@ -167,7 +167,7 @@ impl Receiver {
         assert_eq!(fft_input_vec.len(), self.nfft); 
         detector.add_wfline(fft_input_vec, rfft_nfft_f);
         // dbg!(detector.wf.time_blocks());
-        if detector.wf.symbols_stored() >= self.protocol.total_symbols_nn().0 + 1 {
+        if detector.wf.symbols_stored() >= self.protocol.total_symbols_nn().0 + detector.wf.symbol_pad() {
             pass_decodes = self.try_waterfall_decode(
                 detector,
                 correlator,
@@ -177,7 +177,7 @@ impl Receiver {
             // TODO: push _wfl into subtractor queue
             if pass_decodes > 0 
             {
-                // dbg!(pass_decodes);
+                dbg!(pass_decodes);
             };
         }
         pass_decodes
@@ -191,8 +191,8 @@ impl Receiver {
         detector: &mut detector::Detector,
         correlator: &mut correlator::Correlator,
         message_hash: &mut decoder::DecodeHash,
-    ) -> u32 {
-        let sample_count = 1u32;
+    ) -> usize {
+        let mut bufs_consumed: usize = 0;
 
         for buf in detector_input_bufs.iter_mut()
         {
@@ -206,10 +206,11 @@ impl Receiver {
                 );
                 buf.clear();
                 assert_eq!(buf.len(), 0);
+                bufs_consumed += 1;
             }     
-            buf.push(sample * detector.window_function_samples[buf.len()]); // NB window happens here
+            buf.push(sample * detector.window_function_samples[buf.len()]); // application of window happens here
         }
-        sample_count
+        bufs_consumed
     }
 
 

@@ -1,7 +1,7 @@
 [package]
 name = "transport"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [features]
 default = ["enable_rx","enable_tx"]
@@ -41,4 +41,5 @@ rubato.workspace = true
 audioadapter-buffers.workspace = true
 audioadapter.workspace = true
 lazy_static = "1.5.0"
+minifb.workspace = true
 

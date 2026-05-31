@@ -81,24 +81,28 @@ impl Decoder {
             if !r.is_err() {
                 dbg!("ecc_decode_bitflip contributed");
             }
+        } else {
+            dbg!("primary ecc_decode_bp decode");
         }
         match r {
             Ok(codeword) => {
-                // dbg!("got past ecc");
+                dbg!("got past ecc");
                 // assert_eq!(modem.protocol, &proto_ft8::FT8);
                 // if unpack_ft8::unpack77(&codeword, &mut message.df.text) < 0 {
                 //     // dbg!("Bad unpack");
                 //     return None;
                 // }
                 if message.df.text.is_empty() {
+                    dbg!("Blank message :(");
                     None
                 } else {
+                    dbg!("Non-blank message");
                     message.codeword = codeword; // this is messy
                     Some(message)
                 }
             }
             Err(_) => {
-                // dbg!("Bad ECC");
+                dbg!("Bad ECC");
                 None
             }
         }
@@ -114,10 +118,10 @@ impl Decoder {
 
             //calc block num
             let time_index = c.time_index().0 + (sym_idx * wf.time_osr.0);
-            assert!(time_index < wf.time_bins(), "time_index: {}, wf_bins: {}", time_index, wf.time_bins());
+            assert!(time_index < wf.time_bins_stored(), "time_index: {}, wf_bins: {}", time_index, wf.time_bins_stored());
             
             let logl = if 
-                time_index >= wf.time_bins()
+                time_index >= wf.time_bins_stored()
                 || c.freq_index().0 >= wf.freq_bins - self.protocol.token_tones().0 * wf.freq_osr.0
             {
                 panic!("overrun in decoder"); // layer3::LogL::new(self.protocol)

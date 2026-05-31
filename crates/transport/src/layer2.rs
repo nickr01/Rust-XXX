@@ -169,7 +169,7 @@ impl rustxxx::Modem {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // use super::*;
 
     // fn recheck_config(modem: &rustxxx::Modem) {
     //     assert_eq!(modem.protocol.nd().0 * modem.protocol.token_bits().0, modem.protocol.ldpc_n().0);
