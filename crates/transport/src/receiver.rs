@@ -168,7 +168,7 @@ impl Receiver {
         assert_eq!(fft_input_vec.len(), self.nfft); 
         detector.add_wfline(fft_input_vec, rfft_nfft_f);
         // dbg!(detector.wf.time_blocks());
-        if detector.wf.symbols_stored() >= self.protocol.total_symbols_nn().0 + 1 {
+        if detector.wf.symbols_stored() >= self.protocol.total_symbols_nn().0 + detector.wf.symbol_pad() {
             pass_decodes = self.try_waterfall_decode(
                 detector,
                 correlator,

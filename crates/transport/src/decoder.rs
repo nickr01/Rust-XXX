@@ -114,10 +114,10 @@ impl Decoder {
 
             //calc block num
             let time_index = c.time_index().0 + (sym_idx * wf.time_osr.0);
-            assert!(time_index < wf.time_bins(), "time_index: {}, wf_bins: {}", time_index, wf.time_bins());
+            assert!(time_index < wf.time_bins_stored(), "time_index: {}, wf_bins: {}", time_index, wf.time_bins_stored());
             
             let logl = if 
-                time_index >= wf.time_bins()
+                time_index >= wf.time_bins_stored()
                 || c.freq_index().0 >= wf.freq_bins - self.protocol.token_tones().0 * wf.freq_osr.0
             {
                 panic!("overrun in decoder"); // layer3::LogL::new(self.protocol)

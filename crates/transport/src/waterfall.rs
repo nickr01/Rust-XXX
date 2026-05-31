@@ -68,6 +68,10 @@ impl WaterfallLine {
 type WaterFallLines = Box<circular_buffer::CircularBuffer::<{rustxxx::WATERFALL_BUF_SIZE}, WaterfallLine>>;
 pub struct Waterfall {
     pub load_base: u32,
+
+    pub time_bins: usize,
+    pub symbol_pad: usize, // is extra loaded symbols in wflines
+
     pub freq_bins: usize,
 
     pub time_osr: rustxxx::OverSampleMultiplier,   // number of time subdivisions
@@ -79,6 +83,7 @@ pub struct Waterfall {
 
 impl Waterfall {
     pub fn new(
+        time_bins: usize,
         freq_bins: usize,
         time_osr: rustxxx::OverSampleMultiplier,
         freq_osr: rustxxx::OverSampleMultiplier,
@@ -88,6 +93,10 @@ impl Waterfall {
 
         Waterfall {
             load_base: 0,
+
+            time_bins,
+            symbol_pad: 1,
+
             freq_bins,
 
             time_osr,
@@ -120,10 +129,18 @@ impl Waterfall {
     }
 
     pub fn time_base(&self) -> u32 {
-        self.load_base-self.time_bins() as u32
+        self.load_base-self.time_bins_stored() as u32
     }
 
     pub fn time_bins(&self) -> usize {
+        self.time_bins
+    }
+    
+    pub fn symbol_pad(&self) -> usize {
+        self.symbol_pad
+    }
+    
+    pub fn time_bins_stored(&self) -> usize {
         self.wflines.len()
     }
 
@@ -131,8 +148,12 @@ impl Waterfall {
         self.wflines.capacity()
     }
 
+    pub fn time_buf_capacity(&self) -> usize {
+        self.wflines.capacity()
+    }
+
     pub fn symbols_stored(&self) -> usize {
-        self.time_bins()/self.time_osr.0
+        self.time_bins_stored()/self.time_osr.0
     }
 
     pub fn freq_bins(&self) -> usize {

@@ -4,9 +4,9 @@ use thiserror::Error;
 
 // use crate::rx_streamed::StreamReceiver; // - for library level errors
 
+// These all should be powers of 2 for ringbuf
 pub const AUDIO_INPUT_BUFSIZE: usize = 2_usize.pow(21); // 22 for file // 20
-pub const WATERFALL_BUF_SIZE: usize = 320; // This should be dynamic!!!  2_usize.pow(9);
-
+pub const WATERFALL_BUF_SIZE: usize = 2_usize.pow(9); // This really should be dynamic
 pub const AUDIO_OUTPUT_BUFSIZE: usize = 2_usize.pow(20);
 
 #[derive(PartialEq, Debug, Clone, Copy)]

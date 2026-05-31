@@ -85,10 +85,6 @@ pub struct DebugPortal {
 }
 
 impl DebugPortal {
-    // const DEBUG_WIDTH: usize = 640;
-    // const DEBUG_HEIGHT: usize = 360;
-
-
     pub fn new(draw_size: DrawSize) -> DebugPortal {
         dbg!(&draw_size);
         let mut window = minifb::Window::new(
@@ -139,15 +135,14 @@ impl DebugPortal {
 pub fn plot_spectrogram_to_buffer(
     buf: &mut BufferWrapper,
     spectrogram: &[waterfall::WflDataType],
-    (width, height) : (usize, usize),
+    draw_size: DrawSize,
 ) {
-    // return;
-    // dbg!("plot spectrogram", width, height); H 319
-    let bitmap_backend = BitMapBackend::<BGRXPixel>::with_buffer_and_format(buf.borrow_mut(), (width as u32, height as u32))
+    // dbg!(&draw_size);
+    let bitmap_backend = BitMapBackend::<BGRXPixel>::with_buffer_and_format(buf.borrow_mut(), (draw_size.width as u32, draw_size.height as u32))
         .expect("Cannot set up BitMap backend");
     let drawing_area= bitmap_backend.into_drawing_area();
 
-    let spectrogram_cells = drawing_area.split_evenly((height, width));
+    let spectrogram_cells = drawing_area.split_evenly((draw_size.height, draw_size.width));
 
     let windows_scaled = spectrogram.iter().map(|i| *i as f32).collect::<Vec<f32>>();
     let highest_spectral_density = windows_scaled

@@ -63,12 +63,14 @@ impl Pipeline {
             assert_eq!(buf.len(), init_size);
         }
 
-        let detector = detector::Detector::new(*runtime, rustxxx::RepeatCount(nfft));
+        let detector = detector::Detector::new(*runtime, *protocol,rustxxx::RepeatCount(nfft));
         let correlator = correlator::Correlator::new(protocol, runtime);
 
-        let debug_portal = debug::DebugPortal::new(debug::DrawSize { 
+        assert!(detector.wf.time_bins() <= detector.wf.time_buf_capacity()); // capacity must be power of 2;
+
+        let debug_portal = debug::DebugPortal::new(debug::DrawSize {
             width: detector.wf.freq_bins(), 
-            height: detector.wf.time_capacity() 
+            height: detector.wf.time_bins() + detector.wf.symbol_pad() * runtime.rx_symbol_osr().0, 
         }, );
 
         Pipeline {
@@ -134,10 +136,12 @@ impl Pipeline {
 
         let spectrogram_height = self.detector.wf.wflines().len();
         if spectrogram_height > 0 {
+            use crate::debug::DrawSize;
+
             debug::plot_spectrogram_to_buffer(
                 self.debug_portal.buf_as_mut(), 
                 &spectr2,
-                (spectr2.len()/spectrogram_height, spectrogram_height)
+                DrawSize{ width: spectr2.len()/spectrogram_height, height: spectrogram_height },
             );
         }
     }
@@ -176,6 +180,8 @@ impl Pipeline {
             if let Ok(mut guard) = reader.try_lock() {
                 let reader = guard.as_mut();
 
+                dbg!(reader.occupied_len());
+                
                 // MUST rebuild the iterator each loop - see next() documentation
                 let count_to_load = reader.occupied_len() & !1; // force even consumption
                 assert_eq!(count_to_load & 1, 0);
