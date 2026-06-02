@@ -1,11 +1,12 @@
-
 use crate::candidate;
-use crate::detector;
 use crate::correlator;
 use crate::decoder;
+use crate::detector;
 use crate::detector::DetectFFT;
+use crate::message;
 use crate::rustxxx;
 use crate::waterfall;
+
 // use crate::waterfall::Waterfall;
 
 // use realfft::RealFftPlanner;
@@ -60,20 +61,12 @@ impl Receiver {
         }
     }
 
-    fn get_df(&self, c: &candidate::Candidate, wf: &waterfall::Waterfall) -> (rustxxx::Hz, rustxxx::Secs) {
-        let freq_hz: rustxxx::Hz =
-            rustxxx::Hz(((c.freq_index().0 as f32 + 1.0)/ wf.freq_osr.0 as f32) / self.protocol.symbol_period().0);
-        let time_secs: rustxxx::Secs =
-            rustxxx::Secs((c.time_stamp().0 as f32 / wf.time_osr.0 as f32) * self.protocol.symbol_period().0);
-        (freq_hz, time_secs)
-    }
-
     fn try_waterfall_decode(
         &self,
         detector: &mut detector::Detector,
         correlator: &mut correlator::Correlator,
         message_hash: &mut decoder::DecodeHash
-    ) -> usize{
+    ) -> usize {
         // dbg!("entry");
         // TODO: disable or remove this
         assert!(!self.runtime.auto_segment()); // blocking auto for the moment
@@ -103,50 +96,31 @@ impl Receiver {
 
                         for c in candidates.iter_mut() {
                             let logls = decoder.extract_normalised_likelihood(&detector.wf, c);
-                            match decoder.decode(&mut modem, &logls) {
-                                Some(mut message) => {
-                                    let (freq_hz, time_secs)  = self.get_df(c, &detector.wf);
-                                    message.df = decoder::MessageDf{ 
-                                        c_score: c.score(), time_secs, freq_hz, text: message.df.text
-                                    };
 
-                                    // let message_key = modem.crc_read(message);
-                                    // now using message.txt as the key, and message.df as stored value
+                            let time_secs =
+                                rustxxx::Secs(
+                                   ((c.time_stamp().0 + c.time_index().0 as u32) as f32 / detector.wf.time_osr.0 as f32) * self.protocol.symbol_period().0
+                                );
 
-                                    let should_store = match message_hash.get(&message.codeword) {
-                                        None => {
-                                            true
-                                        },
-                                        Some(_) => {
-                                            false
-                                            // if stored_msg.c_score < message.df.c_score {
-                                            //     // dbg!("Upgraded message");
-                                            //     true
-                                            // } else {
-                                            //     false
-                                            // }
+                            let freq_hz =
+                                rustxxx::Hz(
+                                    ((c.freq_index().0 as f32 + 1.0)/ detector.wf.freq_osr.0 as f32) / self.protocol.symbol_period().0
+                                );
+
+                            match decoder.decode(time_secs, freq_hz, c.score(), &mut modem, &logls) {
+                                Some(message) => {
+                                    if !message.is_empty() {
+                                        if !message_hash.contains_key(message.key()) {
+                                            message_hash.insert(message.key().clone(), message);
+                                            success += 1;
                                         }
-                                    };
-                                    if should_store {
-                                        dbg!(&message.df.text);
-                                        message_hash.insert(message.codeword.clone(), message.df);
-                                        success += 1;
+                                        pass_decodes += success;
                                     }
-                                    pass_decodes += success;
-                                    // dbg!(
-                                    //     // pass,
-                                    //     freq_bin_range.from(),
-                                    //     freq_bin_range.to(),
-                                    //     success,
-                                    //     // candidates.len()
-                                    // );
                                 },
                                 None => {}
                             }
                         };
-                    } else {
-                        // dbg!("No candidates");
-                    }
+                    };
                 }
                 None => {},
             }
@@ -177,7 +151,7 @@ impl Receiver {
             // TODO: push _wfl into subtractor queue
             if pass_decodes > 0 
             {
-                dbg!(pass_decodes);
+                // dbg!(pass_decodes);
             };
         }
         pass_decodes

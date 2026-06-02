@@ -1,6 +1,8 @@
 use crate::correlator;
 use crate::decoder;
 use crate::detector;
+#[cfg(any(feature = "enable_rx", test))]
+use crate::message;
 use crate::receiver;
 use crate::rustxxx;
 use crate::debug;
@@ -171,7 +173,7 @@ impl Pipeline {
         &mut self,
         reader: &mut rustxxx::AudioBufReader,
         resample_context: &mut ResampleContext,
-    ) -> Result<Vec<Vec<u8>>, rustxxx::XxxError> {
+    ) -> Result<Vec<message::Message>, rustxxx::XxxError> {
         {
             let mut mono_samples = Vec::new();
             // if let Ok(mut guard) = reader.try_lock() 
@@ -261,12 +263,42 @@ impl Pipeline {
             // clean the message_hash - remove older than message length secs
         };
 
-        let mut ret: Vec<Vec<u8>> = Vec::new();
-        for codeword in self.message_hash.keys() {
-            ret.push(codeword.clone());
+        let stale_time =
+            rustxxx::Secs(
+                (self.detector.wf.time_base().0 as f32 / self.receiver.runtime.rx_symbol_osr().0 as f32) 
+                * self.receiver.protocol.symbol_period().0
+                - self.receiver.protocol.total_frame_time().0
+            );
+
+        // report the current undelivered msgs and check stale status
+        let mut delivery_msgs: Vec<message::Message> = Vec::new();
+        let mut stale_msgs: Vec<message::Message> = Vec::new();
+
+        for msg in self.message_hash.values() {
+            if !msg.is_delivered() {
+                let mut msg = msg.clone();
+                msg.set_delivered();
+                delivery_msgs.push(msg);
+            }
+            if msg.is_stale(stale_time) {
+                stale_msgs.push(msg.clone())
+            }
         }
 
-        Ok(ret)
+        for msg in delivery_msgs.iter() {
+            // dbg!("Updating msg DELIVER flag");
+            self.message_hash.remove(msg.key());         
+            assert!(msg.is_delivered());
+            self.message_hash.insert(msg.key().clone(), msg.clone());         
+        }
+
+        for msg in stale_msgs.iter() {
+            // dbg!("Deleting STALE msg");
+            assert!(msg.is_delivered());
+            self.message_hash.remove(msg.key());         
+        }
+
+        Ok(delivery_msgs)
     }
 
     // pub fn report_results(&self) -> Result<(), rustxxx::XxxError>

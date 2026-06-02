@@ -550,7 +550,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
 
         // this will be our main event loop
         while receive_pipeline.continue_run() {
-            let codewords = receive_pipeline.write_sample_buffer(
+            let messages = receive_pipeline.write_sample_buffer(
                 &mut audio_input_buff_reader,
                 &mut resample_context
             )
@@ -558,12 +558,10 @@ fn rx_main() -> Result<(), anyhow::Error> {
 
             receive_pipeline.update_spectrogram();
 
-            let mut ft8_messages: Vec<String> = Vec::new();
-            for codeword in codewords {
-                match proto_ft8::unpack_ft8::ft8_unpack_to_string(&codeword) {
+            for msg in messages {
+                match proto_ft8::unpack_ft8::ft8_unpack_to_string(&msg.codeword()) {
                     Some(msg) => {
                         dbg!(&msg);
-                        ft8_messages.push(msg);
                     },
                     None => {
                         dbg!("Bad unpack");

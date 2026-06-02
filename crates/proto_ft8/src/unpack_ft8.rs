@@ -1,5 +1,9 @@
 use crate::text;
 
+// need for bitvec Traits
+// use bitvec::prelude::*;
+
+// as per FT4/FT8 doc QEX  July/August 2020 - Franke et al
 const C28_DE: u32 = 0;
 const C28_QRZ: u32 = 1;
 const C28_CQ: u32 = 2;
@@ -36,11 +40,12 @@ const C28_HASH_CALL_UNDEF_BLOCK: u32 = 6257896 - C28_HASH_CALL_UNDEF;
 
 const C28_STD_CALLS: u32 = C28_HASH_CALL_UNDEF + C28_HASH_CALL_UNDEF_BLOCK; // 6257896;
 
-const MAXGRID4: u16 = 32400;
+// const BIT_i3_2: usize = 76;
+// const BIT_i3_0: usize = 74;
+// const BIT_n3_2: usize = 73;
+// const BIT_n3_0: usize = 71;
 
-const MAGIC0: u32 = 2 + 1;
-const MAGIC1: u32 = 1002 + 1;
-const MAGIC2: u32 = 532443 + 1;
+const MAXGRID4: u16 = 32400;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct CallId {
@@ -202,15 +207,16 @@ fn unpack_callsign(
         },
 
         C28_HASH_CALL..C28_HASH_CALL_UNDEF => {
+            dbg!("hashed call not yet supported");
             // This is a 22-bit hash of a result
             // TODO: implement
-            result.id.push_str("<...>");
+            // result.id.push_str("<...>");
             // todo!();
             // result[0] = '<';
             // int_to_dd(result + 1, n28, 7, false);
             // result[8] = '>';
             // result[9] = '\0';
-            return Some(result);
+            // return Some(result);
         },
 
         C28_STD_CALLS..=u32::MAX => {
@@ -253,13 +259,11 @@ fn unpack_callsign(
     }
 }
 
-fn unpack_type1(
+fn unpack_std_msg(
     a77: &[u8],
     i3: u8
 ) -> Option<Ft8Msg> {
-    // todo!("This will be borked");
-
-    let mut ret = Ft8Msg::new();
+    let mut ft8_msg = Ft8Msg::new();
     
     // Extract packed fields
     let mut n28a = (a77[0] as u32) << 21;
@@ -280,60 +284,62 @@ fn unpack_type1(
 
     match unpack_callsign(n28a >> 1, n28a as u8 & 0x01, i3) {
         Some(call) => {
-            ret.call_to = call;
-            return Some(ret);
+            ft8_msg.call_to = call;
+            return Some(ft8_msg);
         }
         None => {},
     }
 
-    // expect no special as call_from
     match unpack_callsign(n28b >> 1, n28b as u8 & 0x01, i3) {
         Some(call) => {
-            ret.call_from = call;
-            return Some(ret);
+            ft8_msg.call_from = call;
+            return Some(ft8_msg);
         }
         None => {}
     }
 
-    if igrid4 <= MAXGRID4 {
-        // Extract 4 symbol grid locator
-        if ir > 0 {
-            // In case of ir=1 add an "R" before grid
-            ret.extra.push_str("R ");
-        }
+    match igrid4 {
+        0..=MAXGRID4 => {
+            // Extract 4 symbol grid locator
+            if ir > 0 {
+                // In case of ir=1 add an "R" before grid
+                ft8_msg.extra.push_str("R ");
+            }
 
-        let mut n = igrid4;
-        let mut dst = String::new();
+            let mut n = igrid4;
+            let mut dst = String::new();
 
-        dst.push((b'0' + (n % 10) as u8) as char);
-        n /= 10;
-        dst.push((b'0' + (n % 10) as u8) as char);
-        n /= 10;
-        dst.push((b'A' + (n % 18) as u8) as char);
-        n /= 18;
-        dst.push((b'A' + (n % 18) as u8) as char);
+            dst.push((b'0' + (n % 10) as u8) as char);
+            n /= 10;
+            dst.push((b'0' + (n % 10) as u8) as char);
+            n /= 10;
+            dst.push((b'A' + (n % 18) as u8) as char);
+            n /= 18;
+            dst.push((b'A' + (n % 18) as u8) as char);
 
-        ret.extra.push_str(dst.chars().rev().collect::<String>().trim());
-    } else {
-        // Extract report
-        let irpt = igrid4 - MAXGRID4;
+            ft8_msg.extra.push_str(dst.chars().rev().collect::<String>().trim());
+        },
+        _ => {
+            // Extract report
+            let irpt = igrid4 - MAXGRID4;
 
-        // Check special cases first (irpt > 0 always)
-        match irpt {
-            1 => ret.extra.push_str(""),
-            2 => ret.extra.push_str("RRR"),
-            3 => ret.extra.push_str("RR73"),
-            4 => ret.extra.push_str("73"),
-            _ => {
-                // Extract signal report as a two digit number with a + or - sign
-                if ir > 0 {
-                    ret.extra.push('R')
+            // Check special cases first (irpt > 0 always)
+            match irpt {
+                1 => ft8_msg.extra.push_str(""),
+                2 => ft8_msg.extra.push_str("RRR"),
+                3 => ft8_msg.extra.push_str("RR73"),
+                4 => ft8_msg.extra.push_str("73"),
+                _ => {
+                    // Extract signal report as a two digit number with a + or - sign
+                    if ir > 0 {
+                        ft8_msg.extra.push('R')
+                    }
+                    text::int_to_dd(&mut ft8_msg.extra, irpt as i32 - 35, true);
                 }
-                text::int_to_dd(&mut ret.extra, irpt as i32 - 35, true);
             }
         }
     }
-    return Some(ret);
+    return Some(ft8_msg);
 }
 
 fn unpack_text(
@@ -408,7 +414,7 @@ fn unpack_telemetry(
 fn unpack_nonstandard(
     a77: &[u8], 
 ) -> Option<Ft8Msg> {
-    let mut ret = Ft8Msg::new();
+    let mut ft8_msg = Ft8Msg::new();
 
     //let mut n12 = (a77[0] << 4) as u32; //11 ~4  : 8
     //n12 |= (a77[1] as u32) >> 4; //3~0 : 12
@@ -451,75 +457,91 @@ fn unpack_nonstandard(
     //save_hash_call(c11_trimmed);
 
     if icq == 0 {
-        ret.call_to.id.push_str(call_1.as_str());
+        ft8_msg.call_to.id.push_str(call_1.as_str());
         if nrpt == 1 {
-            ret.extra.push_str("RRR");
+            ft8_msg.extra.push_str("RRR");
         } else if nrpt == 2 {
-            ret.extra.push_str("RR73");
+            ft8_msg.extra.push_str("RR73");
         } else if nrpt == 3 {
-            ret.extra.push_str("73");
+            ft8_msg.extra.push_str("73");
         }
     } else {
-        ret.call_to.id.push_str("CQ");
+        ft8_msg.call_to.id.push_str("CQ");
     }
 
-    ret.call_from.id.push_str(call_2.as_str());
+    ft8_msg.call_from.id.push_str(call_2.as_str());
 
-    Some(ret)
+    Some(ft8_msg)
 }
 
 pub fn ft8_unpack_to_msg(a77: &[u8]) -> Option<Ft8Msg> {
     // assert_eq!(a77.len(), FT8.ldpc_k_bytes());
-
     // Extract i3 (bits 74..76)
     let i3 = (a77[9] >> 3) & 0x07;
-
-    if i3 == 0 {
-        // Extract n3 (bits 71..73)
-        let n3 = ((a77[8] << 2) & 0x04) | ((a77[9] >> 6) & 0x03);
-
-        if n3 == 0 {
-            match unpack_text(a77) {
-                Some(field) => {
-                    let mut ret = Ft8Msg::new();
-                    ret.extra = field;
-                    return Some(ret);
+    match i3 {
+        0 => {
+            // Extract n3 (bits 71..73)
+            let n3 = ((a77[8] << 2) & 0x04) | ((a77[9] >> 6) & 0x03);
+            match (n3) {
+                0 => {
+                    match unpack_text(a77) {
+                        Some(field) => {
+                            let mut ret = Ft8Msg::new();
+                            ret.extra = field;
+                            return Some(ret);
+                        },
+                        None => {},
+                    };
                 },
-                None => {},
-            };
-        } else if n3 == 5 {
-            match unpack_telemetry(a77) {
-                Some(field) => {
-                    let mut ret = Ft8Msg::new();
-                    ret.extra = field;
-                    return Some(ret);
+                5 => {
+                    match unpack_telemetry(a77) {
+                        Some(field) => {
+                            let mut ret = Ft8Msg::new();
+                            ret.extra = field;
+                            return Some(ret);
+                        },
+                        None => {},
+                    };
                 },
-                None => {},
-            };
-        }
-    } else if i3 == 1 || i3 == 2 {
-        // Type 1 (standard message) or Type 2 ("/P" form for EU VHF contest)
-        match unpack_type1(a77, i3) {
-            Some(fields) => {
-                return Some(fields);
-            },
-            None => {}
-        }
-    } else if i3 == 4 {
-        //     // Type 4: Nonstandard calls, e.g. <WA9XYZ> PJ4/KA1ABC RR73
-        //     // One hashed call or "CQ"; one compound or nonstandard call with up
-        //     // to 11 characters; and (if not "CQ") an optional RRR, RR73, or 73.
-        match unpack_type1(a77, i3) {
-            Some(fields) => {
-                return Some(fields);
-            },
-            None => {}
-        }
-        match unpack_nonstandard(a77) {
-            Some(fields) => {
-                return Some(fields);
-            },
-            None => {}
+                _ => {
+                    dbg!("unknown subtype", n3);
+                }
+            }
+        },
+        1..=2 => {
+            // Type 1 (standard message) or Type 2 ("/P" form for EU VHF contest)
+            match unpack_std_msg(a77, i3) {
+                Some(fields) => {
+                    return Some(fields);
+                },
+                None => {}
+            }
+        },
+        3 => {
+            dbg!("type 3 not yet supported");
+        },
+        4 => {
+            //     // Type 4: Nonstandard calls, e.g. <WA9XYZ> PJ4/KA1ABC RR73
+            //     // One hashed call or "CQ"; one compound or nonstandard call with up
+            //     // to 11 characters; and (if not "CQ") an optional RRR, RR73, or 73.
+            match unpack_std_msg(a77, i3) {
+                Some(fields) => {
+                    return Some(fields);
+                },
+                None => {}
+            }
+            match unpack_nonstandard(a77) {
+                Some(fields) => {
+                    return Some(fields);
+                },
+                None => {}
+            }
+        },
+        5 => {
+            dbg!("type 5 not yet supported");
+        },
+        _ => {
+            dbg!("unknown type", i3);
         }
     }
     None // -1

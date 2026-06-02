@@ -1,40 +1,12 @@
 use crate::candidate;
 use crate::rustxxx;
+use crate::message;
+
 // use crate::rustxxx::Secs;
 // use crate::rustxxx::TimeStamp;
 use crate::waterfall;
 // use crate::unpack_ft8;
 use crate::layer3;
-
-#[derive(Debug)]
-#[derive(Clone)]
-pub struct MessageDf {
-    pub c_score: f32,
-    pub time_secs: rustxxx::Secs,
-    pub freq_hz: rustxxx::Hz,
-    pub text: String,
-}
-
-#[derive(Debug)]
-pub struct Message {
-    pub df: MessageDf,
-    pub codeword: Vec<u8>, // used as key
-}
-
-impl Message {
-    pub fn new() -> Message {
-        Message {
-            // used to be a Vec of dfs - not sure why yet
-            df: MessageDf{
-                c_score: 0.0,
-                time_secs: rustxxx::Secs(0.0),
-                freq_hz: rustxxx::Hz(0.0),
-                text: String::new(), // for debug purposes
-            },
-            codeword: Vec::new(),
-        }
-    }
-}
 
 fn max2(a: f32, b: f32) -> f32 {
     if a >= b {
@@ -48,7 +20,7 @@ fn max4(a: f32, b: f32, c: f32, d: f32) -> f32 {
     max2(max2(a, b), max2(c, d))
 }
 
-pub type DecodeHash = std::collections::HashMap<Vec<u8>, MessageDf>;
+pub type DecodeHash = std::collections::HashMap<Vec<u8>, message::Message>;
 
 #[cfg(any(feature = "enable_rx", test))]
 pub struct Decoder {
@@ -69,12 +41,13 @@ impl Decoder {
     }
 
     pub fn decode(
-        &self, 
+        &self,
+        time_secs: rustxxx::Secs,
+        freq_hz: rustxxx::Hz,
+        c_score: f32,
         modem: &mut rustxxx::Modem, 
         logls: &Vec<layer3::LogL>,
-    ) -> Option<Message> {
-        let mut message = Message::new();
-
+    ) -> Option<message::Message> {
         let mut r = modem.ecc_decode_bp(&logls, self.runtime.ldpc_max_iteration().0);
         if r.is_err() {
             r = modem.ecc_decode_bitflip(&logls, self.runtime.ldpc_max_iteration().0);
@@ -82,27 +55,27 @@ impl Decoder {
                 dbg!("ecc_decode_bitflip contributed");
             }
         } else {
-            dbg!("primary ecc_decode_bp decode");
+            // dbg!("primary ecc_decode_bp decode");
         }
         match r {
             Ok(codeword) => {
-                dbg!("got past ecc");
-                // assert_eq!(modem.protocol, &proto_ft8::FT8);
-                // if unpack_ft8::unpack77(&codeword, &mut message.df.text) < 0 {
-                //     // dbg!("Bad unpack");
-                //     return None;
-                // }
-                if message.df.text.is_empty() {
-                    dbg!("Blank message :(");
+                // dbg!("got past ecc");
+                if codeword.is_empty() {
+                    // dbg!("Blank message :(");
                     None
                 } else {
-                    dbg!("Non-blank message");
-                    message.codeword = codeword; // this is messy
-                    Some(message)
+                    // dbg!("Non-blank message");
+                    let msg = message::Message::new(
+                        time_secs,
+                        freq_hz,
+                        c_score,
+                        codeword,
+                    );
+                    Some(msg)
                 }
             }
             Err(_) => {
-                dbg!("Bad ECC");
+                // dbg!("Bad ECC");
                 None
             }
         }

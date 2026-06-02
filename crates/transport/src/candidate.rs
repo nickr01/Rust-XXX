@@ -2,7 +2,7 @@ use crate::rustxxx;
 
 #[derive(Debug)]
 pub struct Candidate {
-    time_stamp: rustxxx::TimeStamp,
+    time_base: rustxxx::TimeStamp,
     time_index: rustxxx::TimeIndex,
     freq_index: rustxxx::FreqIndex,
     score: f32,
@@ -10,13 +10,13 @@ pub struct Candidate {
 
 impl Candidate {
     pub fn new(
-    time_stamp: rustxxx::TimeStamp,
+        time_base: rustxxx::TimeStamp,
         time_index: rustxxx::TimeIndex, 
         freq_index: rustxxx::FreqIndex, 
         score: f32
     ) -> Candidate {
         Candidate {
-            time_stamp,
+            time_base,
             time_index,
             freq_index,
             score,
@@ -26,8 +26,8 @@ impl Candidate {
         self.score
     }
     pub fn time_stamp(&self) -> rustxxx::TimeStamp {
-        self.time_stamp
-    }
+        rustxxx::TimeStamp(self.time_base.0 + self.time_index.0 as u32)
+    }    
     pub fn time_index(&self) -> rustxxx::TimeIndex {
         self.time_index
     }

@@ -182,7 +182,7 @@ impl Protocol {
     pub const fn baud_rate(&self) -> Hz { Hz(1.0 / self.symbol_period().0) }
     pub const fn _slot_time(&self) -> Secs { self.slot_time }
     pub const fn _slot_time_locked(&self) -> bool { self.slot_time_locked }
-    pub const fn _total_frame_time(&self) -> Secs { Secs(self.total_symbols_nn().0 as f32 * self.symbol_period().0 ) }
+    pub const fn total_frame_time(&self) -> Secs { Secs(self.total_symbols_nn().0 as f32 * self.symbol_period().0 ) }
     pub const fn token_bits(&self) -> BitCount { self.token_bits }
     pub const fn token_tones(&self) -> RepeatCount { RepeatCount(1 << self.token_bits().0) }
     pub const fn nd(&self) -> SymbolCount { self.nd }
@@ -554,7 +554,7 @@ mod tests {
         && (SymbolCount(protocol.costas_pattern().len()) == protocol._length_sync())
         && (RepeatCount(protocol.gray_map().len()) == protocol.token_tones())
         && protocol._slot_time_locked()
-        && (protocol._total_frame_time().0 <= protocol._slot_time().0)
+        && (protocol.total_frame_time().0 <= protocol._slot_time().0)
         // && (self.length_ramp() == 0)
     }
 

@@ -1,4 +1,4 @@
-// needed fot macro
+// needed for macro
 use std::fmt::Write;
 
 pub fn _dd_to_int(str: &str) -> i32 {

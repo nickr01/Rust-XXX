@@ -1,5 +1,7 @@
 pub mod rustxxx;
 pub mod pipeline;
+pub mod message;
+
 mod receiver;
 mod detector;
 mod waterfall;

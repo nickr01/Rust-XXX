@@ -43,7 +43,7 @@ impl Correlator {
             // dbg!(score);
             candidates.push(
                 candidate::Candidate::new(
-                    rustxxx::TimeStamp(wf.time_base()),
+                    wf.time_base(),
                     rustxxx::TimeIndex(0),
                     rustxxx::FreqIndex(freq_index),
                     score, 

@@ -128,8 +128,8 @@ impl Waterfall {
         self.wflines.pop_front()
     }
 
-    pub fn time_base(&self) -> u32 {
-        self.load_base-self.time_bins_stored() as u32
+    pub fn time_base(&self) -> rustxxx::TimeStamp {
+        rustxxx::TimeStamp(self.load_base-self.time_bins_stored() as u32)
     }
 
     pub fn time_bins(&self) -> usize {
