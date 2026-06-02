@@ -300,12 +300,14 @@ mod tests {
         // test_roundtrip("K1ABC W9XYZ 6A WI"); // 0.3 
         // test_roundtrip("W9XYZ K1ABC R 17B EMA"); // 0.4
         // test_roundtrip("123456789ABCDEF012"); // 0.5
+        test_roundtrip("K1ABC W9XYZ R EN37"); // 1.
         // test_roundtrip("K1ABC/R W9XYZ/R R EN37"); // 1.
         // test_roundtrip("G4ABC/P PA9XYZ JO22"); // 2.
         // test_roundtrip("K1ABC W9XYZ 579 WI"); // 3.
         // test_roundtrip("<W9XYZ> PJ4/K1ABC RRR"); // 4.
         // test_roundtrip("<G4ABC> <PA9XYZ> R 570007 JO22DB"); // 5. 
-        test_roundtrip("CQ VK2ZTY QG61");
+        // test_roundtrip("CQ VK2ZTY QG61");
+        // test_roundtrip("CQ VK2ZTY QG61");
     }
 
 }

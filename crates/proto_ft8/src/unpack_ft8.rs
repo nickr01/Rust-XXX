@@ -247,20 +247,14 @@ fn ft8_unpack_type1or2(
     igrid4 |= (a77[8] as u16) << 2;
     igrid4 |= (a77[9] as u16) >> 6;
 
-    match ft8_unpack_callsign(n28a >> 1, n28a as u8 & 0x01, i3) {
-        Some(call) => {
-            ft8_msg.call_to = call;
-            return Some(ft8_msg);
-        }
-        None => {},
+    let call =  ft8_unpack_callsign(n28a >> 1, n28a as u8 & 0x01, i3);
+    if call.is_some() {
+        ft8_msg.call_to = call.unwrap();
     }
 
-    match ft8_unpack_callsign(n28b >> 1, n28b as u8 & 0x01, i3) {
-        Some(call) => {
-            ft8_msg.call_from = call;
-            return Some(ft8_msg);
-        }
-        None => {}
+    let call = ft8_unpack_callsign(n28b >> 1, n28b as u8 & 0x01, i3);
+    if call.is_some() {
+        ft8_msg.call_from = call.unwrap();
     }
 
     match igrid4 {
