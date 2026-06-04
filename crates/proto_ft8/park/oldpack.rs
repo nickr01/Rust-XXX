@@ -266,9 +266,14 @@ mod tests {
     }
 
     #[test]
-    fn test_min() {
+    fn test_min1() {
         test_roundtrip("VK2TRF VK2ZTY QG61");
         test_roundtrip("CQ VK2ZTY QG61");
+    }
+    
+    #[test]
+    fn test_min2() {
+        test_roundtrip("CQ K1ABC QG61");
     }
 
     #[test]
