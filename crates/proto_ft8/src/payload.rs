@@ -109,14 +109,14 @@ const TELEM_CHARSET: CharSet = CharSet {
 // - Trim to len
 // - Right justify with pad_chars
 // maybe need to get rid of these messy str<>String conversions
-fn left_pad(input_string: &String, charset: &CharSet) -> String {
+fn left_pad(input_string: &str, charset: &CharSet) -> String {
     let mut trimmed = input_string.trim().to_string();
     trimmed.truncate(charset.msg_len);
     let mut trimmed = trimmed.trim().to_string(); // yep, trim again
     {
         let left_pad_len: isize = charset.msg_len as isize - trimmed.len() as isize ;
         if left_pad_len > 0 {
-            let pad_string: String = charset.pad.to_string();
+            let pad_string = String::from(charset.pad); 
             let mut left_padded = pad_string.repeat(left_pad_len as usize);
             left_padded.push_str(&trimmed);
             trimmed = left_padded;
@@ -130,7 +130,7 @@ fn left_pad(input_string: &String, charset: &CharSet) -> String {
 // - Then build sum with num base of the char array length
 // - Assume can build the output bitmap in u128 - might as well pass that around
 fn ft8_pack_0_stg (
-    cn: &String,
+    cn: &str,
     charset: &CharSet,
     bits: usize
 ) -> Option<u128> {
@@ -159,13 +159,13 @@ fn ft8_pack_0_stg (
 }
 
 fn ft8_pack_0_0 (
-    c13:& String,
+    c13: &str,
 ) -> Option<u128> {
     ft8_pack_0_stg(c13, &FREE_CHARSET, FT8_MESSAGE_BITS)
 }
 
 fn ft8_pack_0_5 (
-    c18:& String,
+    c18: &str,
 ) -> Option<u128> {
     ft8_pack_0_stg(c18, &TELEM_CHARSET, FT8_MESSAGE_BITS)
 }
@@ -920,7 +920,7 @@ fn ft8_unpack_0_5(
 // //     match ft8_unpack_buff_to_msg(a77) {
 // //         Some(ft8_msg) => {
 // //             dbg!(&ft8_msg);
-// //             ft8_msg.to_string()
+// //             ft8_msg
 // //         },
 // //         None => { None },
 // //     }
@@ -933,20 +933,20 @@ mod tests {
 
     #[test]
     fn test_left_pad() {
-        assert_eq!(left_pad(&"fred".to_string(), &FREE_CHARSET), "         fred");
-        assert_eq!(left_pad(&"fred         ".to_string(), &FREE_CHARSET), "         fred");
-        assert_eq!(left_pad(&"fred         and more".to_string(), &FREE_CHARSET), "         fred");
-        assert_eq!(left_pad(&"   fred             and much more".to_string(), &FREE_CHARSET), "         fred");
+        assert_eq!(left_pad(&"fred", &FREE_CHARSET), "         fred");
+        assert_eq!(left_pad(&"fred         ", &FREE_CHARSET), "         fred");
+        assert_eq!(left_pad(&"fred         and more", &FREE_CHARSET), "         fred");
+        assert_eq!(left_pad(&"   fred             and much more", &FREE_CHARSET), "         fred");
     }
 
     #[test]
     fn test_pack_0_0() {
-        assert_eq!(ft8_pack_0_0(&"0".to_string()).unwrap(), 1);
-        assert_eq!(ft8_pack_0_0(&"1".to_string()).unwrap(), 2);
-        assert_eq!(ft8_pack_0_0(&"00".to_string()).unwrap(), 1 + FREE_CHARSET.modulus() as u128);
-        assert_eq!(ft8_pack_0_0(&"01".to_string()).unwrap(), 0b00101100);
+        assert_eq!(ft8_pack_0_0(&"0").unwrap(), 1);
+        assert_eq!(ft8_pack_0_0(&"1").unwrap(), 2);
+        assert_eq!(ft8_pack_0_0(&"00").unwrap(), 1 + FREE_CHARSET.modulus() as u128);
+        assert_eq!(ft8_pack_0_0(&"01").unwrap(), 0b00101100);
         assert_eq!(
-            ft8_pack_0_0(&"TNX BOB 73 GL".to_string()).unwrap(),
+            ft8_pack_0_0(&"TNX BOB 73 GL").unwrap(),
             0b01100011111011011100111011100010101001001010111000000111111101010000000
         );
     }
@@ -960,25 +960,25 @@ mod tests {
             "TNX BOB 73 GL");
     }
 
-    fn test_round_0_0(s:& String) {
+    fn test_round_0_0(s: &str) {
         assert_eq!(ft8_unpack_0_0(ft8_pack_0_0(s).unwrap()).unwrap(), left_pad(s, &FREE_CHARSET).trim());
     }
 
     #[test]
     fn test_0_0() {
-        test_round_0_0(&"".to_string());
-        test_round_0_0(&"TNX BOB 73 GL".to_string());
-        test_round_0_0(&"1".to_string());
-        test_round_0_0(&"FRED 1 2 3".to_string());
+        test_round_0_0(&"");
+        test_round_0_0(&"TNX BOB 73 GL");
+        test_round_0_0(&"1");
+        test_round_0_0(&"FRED 1 2 3");
     }
 
     #[test]
     fn test_pack_0_5() {
-        assert_eq!(ft8_pack_0_5(&"".to_string()).unwrap(), 0);
-        assert_eq!(ft8_pack_0_5(&"0".to_string()).unwrap(), 0);
-        assert_eq!(ft8_pack_0_5(&"1".to_string()).unwrap(), 1);
-        assert_eq!(ft8_pack_0_5(&"12".to_string()).unwrap(), 0x12);
-        assert_eq!(ft8_pack_0_5(&"123456781234567800".to_string()).unwrap(), 0x123456781234567800);
+        assert_eq!(ft8_pack_0_5(&"").unwrap(), 0);
+        assert_eq!(ft8_pack_0_5(&"0").unwrap(), 0);
+        assert_eq!(ft8_pack_0_5(&"1").unwrap(), 1);
+        assert_eq!(ft8_pack_0_5(&"12").unwrap(), 0x12);
+        assert_eq!(ft8_pack_0_5(&"123456781234567800").unwrap(), 0x123456781234567800);
     }
 
     #[test]
@@ -986,20 +986,20 @@ mod tests {
         assert_eq!(ft8_unpack_0_5(0x123456781234567800).unwrap(), "123456781234567800");
     }
 
-    fn test_round_0_5(s:& String) {
+    fn test_round_0_5(s: &str) {
         assert_eq!(ft8_unpack_0_5(ft8_pack_0_5(s).unwrap()).unwrap(), left_pad(s, &TELEM_CHARSET));
     }
 
     #[test]
     fn test_0_5() {
-        test_round_0_5(&"0".to_string());
-        // test_round_0_5(&"1".to_string());
-        // test_round_0_5(&"12".to_string());
-        // test_round_0_5(&"123456789ABCDEF".to_string());
+        test_round_0_5(&"0");
+        // test_round_0_5(&"1");
+        // test_round_0_5(&"12");
+        // test_round_0_5(&"123456789ABCDEF");
     }
 
     fn test_0_5_bad_char() {
-        test_round_0_5(&"123456789ABCDEF".to_string());
+        test_round_0_5(&"123456789ABCDEF");
     }
 
     // fn test_pack_0_5(msg: &str) {        
