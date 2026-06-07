@@ -1,51 +1,8 @@
 use crate::text;
+use crate::protocol::*;
 
 // need for bitvec Traits
 // use bitvec::prelude::*;
-
-// as per FT4/FT8 doc QEX  July/August 2020 - Franke et al
-const C28_DE: u32 = 0;
-const C28_QRZ: u32 = 1;
-const C28_CQ: u32 = 2;
-
-const C28_CQ_DDD: u32 = 3;
-const C28_CQ_DDD_BLOCK: u32 = 1002-3+1;
-const C28_CQ_DDD_UNDEF:u32 = C28_CQ_DDD + C28_CQ_DDD_BLOCK;
-const C28_CQ_DDD_UNDEF_BLOCK: u32 = 1004 - C28_CQ_DDD_UNDEF;
-
-const C28_CQ_A: u32 = C28_CQ_DDD + C28_CQ_DDD_BLOCK + C28_CQ_DDD_UNDEF_BLOCK;
-const C28_CQ_A_BLOCK: u32 = 1029-1004+1;
-const C28_CQ_A_UNDEF: u32 = C28_CQ_A + C28_CQ_A_BLOCK;
-const C28_CQ_A_UNDEF_BLOCK: u32 = 1031 - C28_CQ_A_UNDEF;
-
-const C28_CQ_AA: u32 = C28_CQ_A_UNDEF + C28_CQ_A_UNDEF_BLOCK;
-const C28_CQ_AA_BLOCK: u32 = 1731-1031+1;
-const C28_CQ_AA_UNDEF: u32 = C28_CQ_AA + C28_CQ_AA_BLOCK;
-const C28_CQ_AA_UNDEF_BLOCK: u32 = 1760 - C28_CQ_AA_UNDEF;
-
-const C28_CQ_AAA: u32 = C28_CQ_AA_UNDEF + C28_CQ_AA_UNDEF_BLOCK;
-const C28_CQ_AAA_BLOCK: u32 = 20685 - 1760 + 1;
-const C28_CQ_AAA_UNDEF: u32 = C28_CQ_AAA + C28_CQ_AAA_BLOCK;
-const C28_CQ_AAA_UNDEF_BLOCK: u32 = 21443 - C28_CQ_AAA_UNDEF;
-
-const C28_CQ_AAAA: u32 = C28_CQ_AAA_UNDEF + C28_CQ_AAA_UNDEF_BLOCK;
-const C28_CQ_AAAA_BLOCK: u32 = 532443 - 21443 + 1;
-const C28_CQ_AAAA_UNDEF: u32 = C28_CQ_AAAA + C28_CQ_AAAA_BLOCK;
-const C28_CQ_AAAA_UNDEF_BLOCK: u32 = 2063592 - C28_CQ_AAAA_UNDEF;
-
-const C28_HASH_CALL: u32 = C28_CQ_AAAA_UNDEF + C28_CQ_AAAA_UNDEF_BLOCK;
-const C28_HASH_CALL_BLOCK: u32 = 0x400000; // 4194304;
-const C28_HASH_CALL_UNDEF: u32 = C28_HASH_CALL + C28_HASH_CALL_BLOCK;
-const C28_HASH_CALL_UNDEF_BLOCK: u32 = 6257896 - C28_HASH_CALL_UNDEF;
-
-const C28_STD_CALLS: u32 = C28_HASH_CALL_UNDEF + C28_HASH_CALL_UNDEF_BLOCK; // 6257896;
-
-// const BIT_i3_2: usize = 76;
-// const BIT_i3_0: usize = 74;
-// const BIT_n3_2: usize = 73;
-// const BIT_n3_0: usize = 71;
-
-const MAXGRID4: u16 = 32400;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct CallId {
@@ -62,6 +19,7 @@ impl CallId {
     }
 }
 
+#[derive(Debug)]
 pub struct Ft8Msg {
     pub call_to: CallId,
     pub call_from: CallId,
@@ -79,17 +37,21 @@ impl Ft8Msg {
 
     pub fn to_string(&self) -> Option<String> {
         let mut stg = String::new();
+
         if !self.call_to.id.is_empty() {
             stg.push_str(&self.call_to.id);
             stg.push(' ');
         }
+
         if !self.call_from.id.is_empty() {
             stg.push_str(&self.call_from.id);
             stg.push(' ');
         }
+
         if !self.extra.is_empty() {
             stg.push_str(&self.extra);
         }
+
         if stg.is_empty() {
             dbg!("FT8 unpacked to empty string");
             None
@@ -101,11 +63,12 @@ impl Ft8Msg {
 
 // n28 is a 28-bit integer, e.g. n28a or n28b, containing all the
 // call sign bits from a packed message.
-fn unpack_callsign(
+fn ft8_unpack_callsign(
     c28: u32, 
     ip: u8, 
     i3: u8
 ) -> Option<CallId> {
+    dbg!(c28, ip, i3);
     let mut result = CallId::new();
 
     match c28 {
@@ -259,10 +222,12 @@ fn unpack_callsign(
     }
 }
 
-fn unpack_std_msg(
+fn ft8_unpack_type1or2(
     a77: &[u8],
     i3: u8
 ) -> Option<Ft8Msg> {
+    dbg!(a77, i3);
+
     let mut ft8_msg = Ft8Msg::new();
     
     // Extract packed fields
@@ -282,20 +247,14 @@ fn unpack_std_msg(
     igrid4 |= (a77[8] as u16) << 2;
     igrid4 |= (a77[9] as u16) >> 6;
 
-    match unpack_callsign(n28a >> 1, n28a as u8 & 0x01, i3) {
-        Some(call) => {
-            ft8_msg.call_to = call;
-            return Some(ft8_msg);
-        }
-        None => {},
+    let call =  ft8_unpack_callsign(n28a >> 1, n28a as u8 & 0x01, i3);
+    if call.is_some() {
+        ft8_msg.call_to = call.unwrap();
     }
 
-    match unpack_callsign(n28b >> 1, n28b as u8 & 0x01, i3) {
-        Some(call) => {
-            ft8_msg.call_from = call;
-            return Some(ft8_msg);
-        }
-        None => {}
+    let call = ft8_unpack_callsign(n28b >> 1, n28b as u8 & 0x01, i3);
+    if call.is_some() {
+        ft8_msg.call_from = call.unwrap();
     }
 
     match igrid4 {
@@ -342,9 +301,11 @@ fn unpack_std_msg(
     return Some(ft8_msg);
 }
 
-fn unpack_text(
+fn ft8_unpack_type0_0(
     a71: &[u8]
 ) -> Option<String> {
+    dbg!(a71);
+
     let mut text = String::new();
     // todo!("test");
 
@@ -375,9 +336,11 @@ fn unpack_text(
     Some(text) // Success
 }
 
-fn unpack_telemetry(
+fn ft8_unpack_type0_5(
     a71: &[u8], 
 ) -> Option<String> {
+    dbg!(a71);
+
     let mut telemetry = String::new();
     let mut b71 = [0u8; 9];
 
@@ -411,9 +374,11 @@ fn unpack_telemetry(
 
 //none standard for wsjt-x 2.0
 //by KD8CEC
-fn unpack_nonstandard(
+fn ft8_unpack_type4(
     a77: &[u8], 
 ) -> Option<Ft8Msg> {
+    dbg!(a77);
+
     let mut ft8_msg = Ft8Msg::new();
 
     //let mut n12 = (a77[0] << 4) as u32; //11 ~4  : 8
@@ -474,17 +439,19 @@ fn unpack_nonstandard(
     Some(ft8_msg)
 }
 
-pub fn ft8_unpack_to_msg(a77: &[u8]) -> Option<Ft8Msg> {
+pub fn ft8_unpack_buff_to_msg(a77: &[u8]) -> Option<Ft8Msg> {
     // assert_eq!(a77.len(), FT8.ldpc_k_bytes());
     // Extract i3 (bits 74..76)
     let i3 = (a77[9] >> 3) & 0x07;
+    dbg!(i3);
     match i3 {
         0 => {
             // Extract n3 (bits 71..73)
             let n3 = ((a77[8] << 2) & 0x04) | ((a77[9] >> 6) & 0x03);
+            dbg!(n3);
             match (n3) {
                 0 => {
-                    match unpack_text(a77) {
+                    match ft8_unpack_type0_0(a77) {
                         Some(field) => {
                             let mut ret = Ft8Msg::new();
                             ret.extra = field;
@@ -494,7 +461,7 @@ pub fn ft8_unpack_to_msg(a77: &[u8]) -> Option<Ft8Msg> {
                     };
                 },
                 5 => {
-                    match unpack_telemetry(a77) {
+                    match ft8_unpack_type0_5(a77) {
                         Some(field) => {
                             let mut ret = Ft8Msg::new();
                             ret.extra = field;
@@ -510,7 +477,7 @@ pub fn ft8_unpack_to_msg(a77: &[u8]) -> Option<Ft8Msg> {
         },
         1..=2 => {
             // Type 1 (standard message) or Type 2 ("/P" form for EU VHF contest)
-            match unpack_std_msg(a77, i3) {
+            match ft8_unpack_type1or2(a77, i3) {
                 Some(fields) => {
                     return Some(fields);
                 },
@@ -524,13 +491,7 @@ pub fn ft8_unpack_to_msg(a77: &[u8]) -> Option<Ft8Msg> {
             //     // Type 4: Nonstandard calls, e.g. <WA9XYZ> PJ4/KA1ABC RR73
             //     // One hashed call or "CQ"; one compound or nonstandard call with up
             //     // to 11 characters; and (if not "CQ") an optional RRR, RR73, or 73.
-            match unpack_std_msg(a77, i3) {
-                Some(fields) => {
-                    return Some(fields);
-                },
-                None => {}
-            }
-            match unpack_nonstandard(a77) {
+            match ft8_unpack_type4(a77) {
                 Some(fields) => {
                     return Some(fields);
                 },
@@ -548,10 +509,40 @@ pub fn ft8_unpack_to_msg(a77: &[u8]) -> Option<Ft8Msg> {
 }
 
 pub fn ft8_unpack_to_string(a77: &[u8]) -> Option<String> {
-    match ft8_unpack_to_msg(a77) {
+    match ft8_unpack_buff_to_msg(a77) {
         Some(ft8_msg) => {
+            dbg!(&ft8_msg);
             ft8_msg.to_string()
         },
         None => { None },
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::unpack_ft8;
+
+    // fn test_roundtrip(modem: &mut rustxxx::Modem, s: &str) {
+    //     for loopback_at in 0..6 {
+    //         let cw = pack_ft8::_pack77(s);
+    //         assert_eq!(cw.len(), modem.protocol._ldpc_p_bytes().0);
+    //         let loopback_result = modem.l5_top_outbound(loopback_at, &cw).unwrap();
+    //         assert_eq!(loopback_result, cw, "failed at loopback {}", loopback_at);
+    //     }
+    // }
+
+    #[test]
+    fn test() {
+        
+        // let mut modem: rustxxx::Modem = rustxxx::Modem::new(
+        //     &rustxxx::TEST_PROTOCOL, 
+        //     &rustxxx::TEST_FT8_RUNTIME, 
+        //     rustxxx::TEST_FREQUENCY
+        // );
+
+        // const M_0: &str = "CQ VK2ZTY QG61";        
+        // test_roundtrip(&mut modem, M_0);
+    }
+
 }

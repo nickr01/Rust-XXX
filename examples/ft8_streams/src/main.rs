@@ -558,16 +558,16 @@ fn rx_main() -> Result<(), anyhow::Error> {
 
             receive_pipeline.update_spectrogram();
 
-            for msg in messages {
-                match proto_ft8::unpack_ft8::ft8_unpack_to_string(&msg.codeword()) {
-                    Some(msg) => {
-                        dbg!(&msg);
-                    },
-                    None => {
-                        dbg!("Bad unpack");
-                    }
-                }
-            }
+            // for msg in messages {
+            //     match proto_ft8::unpack_ft8::ft8_unpack_to_string(&msg.codeword()) {
+            //         Some(msg) => {
+            //             dbg!(&msg);
+            //         },
+            //         None => {
+            //             dbg!("Bad unpack");
+            //         }
+            //     }
+            // }
         }   
     }
 

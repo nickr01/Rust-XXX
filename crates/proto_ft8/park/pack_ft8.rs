@@ -1,34 +1,28 @@
-use crate::*;
-
-// TODO: This is wasteful, should figure out something more elegant
-const _A0: &str = " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ+-./?";
-const _A1: &str = " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const _A2: &str = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const _A3: &str = "0123456789";
-const _A4: &str = " ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+// use crate::*;
+use crate::protocol::*;
+use crate::text;
 
 // Pack a special token, a 22-bit hash code, or a valid base call
 // into a 28-bit integer.
-pub fn _pack28(callsign: &str) -> i32 {
-    const NTOKENS: u32 = 2063592;
-    const MAX22: u32 = 4194304;
+fn ft8_pack_std_call(callsign: &str) -> Option<u32> {
+    dbg!(callsign);
 
     // Check for special tokens first
     if callsign.starts_with("DE") {
-        return 0;
+        return Some(C28_DE);
     }
 
     if callsign.starts_with("QRZ") {
-        return 1;
+        return Some(C28_QRZ);
     }
 
     if callsign.starts_with("CQ") {
-        return 2;
+        return Some(C28_CQ);
     }
 
     if callsign.starts_with("CQ_") {
         //int nnum = 0, nlet = 0;
-        // TODO:
+        todo!();
     }
 
     // TODO: Check for <...> callsign
@@ -70,41 +64,68 @@ pub fn _pack28(callsign: &str) -> i32 {
     */
     // Check for standard callsign
     let call: Vec<char> = callsign.chars().collect();
-    if let (Some(i0), Some(i1), Some(i2), Some(i3), Some(i4), Some(i5)) = (
-        _A1.find(call[0]),
-        _A2.find(call[1]),
-        _A3.find(call[2]),
-        _A4.find(call[3]),
-        _A4.find(call[4]),
-        _A4.find(call[5]),
-    ) {
-        let mut n28: i32 = i0 as i32;
-        n28 = n28 * 36 + i1 as i32;
-        n28 = n28 * 10 + i2 as i32;
-        n28 = n28 * 27 + i3 as i32;
-        n28 = n28 * 27 + i4 as i32;
-        n28 = n28 * 27 + i5 as i32;
 
-        return (NTOKENS + MAX22) as i32 + n28;
+    let mut n28 = 0u32;
+    for (i, c) in call.iter().enumerate() {
+        let (opt_n, l) = match i {
+            0 => { (CALL_A1.find(*c), CALL_A1_LEN) },
+            1 => { (CALL_A2.find(*c), CALL_A2_LEN) },
+            2 => { (CALL_A3.find(*c), CALL_A3_LEN) },
+            3 => { (CALL_A4.find(*c), CALL_A4_LEN) },
+            4 => { (CALL_A4.find(*c), CALL_A4_LEN) },
+            5 => { (CALL_A4.find(*c), CALL_A4_LEN) },
+            _ => { 
+                dbg!("Too many callsign digits");
+                return None;
+            }
+        };
+        match opt_n {
+            Some(n) => {
+                n28 += n28 * l + n as u32;
+            },
+            None => {
+                dbg!("Invalid callsign character for character position", c, i);
+                return None;
+            }
+        }
     }
+    Some(C28_STD_CALLS + n28)
 
-    -1
+    // if let (Some(i0), Some(i1), Some(i2), Some(i3), Some(i4), Some(i5)) = (
+    //     _A1.find(call[0]),
+    //     _A2.find(call[1]),
+    //     _A3.find(call[2]),
+    //     _A4.find(call[3]),
+    //     _A4.find(call[4]),
+    //     _A4.find(call[5]),
+    // ) {
+    //     let mut n28: i32 = i0 as i32;
+    //     n28 = n28 * _A2_LEN + i1 as i32;
+    //     n28 = n28 * _A3_LEN + i2 as i32;
+    //     n28 = n28 * _A4_LEN + i3 as i32;
+    //     n28 = n28 * _A4_LEN + i4 as i32;
+    //     n28 = n28 * _A4_LEN + i5 as i32;
+
+    //     return (NTOKENS + MAX22) as i32 + n28;
+    // }
+
+    // -1
 }
 
-pub fn _packgrid(grid4: &str) -> u16 {
-    const MAXGRID4: u16 = 32400;
+fn ft8_pack_grid4(grid4: &str) -> Option<u16> {
+    dbg!(grid4);
 
     // Take care of special cases
     if grid4 == "RRR" {
-        return MAXGRID4 + 2;
+        return Some(MAXGRID4 + 2);
     }
 
     if grid4 == "RR73" {
-        return MAXGRID4 + 3;
+        return Some(MAXGRID4 + 3);
     }
 
     if grid4 == "73" {
-        return MAXGRID4 + 4;
+        return Some(MAXGRID4 + 4);
     }
 
     let gstr: Vec<char> = grid4.chars().collect();
@@ -119,7 +140,7 @@ pub fn _packgrid(grid4: &str) -> u16 {
         igrid4 = igrid4 * 10 + (gstr[2] as u16 - '0' as u16);
         igrid4 = igrid4 * 10 + (gstr[3] as u16 - '0' as u16);
 
-        return igrid4;
+        return Some(igrid4);
     }
 
     // Parse report: +dd /-dd /R+dd /R-dd
@@ -127,32 +148,35 @@ pub fn _packgrid(grid4: &str) -> u16 {
     if gstr[0] == 'R' {
         let dd = text::_dd_to_int(&grid4.chars().take(1).collect::<String>());
         let irpt = (35 + dd) as u16;
-        (MAXGRID4 + irpt) | 0x8000 // ir = 1
+        return Some((MAXGRID4 + irpt) | 0x8000); // ir = 1
     } else {
         let dd = text::_dd_to_int(grid4);
         let irpt = (35 + dd) as u16;
-        MAXGRID4 + irpt // ir = 0
+        return Some(MAXGRID4 + irpt); // ir = 0
     }
-    //return MAXGRID4 + 1;
+    
+    // !?&*!!! how do we get here?
+    Some(MAXGRID4 + 1)
 }
 
 // Pack Type 1 (Standard 77-bit message) and Type 2 (ditto, with a "/P" call)
-pub fn _pack77_1(msg: &str) -> Option<Vec<u8>> {
-    // Locate the first delimiter
-    let token: Vec<&str> = msg.split(' ').collect();
-    let n28a = _pack28(token[0]);
-    let n28b = _pack28(token[1]);
+fn ft8_pack_type1(type1_msg: &str) -> Option<Vec<u8>> {
+    dbg!(type1_msg);
 
-    if n28a < 0 || n28b < 0 {
+    // Locate the first delimiter
+    let token: Vec<&str> = type1_msg.split(' ').collect();
+    let n28a = ft8_pack_std_call(token[0]);
+    let n28b = ft8_pack_std_call(token[1]);
+
+    if !n28a.is_some() || !n28b.is_some() {
         return None;
     }
 
-    let igrid4 =  if token.len() > 2 { 
-        _packgrid(token[2]) 
-    } else {
-        // Two callsigns, no grid/report
-        _packgrid(" ")
-    };
+    let n28a = n28a.unwrap();
+    let n28b = n28b.unwrap();
+
+    let igrid4 =  ft8_pack_grid4(if token.len() > 2 { token[2] } else { " " })
+        .expect("expected a packed grid4");
 
     let i3 = 1u8; // No suffix or /R
 
@@ -163,7 +187,7 @@ pub fn _pack77_1(msg: &str) -> Option<Vec<u8>> {
     let n28b = (n28b as u32) << 1; // ipb = 0
 
     // Pack into (28 + 1) + (28 + 1) + (1 + 15) + 3 bits
-    let mut b77 = Vec::with_capacity(protocol::FT8._ldpc_k_bytes().0);
+    let mut b77 = Vec::with_capacity(FT8._ldpc_k_bytes().0);
     b77.push((n28a >> 21) as u8);
     b77.push((n28a >> 13) as u8);
     b77.push((n28a >> 5) as u8);
@@ -178,12 +202,14 @@ pub fn _pack77_1(msg: &str) -> Option<Vec<u8>> {
     Some(b77)
 }
 
-pub fn _packtext77(text: &str) -> Vec<u8> {
-    let text = text.trim();
+fn ft8_pack_type3(type3_msg: &str) -> Option<Vec<u8>> {
+    dbg!(type3_msg);
 
-    let mut b77 = Vec::with_capacity(protocol::FT8._ldpc_k_bytes().0);
+    let text = type3_msg.trim();
+
+    let mut b77 = Vec::with_capacity(FT8._ldpc_k_bytes().0);
     // Clear the first 72 bits representing a long number
-    b77.resize(9, 0);
+    b77.resize(FT8._ldpc_k_bytes().0, 0);
     // for i in 0..9 {
     //     b77[i] = 0;
     // }
@@ -202,7 +228,7 @@ pub fn _packtext77(text: &str) -> Vec<u8> {
         // Get the index of the current char
         if j < text.len() {
             if let Some(c) = text.chars().nth(j) {
-                if let Some(q) = _A0.find(c) {
+                if let Some(q) = CALL_A0.find(c) {
                     x = if q > 0 { q as u16 } else { 0 };
                 } else {
                     x = 0;
@@ -232,13 +258,15 @@ pub fn _packtext77(text: &str) -> Vec<u8> {
     b77[8] &= 0xFE;
     b77[9] &= 0x00;
 
-    b77
+    Some(b77)
 }
 
-pub fn _pack77(msg: &str) -> Vec<u8>  {
+pub fn ft8_pack_string(msg: &str) -> Option<Vec<u8>>  {
+    dbg!(msg);
+
     // Check Type 1 (Standard 77-bit message) or Type 2, with optional "/P"
-    match _pack77_1(msg) {
-        Some(b77) => b77,
+    match ft8_pack_type1(msg) {
+        Some(b77) => Some(b77),
         None => {
             // TODO:
             // Check 0.5 (telemetry)
@@ -247,7 +275,39 @@ pub fn _pack77(msg: &str) -> Vec<u8>  {
 
             // Default to free text
             // i3=0 n3=0
-            _packtext77(msg)
+            ft8_pack_type3(msg)
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{unpack_ft8::ft8_unpack_to_string};
+
+    fn test_roundtrip(msg: &str) {
+        let cw = ft8_pack_string(&msg)
+            .expect("Could not ft8_pack");
+        let msg1 = ft8_unpack_to_string(&cw)
+            .expect("Could not ft8_unpack");
+        assert_eq!(msg, msg1);
+    }
+
+    #[test]
+    fn test() {
+        // test_roundtrip("TNX BOB 73 GL"); // 0.0
+        // test_roundtrip("K1ABC RR73; W9XYZ <KH1/KH7Z> -08"); // 0.1
+        // test_roundtrip("K1ABC W9XYZ 6A WI"); // 0.3 
+        // test_roundtrip("W9XYZ K1ABC R 17B EMA"); // 0.4
+        // test_roundtrip("123456789ABCDEF012"); // 0.5
+        test_roundtrip("K1ABC W9XYZ R EN37"); // 1.
+        // test_roundtrip("K1ABC/R W9XYZ/R R EN37"); // 1.
+        // test_roundtrip("G4ABC/P PA9XYZ JO22"); // 2.
+        // test_roundtrip("K1ABC W9XYZ 579 WI"); // 3.
+        // test_roundtrip("<W9XYZ> PJ4/K1ABC RRR"); // 4.
+        // test_roundtrip("<G4ABC> <PA9XYZ> R 570007 JO22DB"); // 5. 
+        // test_roundtrip("CQ VK2ZTY QG61");
+        // test_roundtrip("CQ VK2ZTY QG61");
+    }
+
 }
