@@ -1,3 +1,5 @@
+use rustfft::num_traits::clamp;
+
 // Pack and Unpack with unit tests
 use crate::protocol::*;
 use crate::text;
@@ -64,31 +66,57 @@ impl Ft8Msg {
 
 //----------------------------------------------------------
 
-const A71_BYTES: usize = 9; // (71+1)/8
+const FT8_MESSAGE_BITS: usize = 71;
+const A71_BYTES: usize = (FT8_MESSAGE_BITS + 1) / 8; // 9;
 type A71 = [u8; A71_BYTES];
 
-const FREE_TEXT_LEN: usize = 13;
-const FREE_TEXT_PAD: char = ' ';
-const FREE_TEXT_CHARSET: &str = " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ+-./?";
-const FREE_TEXT_CHARSET_LEN: usize = FREE_TEXT_CHARSET.len();  // 42
+struct CharSet {
+    msg_len: usize,
+    pad: char,
+    set: &'static str,
+}
 
-const TELEM_TEXT_LEN: usize = 18;
-const TELEM_TEXT_PAD: char = '0';
-const TELEM_TEXT_CHARSET: &str = "0123456789ABCDEF";
-const TELEM_TEXT_CHARSET_LEN: usize = TELEM_TEXT_CHARSET.len(); // 16
+impl CharSet {
+    pub fn modulus(&self) -> usize {
+        self.set.len()
+    }
+}
 
-const FT8_MESSAGE_BITS: usize = 71;
+const FREE_CHARSET: CharSet = CharSet {
+    msg_len: 13,
+    pad: ' ',
+    set: " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ+-./?",
+};
+
+const TELEM_CHARSET: CharSet = CharSet {
+    msg_len: 18,
+    pad: '0',
+    set: "0123456789ABCDEF",
+};
+
+// const FREE_TEXT_LEN: usize = 13;
+// const FREE_TEXT_PAD: char = ' ';
+// const FREE_TEXT_CHARSET: &str = " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ+-./?";
+// const FREE_TEXT_CHARSET_LEN: usize = FREE_TEXT_CHARSET.len();  // 42
+
+// const TELEM_TEXT_LEN: usize = 18;
+// const TELEM_TEXT_PAD: char = '0';
+// const TELEM_TEXT_CHARSET: &str = "0123456789ABCDEF";
+// const TELEM_TEXT_CHARSET_LEN: usize = TELEM_TEXT_CHARSET.len(); // 16
+
 
 // - Leading and trailing whitespace removed
 // - Trim to len
 // - Right justify with pad_chars
-fn left_pad(input_string: &String, len_var: usize, pad_char: char) -> String {
+// maybe need to get rid of these messy str<>String conversions
+fn left_pad(input_string: &String, charset: &CharSet) -> String {
     let mut trimmed = input_string.trim().to_string();
-    trimmed.truncate(len_var);
+    trimmed.truncate(charset.msg_len);
+    let mut trimmed = trimmed.trim().to_string(); // yep, trim again
     {
-        let left_pad_len: isize = len_var as isize - trimmed.len() as isize ;
+        let left_pad_len: isize = charset.msg_len as isize - trimmed.len() as isize ;
         if left_pad_len > 0 {
-            let pad_string: String = pad_char.to_string();
+            let pad_string: String = charset.pad.to_string();
             let mut left_padded = pad_string.repeat(left_pad_len as usize);
             left_padded.push_str(&trimmed);
             trimmed = left_padded;
@@ -101,18 +129,17 @@ fn left_pad(input_string: &String, len_var: usize, pad_char: char) -> String {
 // - Trim, truncate and right justify
 // - Then build sum with num base of the char array length
 // - Assume can build the output bitmap in u128 - might as well pass that around
-fn ft8_pack_0_05 (
+fn ft8_pack_0_stg (
     cn: &String,
-    bits: usize,
-    charset: &str,
-    pad_char: char,
+    charset: &CharSet,
+    bits: usize
 ) -> Option<u128> {
-    let cn = left_pad(&cn,charset.len(), pad_char);
+    let cn = left_pad(&cn, charset);
     let mut val: u128 = 0;
     for c in cn.chars() {
-        match charset.find(c).map_or(None, |i| Some(i as u8)) {
+        match charset.set.find(c).map_or(None, |i| Some(i as u8)) {
             Some(j) => {
-                val = val * charset.len() as u128 + j as u128;
+                val = val * charset.modulus() as u128 + j as u128;
             },
             None => {
                 dbg!("invalid character in 0_0:free text");
@@ -134,35 +161,33 @@ fn ft8_pack_0_05 (
 fn ft8_pack_0_0 (
     c13:& String,
 ) -> Option<u128> {
-    ft8_pack_0_05(c13, FT8_MESSAGE_BITS, FREE_TEXT_CHARSET, ' ')
+    ft8_pack_0_stg(c13, &FREE_CHARSET, FT8_MESSAGE_BITS)
 }
 
 fn ft8_pack_0_5 (
     c18:& String,
 ) -> Option<u128> {
-    ft8_pack_0_05(c18, TELEM_TEXT_LEN, TELEM_TEXT_CHARSET, '0')
+    ft8_pack_0_stg(c18, &TELEM_CHARSET, FT8_MESSAGE_BITS)
 }
 
 //---------------------------------------------------------
 
-fn ft8_unpack_0_(
+fn ft8_unpack_0_stg(
     a71: u128,
     bits: usize,
-    charset: &str,
+    charset: &CharSet,
 ) -> Option<String> {
     // dbg!(a71);
-
     assert!(bits < 128);
     let val_max = 2u128.pow(bits as u32);
     let mut a71 = a71 & val_max - 1; // sanitise
 
     let mut text = String::new();
     
-    let mut bits = bits;
-    while bits > 0 {
-        let n = a71 % charset.len() as u128;
-        a71 /= charset.len() as u128;
-        let oc = charset.chars().nth(n as usize);
+    while text.len() < charset.msg_len {
+        let n = a71 % charset.modulus() as u128;
+        a71 /= charset.modulus() as u128;
+        let oc = charset.set.chars().nth(n as usize);
         match oc {
             Some(c) => {
                 text.push(c);
@@ -172,7 +197,6 @@ fn ft8_unpack_0_(
                 return None;
             }
         }
-        bits -= 1;
     }
     let text: String = text.chars().rev().collect();
     // not sure whether to trim here
@@ -182,13 +206,13 @@ fn ft8_unpack_0_(
 fn ft8_unpack_0_0(
     a71: u128,
 ) -> Option<String> {
-    ft8_unpack_0_(a71, FT8_MESSAGE_BITS, FREE_TEXT_CHARSET)
+    ft8_unpack_0_stg(a71, FT8_MESSAGE_BITS, &FREE_CHARSET)
 }
 
 fn ft8_unpack_0_5(
     a71: u128,
 ) -> Option<String> {
-    ft8_unpack_0_(a71, FT8_MESSAGE_BITS, TELEM_TEXT_CHARSET)
+    ft8_unpack_0_stg(a71, FT8_MESSAGE_BITS, &TELEM_CHARSET)
 }
 
 //     let mut b71 = [0u8; 9];
@@ -909,20 +933,17 @@ mod tests {
 
     #[test]
     fn test_left_pad() {
-        assert_eq!(left_pad(&"fred".to_string(), 3, 'x'), "fre"); // trunc
-        assert_eq!(left_pad(&" fred ".to_string(), 3, 'x'), "fre"); // trim trunc
-        assert_eq!(left_pad(&" fred ".to_string(), 5, 'x'), "xfred"); // trim pad
-        assert_eq!(left_pad(&" freddy ".to_string(), 10, 'x'), "xxxxfreddy"); // trim
-        assert_eq!(left_pad(&" freddy ".to_string(), 3, 'x'), "fre"); // trim trunc
-        assert_eq!(left_pad(&" freddy ".to_string(), 1, 'x'), "f"); // trim
-        assert_eq!(left_pad(&" freddy ".to_string(), 0, 'x'), ""); // trim
+        assert_eq!(left_pad(&"fred".to_string(), &FREE_CHARSET), "         fred");
+        assert_eq!(left_pad(&"fred         ".to_string(), &FREE_CHARSET), "         fred");
+        assert_eq!(left_pad(&"fred         and more".to_string(), &FREE_CHARSET), "         fred");
+        assert_eq!(left_pad(&"   fred             and much more".to_string(), &FREE_CHARSET), "         fred");
     }
 
     #[test]
     fn test_pack_0_0() {
         assert_eq!(ft8_pack_0_0(&"0".to_string()).unwrap(), 1);
         assert_eq!(ft8_pack_0_0(&"1".to_string()).unwrap(), 2);
-        assert_eq!(ft8_pack_0_0(&"00".to_string()).unwrap(), 1 + FREE_TEXT_CHARSET_LEN as u128);
+        assert_eq!(ft8_pack_0_0(&"00".to_string()).unwrap(), 1 + FREE_CHARSET.modulus() as u128);
         assert_eq!(ft8_pack_0_0(&"01".to_string()).unwrap(), 0b00101100);
         assert_eq!(
             ft8_pack_0_0(&"TNX BOB 73 GL".to_string()).unwrap(),
@@ -932,15 +953,15 @@ mod tests {
 
     #[test]
     fn test_unpack_0_0() {
-        assert_eq!(ft8_unpack_0_0(0).unwrap(), "".to_string());     
-        assert_eq!(ft8_unpack_0_0(1).unwrap(), "0".to_string());
+        assert_eq!(ft8_unpack_0_0(0).unwrap(), "");     
+        assert_eq!(ft8_unpack_0_0(1).unwrap(), "0");
         assert_eq!(
             ft8_unpack_0_0(0b01100011111011011100111011100010101001001010111000000111111101010000000).unwrap(), 
-            "TNX BOB 73 GL".to_string());
+            "TNX BOB 73 GL");
     }
 
     fn test_round_0_0(s:& String) {
-        assert_eq!(ft8_unpack_0_0(ft8_pack_0_0(s).unwrap()).unwrap(), *s);
+        assert_eq!(ft8_unpack_0_0(ft8_pack_0_0(s).unwrap()).unwrap(), left_pad(s, &FREE_CHARSET).trim());
     }
 
     #[test]
@@ -951,8 +972,22 @@ mod tests {
         test_round_0_0(&"FRED 1 2 3".to_string());
     }
 
+    #[test]
+    fn test_pack_0_5() {
+        assert_eq!(ft8_pack_0_5(&"".to_string()).unwrap(), 0);
+        assert_eq!(ft8_pack_0_5(&"0".to_string()).unwrap(), 0);
+        assert_eq!(ft8_pack_0_5(&"1".to_string()).unwrap(), 1);
+        assert_eq!(ft8_pack_0_5(&"12".to_string()).unwrap(), 0x12);
+        assert_eq!(ft8_pack_0_5(&"123456781234567800".to_string()).unwrap(), 0x123456781234567800);
+    }
+
+    #[test]
+    fn test_unpack_0_5() {
+        assert_eq!(ft8_unpack_0_5(0x123456781234567800).unwrap(), "123456781234567800");
+    }
+
     fn test_round_0_5(s:& String) {
-        assert_eq!(ft8_unpack_0_5(ft8_pack_0_5(s).unwrap()).unwrap(), *s);
+        assert_eq!(ft8_unpack_0_5(ft8_pack_0_5(s).unwrap()).unwrap(), left_pad(s, &TELEM_CHARSET));
     }
 
     #[test]
