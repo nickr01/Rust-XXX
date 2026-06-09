@@ -225,6 +225,7 @@ fn ft8_unpack_0_5(
     ft8_unpack_0_stg(a71, FT8_MESSAGE_BITS, &TELEM_CHARSET)
 }
 
+/// Mimic std_call_to_c28.f90 incl behaviour with unexpected chars
 fn ft8_pack_callsign(c28: &str) -> Option<U28> {
 
     /*
@@ -268,44 +269,60 @@ fn ft8_pack_callsign(c28: &str) -> Option<U28> {
     dbg!(&c28);
 
     let char6: Vec<char> = c28.chars().collect();
+    let mut i = [0i32; 6]; 
 
-    let i0 = CALL1_CHARSET.set.find(char6[0]).unwrap() as U28;
-    let i1 = CALL2_CHARSET.set.find(char6[1]).unwrap() as U28;
-    let i2 = CALL3_CHARSET.set.find(char6[2]).unwrap() as U28;
-    let i3 = CALL4_CHARSET.set.find(char6[3]).unwrap() as U28;
-    let i4 = CALL4_CHARSET.set.find(char6[4]).unwrap() as U28;
-    let i5 = CALL4_CHARSET.set.find(char6[5]).unwrap() as U28;
+    // NBNB the behaviour with unexpected characters matches the
+    // behaviour of reference packer std_call_to_c28.f90
+    // which does not fail on chars in unexpected positions
+    i[0] = match CALL1_CHARSET.set.find(char6[0]) {
+        Some(n) => {
+            n as i32
+        },
+        None => { -1 }
+    };
+    i[1] = match CALL2_CHARSET.set.find(char6[1]) {
+        Some(n) => {
+            n as i32
+        },
+        None => { -1 }
+    };
+    i[2] = match CALL3_CHARSET.set.find(char6[2]) {
+        Some(n) => {
+            n as i32
+        },
+        None => { -1 }
+    };
+    i[3] = match CALL4_CHARSET.set.find(char6[3]) {
+        Some(n) => {
+            n as i32
+        },
+        None => { -1 }
+    };
+    i[4] = match CALL4_CHARSET.set.find(char6[4]) {
+        Some(n) => {
+            n as i32
+        },
+        None => { -1 }
+    };
+    i[5] = match CALL4_CHARSET.set.find(char6[5]) {
+        Some(n) => {
+            n as i32
+        },
+        None => { -1 }
+    };
 
-    let n28: U28 = C28_STD_CALLS
-        //+ MAX22
-        + 36 * 10 * 27 * 27 * 27 * i0
-        + 10 * 27 * 27 * 27 * i1
-        + 27 * 27 * 27 * i2
-        + 27 * 27 * i3
-        + 27 * i4
-        + i5;
+    let n28: i32 = 
+        C28_STD_CALLS as i32
+        + 36 * 10 * 27 * 27 * 27 * i[0]
+        + 10 * 27 * 27 * 27 * i[1]
+        + 27 * 27 * 27 * i[2]
+        + 27 * 27 * i[3]
+        + 27 * i[4]
+        + i[5];
 
-    Some(n28)
+    dbg!(n28);
 
-    // if let (Some(i0), Some(i1), Some(i2), Some(i3), Some(i4), Some(i5)) = (
-    //     _A1.find(call[0]),
-    //     _A2.find(call[1]),
-    //     _A3.find(call[2]),
-    //     _A4.find(call[3]),
-    //     _A4.find(call[4]),
-    //     _A4.find(call[5]),
-    // ) {
-    //     let mut n28: i32 = i0 as i32;
-    //     n28 = n28 * _A2_LEN + i1 as i32;
-    //     n28 = n28 * _A3_LEN + i2 as i32;
-    //     n28 = n28 * _A4_LEN + i3 as i32;
-    //     n28 = n28 * _A4_LEN + i4 as i32;
-    //     n28 = n28 * _A4_LEN + i5 as i32;
-
-    //     return (NTOKENS + MAX22) as i32 + n28;
-    // }
-
-    // -1
+    Some(n28 as U28)
 }
 
 fn ft8_pack_h22call(c28: &str) -> Option<U28> {
