@@ -1,5 +1,8 @@
 use transport::rustxxx::*;
 
+pub type U71 = u128;
+pub type U28 = u32;
+
 pub const FT8: Protocol = Protocol::new(
     Secs(0.16),
     Secs(15.0),
@@ -21,67 +24,59 @@ pub const FT8: Protocol = Protocol::new(
     SymbolCount(1),
 );
 
-// TODO: something more elegant with slices
-pub const CALL_A0: &str = " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ+-./?";
-pub const CALL_A0_LEN: u32 = CALL_A0.len() as u32;
-
-pub const CALL_A1: &str = " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-pub const CALL_A1_LEN: u32 = CALL_A1.len() as u32;
-
-pub const CALL_A2: &str = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-pub const CALL_A2_LEN: u32 = CALL_A2.len() as u32;
-
-pub const CALL_A3: &str = "0123456789";
-pub const CALL_A3_LEN: u32 = CALL_A3.len() as u32;
-
-pub const CALL_A4: &str = " ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-pub const CALL_A4_LEN: u32 = CALL_A4.len() as u32;
-
 // as per FT4/FT8 doc QEX  July/August 2020 - Franke et al
-pub const C28_DE: u32 = 0;
-pub const C28_QRZ: u32 = 1;
-pub const C28_CQ: u32 = 2;
+pub const C28_DE: U28 = 0;
+pub const C28_QRZ: U28 = 1;
+pub const C28_CQ: U28 = 2;
 
-pub const C28_CQ_DDD: u32 = 3;
-pub const C28_CQ_DDD_BLOCK: u32 = 1002-3+1;
-pub const C28_CQ_DDD_UNDEF:u32 = C28_CQ_DDD + C28_CQ_DDD_BLOCK;
-pub const C28_CQ_DDD_UNDEF_BLOCK: u32 = 1004 - C28_CQ_DDD_UNDEF;
+pub const C28_CQ_DDD: U28 = 3;
+pub const C28_CQ_DDD_BLOCK: U28 = 1002-3+1;
+pub const C28_CQ_DDD_UNDEF:U28 = C28_CQ_DDD + C28_CQ_DDD_BLOCK;
+pub const C28_CQ_DDD_UNDEF_BLOCK: U28 = 1004 - C28_CQ_DDD_UNDEF;
 
-pub const C28_CQ_A: u32 = C28_CQ_DDD + C28_CQ_DDD_BLOCK + C28_CQ_DDD_UNDEF_BLOCK;
-pub const C28_CQ_A_BLOCK: u32 = 1029-1004+1;
-pub const C28_CQ_A_UNDEF: u32 = C28_CQ_A + C28_CQ_A_BLOCK;
-pub const C28_CQ_A_UNDEF_BLOCK: u32 = 1031 - C28_CQ_A_UNDEF;
+pub const C28_CQ_A: U28 = C28_CQ_DDD + C28_CQ_DDD_BLOCK + C28_CQ_DDD_UNDEF_BLOCK;
+pub const C28_CQ_A_BLOCK: U28 = 1029-1004+1;
+pub const C28_CQ_A_UNDEF: U28 = C28_CQ_A + C28_CQ_A_BLOCK;
+pub const C28_CQ_A_UNDEF_BLOCK: U28 = 1031 - C28_CQ_A_UNDEF;
 
-pub const C28_CQ_AA: u32 = C28_CQ_A_UNDEF + C28_CQ_A_UNDEF_BLOCK;
-pub const C28_CQ_AA_BLOCK: u32 = 1731-1031+1;
-pub const C28_CQ_AA_UNDEF: u32 = C28_CQ_AA + C28_CQ_AA_BLOCK;
-pub const C28_CQ_AA_UNDEF_BLOCK: u32 = 1760 - C28_CQ_AA_UNDEF;
+pub const C28_CQ_AA: U28 = C28_CQ_A_UNDEF + C28_CQ_A_UNDEF_BLOCK;
+pub const C28_CQ_AA_BLOCK: U28 = 1731-1031+1;
+pub const C28_CQ_AA_UNDEF: U28 = C28_CQ_AA + C28_CQ_AA_BLOCK;
+pub const C28_CQ_AA_UNDEF_BLOCK: U28 = 1760 - C28_CQ_AA_UNDEF;
 
-pub const C28_CQ_AAA: u32 = C28_CQ_AA_UNDEF + C28_CQ_AA_UNDEF_BLOCK;
-pub const C28_CQ_AAA_BLOCK: u32 = 20685 - 1760 + 1;
-pub const C28_CQ_AAA_UNDEF: u32 = C28_CQ_AAA + C28_CQ_AAA_BLOCK;
-pub const C28_CQ_AAA_UNDEF_BLOCK: u32 = 21443 - C28_CQ_AAA_UNDEF;
+pub const C28_CQ_AAA: U28 = C28_CQ_AA_UNDEF + C28_CQ_AA_UNDEF_BLOCK;
+pub const C28_CQ_AAA_BLOCK: U28 = 20685 - 1760 + 1;
+pub const C28_CQ_AAA_UNDEF: U28 = C28_CQ_AAA + C28_CQ_AAA_BLOCK;
+pub const C28_CQ_AAA_UNDEF_BLOCK: U28 = 21443 - C28_CQ_AAA_UNDEF;
 
-pub const C28_CQ_AAAA: u32 = C28_CQ_AAA_UNDEF + C28_CQ_AAA_UNDEF_BLOCK;
-pub const C28_CQ_AAAA_BLOCK: u32 = 532443 - 21443 + 1;
-pub const C28_CQ_AAAA_UNDEF: u32 = C28_CQ_AAAA + C28_CQ_AAAA_BLOCK;
-pub const C28_CQ_AAAA_UNDEF_BLOCK: u32 = 2063592 - C28_CQ_AAAA_UNDEF;
+pub const C28_CQ_AAAA: U28 = C28_CQ_AAA_UNDEF + C28_CQ_AAA_UNDEF_BLOCK;
+pub const C28_CQ_AAAA_BLOCK: U28 = 532443 - 21443 + 1;
+pub const C28_CQ_AAAA_UNDEF: U28 = C28_CQ_AAAA + C28_CQ_AAAA_BLOCK;
+pub const C28_CQ_AAAA_UNDEF_BLOCK: U28 = 2063592 - C28_CQ_AAAA_UNDEF;
 
-pub const C28_HASH_CALL: u32 = C28_CQ_AAAA_UNDEF + C28_CQ_AAAA_UNDEF_BLOCK;
-pub const C28_HASH_CALL_BLOCK: u32 = 0x400000; // 4194304;
-pub const C28_HASH_CALL_UNDEF: u32 = C28_HASH_CALL + C28_HASH_CALL_BLOCK;
-pub const C28_HASH_CALL_UNDEF_BLOCK: u32 = 6257896 - C28_HASH_CALL_UNDEF;
+pub const C28_HASH_CALL: U28 = C28_CQ_AAAA_UNDEF + C28_CQ_AAAA_UNDEF_BLOCK;
+pub const C28_HASH_CALL_BLOCK: U28 = 0x400000; // 4194304;
+pub const C28_HASH_CALL_UNDEF: U28 = C28_HASH_CALL + C28_HASH_CALL_BLOCK;
+pub const C28_HASH_CALL_UNDEF_BLOCK: U28 = 6257896 - C28_HASH_CALL_UNDEF;
 
-pub const C28_STD_CALLS: u32 = C28_HASH_CALL_UNDEF + C28_HASH_CALL_UNDEF_BLOCK; // 6257896;
+pub const C28_STD_CALLS: U28 = C28_HASH_CALL_UNDEF + C28_HASH_CALL_UNDEF_BLOCK; // 6257896;
+
+pub const U28_MAX: U28 = u32::MAX; // Hmmm - this may be wrong!
 
 // pub const BIT_i3_2: usize = 76;
 // pub const BIT_i3_0: usize = 74;
 // pub const BIT_n3_2: usize = 73;
 // pub const BIT_n3_0: usize = 71;
 
-// const NTOKENS: u32 = 2063592;
-// const MAX22: u32 = 0x400000; // 4194304;
-// const test1: u32 = NTOKENS + MAX22;
+// const NTOKENS: U71 = 2063592;
+// const MAX22: U71 = 0x400000; // 4194304;
+// const test1: U71 = NTOKENS + MAX22;
 
 pub const MAXGRID4: u16 = 32400;
+
+pub const FT8_MESSAGE_BITS: usize = 71;
+pub const A71_BYTES: usize = (FT8_MESSAGE_BITS + 1) / 8; // 9;
+pub type A71 = [u8; A71_BYTES];
+
+
 

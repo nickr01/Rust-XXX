@@ -66,10 +66,6 @@ impl Ft8Msg {
 
 //----------------------------------------------------------
 
-const FT8_MESSAGE_BITS: usize = 71;
-const A71_BYTES: usize = (FT8_MESSAGE_BITS + 1) / 8; // 9;
-type A71 = [u8; A71_BYTES];
-
 struct CharSet {
     msg_len: usize,
     pad: char,
@@ -94,16 +90,30 @@ const TELEM_CHARSET: CharSet = CharSet {
     set: "0123456789ABCDEF",
 };
 
-// const FREE_TEXT_LEN: usize = 13;
-// const FREE_TEXT_PAD: char = ' ';
-// const FREE_TEXT_CHARSET: &str = " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ+-./?";
-// const FREE_TEXT_CHARSET_LEN: usize = FREE_TEXT_CHARSET.len();  // 42
+// These are not elegant
+const CALL1_CHARSET: CharSet = CharSet {
+    msg_len: 6,
+    pad: ' ',
+    set: " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+};
 
-// const TELEM_TEXT_LEN: usize = 18;
-// const TELEM_TEXT_PAD: char = '0';
-// const TELEM_TEXT_CHARSET: &str = "0123456789ABCDEF";
-// const TELEM_TEXT_CHARSET_LEN: usize = TELEM_TEXT_CHARSET.len(); // 16
+const CALL2_CHARSET: CharSet = CharSet {
+    msg_len: 6,
+    pad: ' ',
+    set: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+};
 
+const CALL3_CHARSET: CharSet = CharSet {
+    msg_len: 6,
+    pad: ' ',
+    set: "0123456789"
+};
+
+const CALL4_CHARSET: CharSet = CharSet {
+    msg_len: 6,
+    pad: ' ',
+    set: " ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+};
 
 // - Leading and trailing whitespace removed
 // - Trim to len
@@ -128,18 +138,18 @@ fn left_pad(input_string: &str, charset: &CharSet) -> String {
 // - Accept a char string
 // - Trim, truncate and right justify
 // - Then build sum with num base of the char array length
-// - Assume can build the output bitmap in u128 - might as well pass that around
+// - Assume can build the output bitmap in UWork - might as well pass that around
 fn ft8_pack_0_stg (
     cn: &str,
     charset: &CharSet,
     bits: usize
-) -> Option<u128> {
+) -> Option<U71> {
     let cn = left_pad(&cn, charset);
-    let mut val: u128 = 0;
+    let mut val: U71 = 0;
     for c in cn.chars() {
         match charset.set.find(c).map_or(None, |i| Some(i as u8)) {
             Some(j) => {
-                val = val * charset.modulus() as u128 + j as u128;
+                val = val * charset.modulus() as U71 + j as U71;
             },
             None => {
                 dbg!("invalid character in 0_0:free text");
@@ -160,20 +170,20 @@ fn ft8_pack_0_stg (
 
 fn ft8_pack_0_0 (
     c13: &str,
-) -> Option<u128> {
+) -> Option<U71> {
     ft8_pack_0_stg(c13, &FREE_CHARSET, FT8_MESSAGE_BITS)
 }
 
 fn ft8_pack_0_5 (
     c18: &str,
-) -> Option<u128> {
+) -> Option<U71> {
     ft8_pack_0_stg(c18, &TELEM_CHARSET, FT8_MESSAGE_BITS)
 }
 
 //---------------------------------------------------------
 
 fn ft8_unpack_0_stg(
-    a71: u128,
+    a71: U71,
     bits: usize,
     charset: &CharSet,
 ) -> Option<String> {
@@ -185,8 +195,8 @@ fn ft8_unpack_0_stg(
     let mut text = String::new();
     
     while text.len() < charset.msg_len {
-        let n = a71 % charset.modulus() as u128;
-        a71 /= charset.modulus() as u128;
+        let n = a71 % charset.modulus() as U71;
+        a71 /= charset.modulus() as U71;
         let oc = charset.set.chars().nth(n as usize);
         match oc {
             Some(c) => {
@@ -199,355 +209,310 @@ fn ft8_unpack_0_stg(
         }
     }
     let text: String = text.chars().rev().collect();
-    // not sure whether to trim here
+    // not sure whether useful to trim here - probably
     Some(text.trim().to_string())
 }
 
 fn ft8_unpack_0_0(
-    a71: u128,
+    a71: U71,
 ) -> Option<String> {
     ft8_unpack_0_stg(a71, FT8_MESSAGE_BITS, &FREE_CHARSET)
 }
 
 fn ft8_unpack_0_5(
-    a71: u128,
+    a71: U71,
 ) -> Option<String> {
     ft8_unpack_0_stg(a71, FT8_MESSAGE_BITS, &TELEM_CHARSET)
 }
 
-//     let mut b71 = [0u8; 9];
+fn ft8_pack_callsign(c28: &str) -> Option<U28> {
 
-//     // Shift 71 bits right by 1 bit, so that it's right-aligned in the byte array
-//     let mut carry = 0;
-//     for i in 0..9 {
-//         b71[i] = carry | (a71[i] >> 1);
-//         carry = if (a71[i] & 1) != 0 { 0x80 } else { 0 };
-//     }
+    /*
+    char c6[6] = { ' ', ' ', ' ', ' ', ' ', ' ' };
 
-//     let mut c14 = String::new();
+    int length = 0; //strlen(callsign);  //We will need it later
+    while (callsign[length] != ' ' && callsign[length] != 0)
+    {
+        length++;
+    }
 
-//     for _idx in 0..13 {
-//         // Divide the long integer in b71 by 42
-//         let mut rem = 0u16;
-//         for b in &mut b71 {
-//             rem = (rem << 8) | (*b as u16);
-//             *b = (rem / 42) as u8;
-//             rem %= 42;
-//         }
-//         c14.push(text::charn(rem as u8, 0));
-//     }
+    // Copy callsign to 6 character buffer
+    if (starts_with(callsign, "3DA0") && length <= 7)
+    {
+        // Work-around for Swaziland prefix: 3DA0XYZ -> 3D0XYZ
+        memcpy(c6, "3D0", 3);
+        memcpy(c6 + 3, callsign + 4, length -4);
+    }
+    else if (starts_with(callsign, "3X") && is_letter(callsign[2]) && length <= 7)
+    {
+        // Work-around for Guinea prefixes: 3XA0XYZ -> QA0XYZ
+        memcpy(c6, "Q", 1);
+        memcpy(c6 + 1, callsign + 2, length -2);
+    }
+    else
+    {
+        if (is_digit(callsign[2]) && length <= 6)
+        {
+            // AB0XYZ
+            memcpy(c6, callsign, length);
+        }
+        else if (is_digit(callsign[1]) && length <= 5)
+        {
+            // A0XYZ -> " A0XYZ"
+            memcpy(c6 + 1, callsign, length);
+        }
+    }
+    */
 
-//     text.push_str(c14.chars().rev().collect::<String>().trim());
-    
-//     Some(text) // Success
-// }
+    let c28 = left_pad(c28, &CALL1_CHARSET);
+    dbg!(&c28);
 
-// fn ft8_unpack_type0_5(
-//     a71: &[u8], 
-// ) -> Option<String> {
-//     dbg!(a71);
+    let char6: Vec<char> = c28.chars().collect();
 
-//     let mut telemetry = String::new();
-//     let mut b71 = [0u8; 9];
+    let i0 = CALL1_CHARSET.set.find(char6[0]).unwrap() as U28;
+    let i1 = CALL2_CHARSET.set.find(char6[1]).unwrap() as U28;
+    let i2 = CALL3_CHARSET.set.find(char6[2]).unwrap() as U28;
+    let i3 = CALL4_CHARSET.set.find(char6[3]).unwrap() as U28;
+    let i4 = CALL4_CHARSET.set.find(char6[4]).unwrap() as U28;
+    let i5 = CALL4_CHARSET.set.find(char6[5]).unwrap() as U28;
 
-//     // Shift bits in a71 right by 1 bit
-//     let mut carry = 0u8;
-//     for i in 0..9 {
-//         b71[i] = (carry << 7) | (a71[i] >> 1);
-//         carry = a71[i] & 0x01;
-//     }
+    let n28: U28 = C28_STD_CALLS
+        //+ MAX22
+        + 36 * 10 * 27 * 27 * 27 * i0
+        + 10 * 27 * 27 * 27 * i1
+        + 27 * 27 * 27 * i2
+        + 27 * 27 * i3
+        + 27 * i4
+        + i5;
 
-//     // Convert b71 to hexadecimal string
-//     for b in &b71 {
-//         let nibble1 = *b >> 4;
-//         let nibble2 = *b & 0x0F;
-//         let c1 = if nibble1 > 9 {
-//             (nibble1 - 10 + b'A') as char
-//         } else {
-//             (nibble1 + b'0') as char
-//         };
-//         let c2 = if nibble2 > 9 {
-//             (nibble2 - 10 + b'A') as char
-//         } else {
-//             (nibble2 + b'0') as char
-//         };
-//         telemetry.push(c1);
-//         telemetry.push(c2);
-//     }
+    Some(n28)
 
-//     Some(telemetry)
-// }
+    // if let (Some(i0), Some(i1), Some(i2), Some(i3), Some(i4), Some(i5)) = (
+    //     _A1.find(call[0]),
+    //     _A2.find(call[1]),
+    //     _A3.find(call[2]),
+    //     _A4.find(call[3]),
+    //     _A4.find(call[4]),
+    //     _A4.find(call[5]),
+    // ) {
+    //     let mut n28: i32 = i0 as i32;
+    //     n28 = n28 * _A2_LEN + i1 as i32;
+    //     n28 = n28 * _A3_LEN + i2 as i32;
+    //     n28 = n28 * _A4_LEN + i3 as i32;
+    //     n28 = n28 * _A4_LEN + i4 as i32;
+    //     n28 = n28 * _A4_LEN + i5 as i32;
 
-// Pack a special token, a 22-bit hash code, or a valid base call
+    //     return (NTOKENS + MAX22) as i32 + n28;
+    // }
+
+    // -1
+}
+
+fn ft8_pack_h22call(c28: &str) -> Option<U28> {
+    todo!("Pack h22 call")
+}
+
+// Pack a special token, a 22-bit hash code call, or a valid base call
 // into a 28-bit integer.
-// fn ft8_pack_std_call(callsign: &str) -> Option<u32> {
-//     dbg!(callsign);
+fn ft8_pack_c28(c28: &str) -> Option<U28> {
+    dbg!(c28);
+    match &c28[0..3] {
+        "DE " => {
+            Some(C28_DE)
+        },
+        "QRZ" => {
+            Some(C28_QRZ)
+        },
+        "CQ " => {
+            Some(C28_CQ)
+        },
+        "CQ_" => {
+            //int nnum = 0, nlet = 0;
+            todo!("Support CQ_ ins c28");
+        },
+        "<.." => {
+            ft8_pack_h22call(c28)
+        },
+        _ => {
+            ft8_pack_callsign(c28)
+        }
+    }
+}
 
-//     // Check for special tokens first
-//     if callsign.starts_with("DE") {
-//         return Some(C28_DE);
-//     }
+fn ft8_unpack_stdcall(
+    c28: U28,
+    ip: u8, 
+    i3: u8
+) -> Option<CallId> {
+    // Standard callsign
+    let mut n: U28 = c28 - C28_STD_CALLS;
 
-//     if callsign.starts_with("QRZ") {
-//         return Some(C28_QRZ);
-//     }
+    let mut callsign = String::new();
+    callsign.push(text::charn((n % 27) as u8, 4));
+    n /= 27;
+    callsign.push(text::charn((n % 27) as u8, 4));
+    n /= 27;
+    callsign.push(text::charn((n % 27) as u8, 4));
+    n /= 27;
+    callsign.push(text::charn((n % 10) as u8, 3));
+    n /= 10;
+    callsign.push(text::charn((n % 36) as u8, 2));
+    n /= 36;
+    callsign.push(text::charn((n % 37) as u8, 1));
 
-//     if callsign.starts_with("CQ") {
-//         return Some(C28_CQ);
-//     }
+    // Skip trailing and leading whitespace in case of a short callsign
+    let mut result = CallId::new();
+    result.id.push_str(callsign.chars().rev().collect::<String>().trim());
 
-//     if callsign.starts_with("CQ_") {
-//         //int nnum = 0, nlet = 0;
-//         todo!();
-//     }
-
-//     // TODO: Check for <...> callsign
-//     /*
-//     char c6[6] = { ' ', ' ', ' ', ' ', ' ', ' ' };
-
-//     int length = 0; //strlen(callsign);  //We will need it later
-//     while (callsign[length] != ' ' && callsign[length] != 0)
-//     {
-//         length++;
-//     }
-
-//     // Copy callsign to 6 character buffer
-//     if (starts_with(callsign, "3DA0") && length <= 7)
-//     {
-//         // Work-around for Swaziland prefix: 3DA0XYZ -> 3D0XYZ
-//         memcpy(c6, "3D0", 3);
-//         memcpy(c6 + 3, callsign + 4, length -4);
-//     }
-//     else if (starts_with(callsign, "3X") && is_letter(callsign[2]) && length <= 7)
-//     {
-//         // Work-around for Guinea prefixes: 3XA0XYZ -> QA0XYZ
-//         memcpy(c6, "Q", 1);
-//         memcpy(c6 + 1, callsign + 2, length -2);
-//     }
-//     else
-//     {
-//         if (is_digit(callsign[2]) && length <= 6)
-//         {
-//             // AB0XYZ
-//             memcpy(c6, callsign, length);
-//         }
-//         else if (is_digit(callsign[1]) && length <= 5)
-//         {
-//             // A0XYZ -> " A0XYZ"
-//             memcpy(c6 + 1, callsign, length);
-//         }
-//     }
-//     */
-//     // Check for standard callsign
-//     let call: Vec<char> = callsign.chars().collect();
-
-//     let mut n28 = 0u32;
-//     for (i, c) in call.iter().enumerate() {
-//         let (opt_n, l) = match i {
-//             0 => { (CALL_A1.find(*c), CALL_A1_LEN) },
-//             1 => { (CALL_A2.find(*c), CALL_A2_LEN) },
-//             2 => { (CALL_A3.find(*c), CALL_A3_LEN) },
-//             3 => { (CALL_A4.find(*c), CALL_A4_LEN) },
-//             4 => { (CALL_A4.find(*c), CALL_A4_LEN) },
-//             5 => { (CALL_A4.find(*c), CALL_A4_LEN) },
-//             _ => { 
-//                 dbg!("Too many callsign digits");
-//                 return None;
-//             }
-//         };
-//         match opt_n {
-//             Some(n) => {
-//                 n28 += n28 * l + n as u32;
-//             },
-//             None => {
-//                 dbg!("Invalid callsign character for character position", c, i);
-//                 return None;
-//             }
-//         }
-//     }
-//     Some(C28_STD_CALLS + n28)
-
-//     // if let (Some(i0), Some(i1), Some(i2), Some(i3), Some(i4), Some(i5)) = (
-//     //     _A1.find(call[0]),
-//     //     _A2.find(call[1]),
-//     //     _A3.find(call[2]),
-//     //     _A4.find(call[3]),
-//     //     _A4.find(call[4]),
-//     //     _A4.find(call[5]),
-//     // ) {
-//     //     let mut n28: i32 = i0 as i32;
-//     //     n28 = n28 * _A2_LEN + i1 as i32;
-//     //     n28 = n28 * _A3_LEN + i2 as i32;
-//     //     n28 = n28 * _A4_LEN + i3 as i32;
-//     //     n28 = n28 * _A4_LEN + i4 as i32;
-//     //     n28 = n28 * _A4_LEN + i5 as i32;
-
-//     //     return (NTOKENS + MAX22) as i32 + n28;
-//     // }
-
-//     // -1
-// }
+    if !result.id.is_empty() {
+        // Check if should append /R or /P suffix
+        if ip != 0 {
+            if i3 == 1 {
+                result.id.push_str("/R");
+            } else if i3 == 2 {
+                result.id.push_str("/P");
+            }
+        }
+    }
+    if result.id.is_empty() {
+        None
+    } else {
+        Some(result)
+    }
+}
 
 // n28 is a 28-bit integer, e.g. n28a or n28b, containing all the
 // call sign bits from a packed message.
-// fn ft8_unpack_callsign(
-//     c28: u32, 
-//     ip: u8, 
-//     i3: u8
-// ) -> Option<CallId> {
-//     dbg!(c28, ip, i3);
-//     let mut result = CallId::new();
+fn ft8_unpack_c28(
+    c28: U28, 
+    ip: u8, 
+    i3: u8
+) -> Option<CallId> {
+    dbg!(c28, ip, i3);
+    let mut result = CallId::new();
 
-//     match c28 {
-//         C28_DE => {
-//             result.id.push_str("DE");
-//             result.special = true;
-//         },
-//         C28_QRZ => {
-//             result.id.push_str("QRZ");
-//             result.special = true;
-//         },
-//         C28_CQ => {
-//             result.id.push_str("CQ");
-//             result.special = true;
-//         },
-//         C28_CQ_DDD..C28_CQ_DDD_UNDEF => {
-//             // CQ_nnn with 3 digits
-//             result.id.push_str("CQ ");
-//             text::int_to_dd(&mut result.id, c28 as i32 - 3, false);
-//             result.special = true;
-//         },
-//         C28_CQ_DDD_UNDEF..C28_CQ_A => {
-//             dbg!("undefined cq_ddd");
-//         },
-//         C28_CQ_A..C28_CQ_A_UNDEF => {
-//             // CQ_aaaa with 4 alphanumeric symbols
-//             let mut n = c28 - (C28_CQ_A - 1); // - 1003;
-//             let mut aaaa = String::new();
+    match c28 {
+        C28_DE => {
+            result.id.push_str("DE");
+            result.special = true;
+        },
+        C28_QRZ => {
+            result.id.push_str("QRZ");
+            result.special = true;
+        },
+        C28_CQ => {
+            result.id.push_str("CQ");
+            result.special = true;
+        },
+        C28_CQ_DDD..C28_CQ_DDD_UNDEF => {
+            // CQ_nnn with 3 digits
+            result.id.push_str("CQ ");
+            text::int_to_dd(&mut result.id, c28 as i32 - 3, false);
+            result.special = true;
+        },
+        C28_CQ_DDD_UNDEF..C28_CQ_A => {
+            dbg!("undefined cq_ddd");
+        },
+        C28_CQ_A..C28_CQ_A_UNDEF => {
+            // CQ_aaaa with 4 alphanumeric symbols
+            let mut n = c28 - (C28_CQ_A - 1); // - 1003;
+            let mut aaaa = String::new();
 
-//             for _i in (0..1).rev() {
-//                 aaaa.push(text::charn((n % 27) as u8, 4));
-//                 n /= 27;
-//             }
+            for _i in (0..1).rev() {
+                aaaa.push(text::charn((n % 27) as u8, 4));
+                n /= 27;
+            }
 
-//             result.id.push_str("CQ ");
-//             result.id.push_str(aaaa.chars().rev().collect::<String>().trim());
-//             result.special = true;
-//         },
-//         C28_CQ_A_UNDEF..C28_CQ_AA => {
-//             dbg!("undefined cq_a");
-//         },
-//         C28_CQ_AA..C28_CQ_AA_UNDEF => {
-//             // CQ_aaaa with 4 alphanumeric symbols
-//             let mut n = c28 - (C28_CQ_AA - 1); // - 1003;
-//             let mut aaaa = String::new();
+            result.id.push_str("CQ ");
+            result.id.push_str(aaaa.chars().rev().collect::<String>().trim());
+            result.special = true;
+        },
+        C28_CQ_A_UNDEF..C28_CQ_AA => {
+            dbg!("undefined cq_a");
+        },
+        C28_CQ_AA..C28_CQ_AA_UNDEF => {
+            // CQ_aaaa with 4 alphanumeric symbols
+            let mut n = c28 - (C28_CQ_AA - 1); // - 1003;
+            let mut aaaa = String::new();
 
-//             for _i in (0..2).rev() {
-//                 aaaa.push(text::charn((n % 27) as u8, 4));
-//                 n /= 27;
-//             }
+            for _i in (0..2).rev() {
+                aaaa.push(text::charn((n % 27) as u8, 4));
+                n /= 27;
+            }
 
-//             result.id.push_str("CQ ");
-//             result.id.push_str(aaaa.chars().rev().collect::<String>().trim());
-//             result.special = true;
+            result.id.push_str("CQ ");
+            result.id.push_str(aaaa.chars().rev().collect::<String>().trim());
+            result.special = true;
 
-//         },
-//         C28_CQ_AA_UNDEF..C28_CQ_AAA => {
-//             dbg!("undefined cq_aa");
-//         },
+        },
+        C28_CQ_AA_UNDEF..C28_CQ_AAA => {
+            dbg!("undefined cq_aa");
+        },
 
-//         C28_CQ_AAA..C28_CQ_AAA_UNDEF => {
-//             // CQ_aaaa with 4 alphanumeric symbols
-//             let mut n = c28 - (C28_CQ_AAA - 1); // - 1003;
-//             let mut aaaa = String::new();
+        C28_CQ_AAA..C28_CQ_AAA_UNDEF => {
+            // CQ_aaaa with 4 alphanumeric symbols
+            let mut n = c28 - (C28_CQ_AAA - 1); // - 1003;
+            let mut aaaa = String::new();
 
-//             for _i in (0..3).rev() {
-//                 aaaa.push(text::charn((n % 27) as u8, 4));
-//                 n /= 27;
-//             }
+            for _i in (0..3).rev() {
+                aaaa.push(text::charn((n % 27) as u8, 4));
+                n /= 27;
+            }
 
-//             result.id.push_str("CQ ");
-//             result.id.push_str(aaaa.chars().rev().collect::<String>().trim());
-//             result.special = true;
+            result.id.push_str("CQ ");
+            result.id.push_str(aaaa.chars().rev().collect::<String>().trim());
+            result.special = true;
 
-//         },
+        },
 
-//         C28_CQ_AAA_UNDEF..C28_CQ_AAAA => {
-//             dbg!("undefined cq_aaa");
-//         },
+        C28_CQ_AAA_UNDEF..C28_CQ_AAAA => {
+            dbg!("undefined cq_aaa");
+        },
 
-//         C28_CQ_AAAA..C28_CQ_AAAA_UNDEF => {
-//             // CQ_aaaa with 4 alphanumeric symbols
-//             let mut n = c28 - (C28_CQ_AAAA - 1); // - 1003;
-//             let mut aaaa = String::new();
+        C28_CQ_AAAA..C28_CQ_AAAA_UNDEF => {
+            // CQ_aaaa with 4 alphanumeric symbols
+            let mut n = c28 - (C28_CQ_AAAA - 1); // - 1003;
+            let mut aaaa = String::new();
 
-//             for _i in (0..4).rev() {
-//                 aaaa.push(text::charn((n % 27) as u8, 4));
-//                 n /= 27;
-//             }
+            for _i in (0..4).rev() {
+                aaaa.push(text::charn((n % 27) as u8, 4));
+                n /= 27;
+            }
 
-//             result.id.push_str("CQ ");
-//             result.id.push_str(aaaa.chars().rev().collect::<String>().trim());
-//             result.special = true;
+            result.id.push_str("CQ ");
+            result.id.push_str(aaaa.chars().rev().collect::<String>().trim());
+            result.special = true;
 
-//         },
+        },
 
-//         C28_CQ_AAAA_UNDEF..C28_HASH_CALL => {
-//             dbg!("undefined cq_a");
-//         },
+        C28_CQ_AAAA_UNDEF..C28_HASH_CALL => {
+            dbg!("undefined cq_aaaa");
+        },
 
-//         C28_HASH_CALL..C28_HASH_CALL_UNDEF => {
-//             dbg!("hashed call not yet supported");
-//             // This is a 22-bit hash of a result
-//             // TODO: implement
-//             // result.id.push_str("<...>");
-//             // todo!();
-//             // result[0] = '<';
-//             // int_to_dd(result + 1, n28, 7, false);
-//             // result[8] = '>';
-//             // result[9] = '\0';
-//             // return Some(result);
-//         },
+        C28_HASH_CALL..C28_HASH_CALL_UNDEF => {
+            dbg!("hashed call not yet supported");
+            // This is a 22-bit hash of a result
+            // TODO: implement
+            // result.id.push_str("<...>");
+            // todo!();
+            // result[0] = '<';
+            // int_to_dd(result + 1, n28, 7, false);
+            // result[8] = '>';
+            // result[9] = '\0';
+            // return Some(result);
+        },
 
-//         C28_STD_CALLS..=u32::MAX => {
-//             // Standard callsign
-//             let mut n = c28 - C28_STD_CALLS;
+        C28_STD_CALLS..=U28_MAX => {
+            result = ft8_unpack_stdcall(c28, ip, i3)?;
 
-//             let mut callsign = String::new();
-
-//             callsign.push(text::charn((n % 27) as u8, 4));
-//             n /= 27;
-//             callsign.push(text::charn((n % 27) as u8, 4));
-//             n /= 27;
-//             callsign.push(text::charn((n % 27) as u8, 4));
-//             n /= 27;
-//             callsign.push(text::charn((n % 10) as u8, 3));
-//             n /= 10;
-//             callsign.push(text::charn((n % 36) as u8, 2));
-//             n /= 36;
-//             callsign.push(text::charn((n % 37) as u8, 1));
-
-//             // Skip trailing and leading whitespace in case of a short callsign
-//             result.id.push_str(callsign.chars().rev().collect::<String>().trim());
-
-//             if !result.id.is_empty() {
-//                 // Check if should append /R or /P suffix
-//                 if ip != 0 {
-//                     if i3 == 1 {
-//                         result.id.push_str("/R");
-//                     } else if i3 == 2 {
-//                         result.id.push_str("/P");
-//                     }
-//                 }
-//             }
-//         }
-//     }
-//     if result.id.is_empty() {
-//         None
-//     } else {
-//         Some(result)
-//     }
-// }
+        },
+    }
+    if result.id.is_empty() {
+        None
+    } else {
+        Some(result)
+    }
+}
 
 // fn ft8_pack_grid4(grid4: &str) -> Option<u16> {
 //     dbg!(grid4);
@@ -943,7 +908,7 @@ mod tests {
     fn test_pack_0_0() {
         assert_eq!(ft8_pack_0_0(&"0").unwrap(), 1);
         assert_eq!(ft8_pack_0_0(&"1").unwrap(), 2);
-        assert_eq!(ft8_pack_0_0(&"00").unwrap(), 1 + FREE_CHARSET.modulus() as u128);
+        assert_eq!(ft8_pack_0_0(&"00").unwrap(), 1 + FREE_CHARSET.modulus() as U71);
         assert_eq!(ft8_pack_0_0(&"01").unwrap(), 0b00101100);
         assert_eq!(
             ft8_pack_0_0(&"TNX BOB 73 GL").unwrap(),
@@ -998,14 +963,24 @@ mod tests {
         // test_round_0_5(&"123456789ABCDEF");
     }
 
-    fn test_0_5_bad_char() {
-        test_round_0_5(&"123456789ABCDEF");
+    // fn test_0_5_bad_char() {
+    //     test_round_0_5(&"123456789ABCDEF");
+    // }
+
+    #[test]
+    fn test_pack_callsign() {
+        assert_eq!(ft8_pack_callsign(&"K1JT").unwrap(), 6040944);
+        assert_eq!(ft8_pack_callsign(&"VK2ZTY").unwrap(), 237001541);
+        assert_eq!(ft8_pack_callsign(&"VK2EA").unwrap(), 12339350);
     }
 
+    fn test_unpack_callsign() {
+        // assert_eq!(ft8_unpack_callsign(237001541).unwrap(), &"VK2ZTY");
+    }
     // fn test_pack_0_5(msg: &str) {        
     // }
 
-    // fn test_unpack_0_5(p: u128) {        
+    // fn test_unpack_0_5(p: UWork) {        
     // }
 
     // fn test_round_0_5(msg: &str) {
