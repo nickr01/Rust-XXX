@@ -1,6 +1,11 @@
 
 # RustXXX README
 
+## Status
+
+transport is working
+proto_FT8 is WIP and incomplete
+
 ## Acknowledgement
 
 This project, standing on the shoulders of giants, builds on the amazing work of Joe Taylor - K1JT, Jordan Sherer - KN4CRD, and many other contributions.
