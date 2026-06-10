@@ -1,4 +1,4 @@
-pub mod protocol;
+pub mod ft8;
 pub mod generator;
 pub mod parity;
 // pub mod pack_ft8;

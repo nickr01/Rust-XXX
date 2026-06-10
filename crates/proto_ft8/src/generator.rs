@@ -1,7 +1,7 @@
 use crate::*;
 
 // Parity generator matrix for (174,91) LDPC code, stored in bitpacked format (MSB first)
-pub const _XXX_LDPC_GENERATOR: [[u8; protocol::FT8._ldpc_k_bytes().0]; protocol::FT8.ldpc_m().0] = [
+pub const _XXX_LDPC_GENERATOR: [[u8; ft8::FT8._ldpc_k_bytes().0]; ft8::FT8.ldpc_m().0] = [
     [
         0x83, 0x29, 0xce, 0x11, 0xbf, 0x31, 0xea, 0xf5, 0x09, 0xf2, 0x7f, 0xc0,
     ],

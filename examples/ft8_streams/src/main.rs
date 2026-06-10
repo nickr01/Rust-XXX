@@ -404,7 +404,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
     };
 
     let mut receive_pipeline= transport::pipeline::Pipeline::new(
-        &proto_ft8::protocol::FT8, 
+        &proto_ft8::ft8::FT8, 
         runtime,
     );
 

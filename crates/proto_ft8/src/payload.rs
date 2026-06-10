@@ -1,7 +1,7 @@
-use rustfft::num_traits::clamp;
+// use rustfft::num_traits::clamp;
 
 // Pack and Unpack with unit tests
-use crate::protocol::*;
+use crate::ft8::*;
 use crate::text;
 
 // need for bitvec Traits
@@ -145,11 +145,11 @@ fn ft8_pack_0_stg (
     bits: usize
 ) -> Option<U71> {
     let cn = left_pad(&cn, charset);
-    let mut val: U71 = 0;
+    let mut val: U71 = U71(0);
     for c in cn.chars() {
         match charset.set.find(c).map_or(None, |i| Some(i as u8)) {
             Some(j) => {
-                val = val * charset.modulus() as U71 + j as U71;
+                val.0 = val.0 * U71(charset.modulus() as u128).0 + U71(j as u128).0;
             },
             None => {
                 dbg!("invalid character in 0_0:free text");
@@ -160,7 +160,7 @@ fn ft8_pack_0_stg (
     assert!(bits < 128);
     let val_max = 2u128.pow(bits as u32);
     // dbg!(val);
-    if val < val_max {
+    if val.0 < val_max {
         Some(val)
     } else {
         dbg!("packed data out of range");
@@ -190,13 +190,13 @@ fn ft8_unpack_0_stg(
     // dbg!(a71);
     assert!(bits < 128);
     let val_max = 2u128.pow(bits as u32);
-    let mut a71 = a71 & val_max - 1; // sanitise
+    let mut a71 = a71.0 & val_max - 1; // sanitise
 
     let mut text = String::new();
     
     while text.len() < charset.msg_len {
-        let n = a71 % charset.modulus() as U71;
-        a71 /= charset.modulus() as U71;
+        let n = a71 % U71(charset.modulus() as u128).0;
+        a71 /= U71(charset.modulus() as u128).0;
         let oc = charset.set.chars().nth(n as usize);
         match oc {
             Some(c) => {
@@ -267,27 +267,27 @@ fn ft8_try_pack_stdcall(c28: &str) -> Option<U28> {
     }
     */
 
-    dbg!(&c28);
+    // dbg!(&c28);
 
     let char6: Vec<char> = c28.chars().collect();
-    let mut i = [0u32; 6]; 
+    assert_eq!(char6.len(), 6);
+    let mut i = [U28(0); 6]; 
 
     // NBNB the behaviour with unexpected characters differs to the
     // behaviour of reference packer std_call_to_c28.f90
     // which does not fail on chars in unexpected positions
-    // really an algo error which should be trapped
     // can't let through as round trip would fail anyway
     i[0] = match CALL1_CHARSET.set.find(char6[0]) {
         Some(n) => {
-            n as U28
+            U28(n as u32)
         },
-        None => { 
+        None => {
             return None;
         }
     };
     i[1] = match CALL2_CHARSET.set.find(char6[1]) {
         Some(n) => {
-            n as U28
+            U28(n as u32)
         },
         None => { 
             return None;
@@ -295,7 +295,7 @@ fn ft8_try_pack_stdcall(c28: &str) -> Option<U28> {
     };
     i[2] = match CALL3_CHARSET.set.find(char6[2]) {
         Some(n) => {
-            n as U28
+            U28(n as u32)
         },
         None => { 
             return None;
@@ -303,7 +303,7 @@ fn ft8_try_pack_stdcall(c28: &str) -> Option<U28> {
     };
     i[3] = match CALL4_CHARSET.set.find(char6[3]) {
         Some(n) => {
-            n as U28
+            U28(n as u32)
         },
         None => {
             return None;
@@ -311,7 +311,7 @@ fn ft8_try_pack_stdcall(c28: &str) -> Option<U28> {
     };
     i[4] = match CALL4_CHARSET.set.find(char6[4]) {
         Some(n) => {
-            n as U28
+            U28(n as u32)
         },
         None => { 
             return None;
@@ -319,21 +319,22 @@ fn ft8_try_pack_stdcall(c28: &str) -> Option<U28> {
     };
     i[5] = match CALL4_CHARSET.set.find(char6[5]) {
         Some(n) => {
-            n as U28
+            U28(n as u32)
         },
         None => { 
             return None;
         }
     };
 
-    let n28: U28 = 
-        C28_STD_CALLS as U28
-        + 36 * 10 * 27 * 27 * 27 * i[0]
-        + 10 * 27 * 27 * 27 * i[1]
-        + 27 * 27 * 27 * i[2]
-        + 27 * 27 * i[3]
-        + 27 * i[4]
-        + i[5];
+    let n28: U28 = U28(
+        C28_STD_CALLS
+        + 36 * 10 * 27 * 27 * 27 * i[0].0
+        + 10 * 27 * 27 * 27 * i[1].0
+        + 27 * 27 * 27 * i[2].0
+        + 27 * 27 * i[3].0
+        + 27 * i[4].0
+        + i[5].0
+    );
 
     // dbg!(n28);
 
@@ -386,13 +387,13 @@ fn ft8_pack_c28(c28: &str) -> Option<U28> {
     dbg!(c28);
     match &c28[0..3] {
         "DE " => {
-            Some(C28_DE)
+            Some(U28(C28_DE))
         },
         "QRZ" => {
-            Some(C28_QRZ)
+            Some(U28(C28_QRZ))
         },
         "CQ " => {
-            Some(C28_CQ)
+            Some(U28(C28_CQ))
         },
         "CQ_" => {
             //int nnum = 0, nlet = 0;
@@ -409,40 +410,40 @@ fn ft8_pack_c28(c28: &str) -> Option<U28> {
 
 fn ft8_unpack_stdcall(
     c28: U28,
-    ip: u8, 
+    ip: bool, 
     i3: u8
-) -> Option<CallId> {
+) -> Option<String> {
     // Standard callsign
-    let mut n: U28 = c28 - C28_STD_CALLS;
+    let mut n: U28 = U28(c28.0 - C28_STD_CALLS);
 
     let mut callsign = String::new();
-    callsign.push(text::charn((n % 27) as u8, 4));
-    n /= 27;
-    callsign.push(text::charn((n % 27) as u8, 4));
-    n /= 27;
-    callsign.push(text::charn((n % 27) as u8, 4));
-    n /= 27;
-    callsign.push(text::charn((n % 10) as u8, 3));
-    n /= 10;
-    callsign.push(text::charn((n % 36) as u8, 2));
-    n /= 36;
-    callsign.push(text::charn((n % 37) as u8, 1));
+    callsign.push(text::charn((n.0 % 27) as u8, 4));
+    n.0 /= 27;
+    callsign.push(text::charn((n.0 % 27) as u8, 4));
+    n.0 /= 27;
+    callsign.push(text::charn((n.0 % 27) as u8, 4));
+    n.0 /= 27;
+    callsign.push(text::charn((n.0 % 10) as u8, 3));
+    n.0 /= 10;
+    callsign.push(text::charn((n.0 % 36) as u8, 2));
+    n.0 /= 36;
+    callsign.push(text::charn((n.0 % 37) as u8, 1));
 
     // Skip trailing and leading whitespace in case of a short callsign
-    let mut result = CallId::new();
-    result.id.push_str(callsign.chars().rev().collect::<String>().trim());
+    let mut result = String::new();
+    result.push_str(callsign.chars().rev().collect::<String>().trim());
 
-    if !result.id.is_empty() {
+    if !result.is_empty() {
         // Check if should append /R or /P suffix
-        if ip != 0 {
+        if ip {
             if i3 == 1 {
-                result.id.push_str("/R");
+                result.push_str("/R");
             } else if i3 == 2 {
-                result.id.push_str("/P");
+                result.push_str("/P");
             }
         }
     }
-    if result.id.is_empty() {
+    if result.is_empty() {
         None
     } else {
         Some(result)
@@ -453,13 +454,13 @@ fn ft8_unpack_stdcall(
 // call sign bits from a packed message.
 fn ft8_unpack_c28(
     c28: U28, 
-    ip: u8, 
+    ip: bool, 
     i3: u8
 ) -> Option<CallId> {
     dbg!(c28, ip, i3);
     let mut result = CallId::new();
 
-    match c28 {
+    match c28.0 {
         C28_DE => {
             result.id.push_str("DE");
             result.special = true;
@@ -475,7 +476,7 @@ fn ft8_unpack_c28(
         C28_CQ_DDD..C28_CQ_DDD_UNDEF => {
             // CQ_nnn with 3 digits
             result.id.push_str("CQ ");
-            text::int_to_dd(&mut result.id, c28 as i32 - 3, false);
+            text::int_to_dd(&mut result.id, c28.0 as i32 - 3, false);
             result.special = true;
         },
         C28_CQ_DDD_UNDEF..C28_CQ_A => {
@@ -483,7 +484,7 @@ fn ft8_unpack_c28(
         },
         C28_CQ_A..C28_CQ_A_UNDEF => {
             // CQ_aaaa with 4 alphanumeric symbols
-            let mut n = c28 - (C28_CQ_A - 1); // - 1003;
+            let mut n = c28.0 - (C28_CQ_A - 1); // - 1003;
             let mut aaaa = String::new();
 
             for _i in (0..1).rev() {
@@ -500,7 +501,7 @@ fn ft8_unpack_c28(
         },
         C28_CQ_AA..C28_CQ_AA_UNDEF => {
             // CQ_aaaa with 4 alphanumeric symbols
-            let mut n = c28 - (C28_CQ_AA - 1); // - 1003;
+            let mut n = c28.0 - (C28_CQ_AA - 1); // - 1003;
             let mut aaaa = String::new();
 
             for _i in (0..2).rev() {
@@ -519,7 +520,7 @@ fn ft8_unpack_c28(
 
         C28_CQ_AAA..C28_CQ_AAA_UNDEF => {
             // CQ_aaaa with 4 alphanumeric symbols
-            let mut n = c28 - (C28_CQ_AAA - 1); // - 1003;
+            let mut n = c28.0 - (C28_CQ_AAA - 1); // - 1003;
             let mut aaaa = String::new();
 
             for _i in (0..3).rev() {
@@ -539,7 +540,7 @@ fn ft8_unpack_c28(
 
         C28_CQ_AAAA..C28_CQ_AAAA_UNDEF => {
             // CQ_aaaa with 4 alphanumeric symbols
-            let mut n = c28 - (C28_CQ_AAAA - 1); // - 1003;
+            let mut n = c28.0 - (C28_CQ_AAAA - 1); // - 1003;
             let mut aaaa = String::new();
 
             for _i in (0..4).rev() {
@@ -571,9 +572,13 @@ fn ft8_unpack_c28(
         },
 
         C28_STD_CALLS..=U28_MAX => {
-            result = ft8_unpack_stdcall(c28, ip, i3)?;
+            result.id = ft8_unpack_stdcall(c28, ip, i3)?;
 
         },
+
+        _ => {
+            dbg!("undefined value above max for bit width");
+        }
     }
     if result.id.is_empty() {
         None
@@ -582,52 +587,64 @@ fn ft8_unpack_c28(
     }
 }
 
-// fn ft8_pack_grid4(grid4: &str) -> Option<u16> {
-//     dbg!(grid4);
+fn ft8_pack_grid4(grid4: &str) -> Option<U15> {
+    let gstr: Vec<char> = grid4.chars().collect();
+    if text::_in_range(gstr[0], 'A', 'R')
+        && text::_in_range(gstr[1], 'A', 'R')
+        && text::_in_range(gstr[2], '0', '9')
+        && text::_in_range(gstr[3], '0', '9')
+    {
+        let mut igrid4: u16 = gstr[0] as u16 - 'A' as u16;
+        igrid4 = igrid4 * 18 + (gstr[1] as u16 - 'A' as u16);
+        igrid4 = igrid4 * 10 + (gstr[2] as u16 - '0' as u16);
+        igrid4 = igrid4 * 10 + (gstr[3] as u16 - '0' as u16);
+        return Some(U15(igrid4));
+    }
+    None
+}
 
-//     // Take care of special cases
-//     if grid4 == "RRR" {
-//         return Some(MAXGRID4 + 2);
-//     }
+fn ft8_parse_report(g15: &str) -> Option<U15> {
+    // Parse report: +dd /-dd /R+dd /R-dd
+    // TODO: check the range of dd
+    let gstr: Vec<char> = g15.chars().collect();
+    if gstr[0] == 'R' {
+        let dd = text::_dd_to_int(&g15.chars().take(1).collect::<String>());
+        let irpt = (35 + dd) as u16;
+        return Some(U15((MAXGRID4 + irpt) | 0x8000)); // ir = 1
+    } else {
+        let dd = text::_dd_to_int(g15);
+        let irpt = (35 + dd) as u16;
+        return Some(U15(MAXGRID4 + irpt)); // ir = 0
+    }
+}
 
-//     if grid4 == "RR73" {
-//         return Some(MAXGRID4 + 3);
-//     }
+fn ft8_pack_g15(g15: &str) -> Option<U15> {
+    dbg!(g15);
 
-//     if grid4 == "73" {
-//         return Some(MAXGRID4 + 4);
-//     }
-
-//     let gstr: Vec<char> = grid4.chars().collect();
-
-//     if text::_in_range(gstr[0], 'A', 'R')
-//         && text::_in_range(gstr[1], 'A', 'R')
-//         && text::_in_range(gstr[2], '0', '9')
-//         && text::_in_range(gstr[3], '0', '9')
-//     {
-//         let mut igrid4: u16 = gstr[0] as u16 - 'A' as u16;
-//         igrid4 = igrid4 * 18 + (gstr[1] as u16 - 'A' as u16);
-//         igrid4 = igrid4 * 10 + (gstr[2] as u16 - '0' as u16);
-//         igrid4 = igrid4 * 10 + (gstr[3] as u16 - '0' as u16);
-
-//         return Some(igrid4);
-//     }
-
-//     // Parse report: +dd /-dd /R+dd /R-dd
-//     // TODO: check the range of dd
-//     if gstr[0] == 'R' {
-//         let dd = text::_dd_to_int(&grid4.chars().take(1).collect::<String>());
-//         let irpt = (35 + dd) as u16;
-//         return Some((MAXGRID4 + irpt) | 0x8000); // ir = 1
-//     } else {
-//         let dd = text::_dd_to_int(grid4);
-//         let irpt = (35 + dd) as u16;
-//         return Some(MAXGRID4 + irpt); // ir = 0
-//     }
-    
-//     // !?&*!!! how do we get here?
-//     Some(MAXGRID4 + 1)
-// }
+    match g15 {
+        "RRR" => {
+            return Some(U15(MAXGRID4 + 2));
+        },
+        "RR73" => {
+            return Some(U15(MAXGRID4 + 3));
+        },
+        "73" => {
+            return Some(U15(MAXGRID4 + 4));
+        },
+        _ => {
+            match ft8_pack_grid4(g15) {
+                Some(result) => {
+                    return Some(result);
+                },
+                None => {
+                    return ft8_parse_report(g15);
+                    // !?&*!!! how do we get here?
+                    Some(U15(MAXGRID4 + 1))
+                }
+            }
+        }
+    }
+}
 
 // // Pack Type 1 (Standard 77-bit message) and Type 2 (ditto, with a "/P" call)
 // fn ft8_pack_type1(type1_msg: &str) -> Option<Vec<u8>> {
@@ -974,22 +991,22 @@ mod tests {
 
     #[test]
     fn test_pack_0_0() {
-        assert_eq!(ft8_pack_0_0(&"0").unwrap(), 1);
-        assert_eq!(ft8_pack_0_0(&"1").unwrap(), 2);
-        assert_eq!(ft8_pack_0_0(&"00").unwrap(), 1 + FREE_CHARSET.modulus() as U71);
-        assert_eq!(ft8_pack_0_0(&"01").unwrap(), 0b00101100);
+        assert_eq!(ft8_pack_0_0(&"0").unwrap(), U71(1));
+        assert_eq!(ft8_pack_0_0(&"1").unwrap(), U71(2));
+        assert_eq!(ft8_pack_0_0(&"00").unwrap(), U71(1 + FREE_CHARSET.modulus() as UType71));
+        assert_eq!(ft8_pack_0_0(&"01").unwrap(), U71(0b00101100));
         assert_eq!(
             ft8_pack_0_0(&"TNX BOB 73 GL").unwrap(),
-            0b01100011111011011100111011100010101001001010111000000111111101010000000
+            U71(0b01100011111011011100111011100010101001001010111000000111111101010000000)
         );
     }
 
     #[test]
     fn test_unpack_0_0() {
-        assert_eq!(ft8_unpack_0_0(0).unwrap(), "");     
-        assert_eq!(ft8_unpack_0_0(1).unwrap(), "0");
+        assert_eq!(ft8_unpack_0_0(U71(0)).unwrap(), "");     
+        assert_eq!(ft8_unpack_0_0(U71(1)).unwrap(), "0");
         assert_eq!(
-            ft8_unpack_0_0(0b01100011111011011100111011100010101001001010111000000111111101010000000).unwrap(), 
+            ft8_unpack_0_0(U71(0b01100011111011011100111011100010101001001010111000000111111101010000000)).unwrap(), 
             "TNX BOB 73 GL");
     }
 
@@ -1007,16 +1024,16 @@ mod tests {
 
     #[test]
     fn test_pack_0_5() {
-        assert_eq!(ft8_pack_0_5(&"").unwrap(), 0);
-        assert_eq!(ft8_pack_0_5(&"0").unwrap(), 0);
-        assert_eq!(ft8_pack_0_5(&"1").unwrap(), 1);
-        assert_eq!(ft8_pack_0_5(&"12").unwrap(), 0x12);
-        assert_eq!(ft8_pack_0_5(&"123456781234567800").unwrap(), 0x123456781234567800);
+        assert_eq!(ft8_pack_0_5(&"").unwrap(), U71(0));
+        assert_eq!(ft8_pack_0_5(&"0").unwrap(), U71(0));
+        assert_eq!(ft8_pack_0_5(&"1").unwrap(), U71(1));
+        assert_eq!(ft8_pack_0_5(&"12").unwrap(), U71(0x12));
+        assert_eq!(ft8_pack_0_5(&"123456781234567800").unwrap(), U71(0x123456781234567800));
     }
 
     #[test]
     fn test_unpack_0_5() {
-        assert_eq!(ft8_unpack_0_5(0x123456781234567800).unwrap(), "123456781234567800");
+        assert_eq!(ft8_unpack_0_5(U71(0x123456781234567800)).unwrap(), "123456781234567800");
     }
 
     fn test_round_0_5(s: &str) {
@@ -1036,18 +1053,40 @@ mod tests {
     // }
 
     #[test]
-    fn test_pack_callsign() {
-        assert_eq!(ft8_pack_stdcall(&"VK2ZTY").unwrap(), 237001541);
-        assert_eq!(ft8_pack_stdcall(&"VK2EA").unwrap(), 236985694);
-        assert_eq!(ft8_pack_stdcall(&"K1JT").unwrap(), 10222009);
-        assert_eq!(ft8_pack_stdcall(&"E2A").unwrap(), 9053611);
-        assert_eq!(ft8_pack_stdcall(&"3D0XYZ").unwrap(), 37178403);
-        assert_eq!(ft8_pack_stdcall(&"3D0").unwrap(), 37160206);
-        assert_eq!(ft8_pack_stdcall(&"A33A").unwrap(), 84852844);
+    fn test_pack_stdcall() {
+        assert_eq!(ft8_pack_stdcall(&"VK2ZTY").unwrap(), U28(237001541));
+        assert_eq!(ft8_pack_stdcall(&"VK2EA").unwrap(), U28(236985694));
+        assert_eq!(ft8_pack_stdcall(&"K1JT").unwrap(), U28(10222009));
+        assert_eq!(ft8_pack_stdcall(&"E2A").unwrap(), U28(9053611));
+        assert_eq!(ft8_pack_stdcall(&"3D0XYZ").unwrap(), U28(37178403));
+        assert_eq!(ft8_pack_stdcall(&"3D0").unwrap(), U28(37160206));
+        assert_eq!(ft8_pack_stdcall(&"A33A").unwrap(), U28(84852844));
     }
 
-    fn test_unpack_callsign() {
-        // assert_eq!(ft8_unpack_callsign(237001541).unwrap(), &"VK2ZTY");
+    #[test]
+    fn test_unpack_stdcall() {
+        assert_eq!(ft8_unpack_stdcall(U28(237001541), false, 0).unwrap(), "VK2ZTY");
+        assert_eq!(ft8_unpack_stdcall(U28(236985694), false, 0).unwrap(), "VK2EA");
+        assert_eq!(ft8_unpack_stdcall(U28(10222009), false, 0).unwrap(), "K1JT");
+        assert_eq!(ft8_unpack_stdcall(U28(9053611), false, 0).unwrap(), "E2A");
+        assert_eq!(ft8_unpack_stdcall(U28(37178403), false, 0).unwrap(), "3D0XYZ");
+        assert_eq!(ft8_unpack_stdcall(U28(37160206), false, 0).unwrap(), "3D0");
+        assert_eq!(ft8_unpack_stdcall(U28(84852844), false, 0).unwrap(), "A33A");
+    }
+
+    fn test_round_stdcall(s: &str) {
+        assert_eq!(ft8_unpack_stdcall(ft8_pack_stdcall(s).unwrap(), false, 0).unwrap(), s);
+    }
+
+    #[test]
+    fn test_stdcall() {
+        test_round_stdcall("VK2ZTY");
+        test_round_stdcall("VK2EA");
+        test_round_stdcall("K1JT");
+        test_round_stdcall("E2A");
+        test_round_stdcall("3D0XYZ");
+        test_round_stdcall("3D0");
+        test_round_stdcall("A33A");
     }
     // fn test_pack_0_5(msg: &str) {        
     // }

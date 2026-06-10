@@ -3,7 +3,7 @@ use crate::*;
 // Parity Check Equations.
 // Each row corresponds to parity check matrix column.
 // The numbers indicate the codeword bit. 1-origin.
-pub const XXX_LDPC_NM: [[usize; 7]; protocol::FT8.ldpc_m().0] = [
+pub const XXX_LDPC_NM: [[usize; 7]; ft8::FT8.ldpc_m().0] = [
     [4, 31, 59, 91, 92, 96, 153],
     [5, 32, 60, 93, 115, 146, 0],
     [6, 24, 61, 94, 122, 151, 0],
@@ -92,7 +92,7 @@ pub const XXX_LDPC_NM: [[usize; 7]; protocol::FT8.ldpc_m().0] = [
 // Each row corresponds to a codeword bit.
 // The numbers indicate which three LDPC parity checks (rows in Nm) refer to the codeword bit.
 // 1-origin.
-pub const XXX_LDPC_MN: [[usize; 3]; protocol::FT8.ldpc_n().0] = [
+pub const XXX_LDPC_MN: [[usize; 3]; ft8::FT8.ldpc_n().0] = [
     [16, 45, 73],
     [25, 51, 62],
     [33, 58, 78],
