@@ -225,9 +225,11 @@ fn ft8_unpack_0_5(
     ft8_unpack_0_stg(a71, FT8_MESSAGE_BITS, &TELEM_CHARSET)
 }
 
-/// Mimic std_call_to_c28.f90 incl behaviour with unexpected chars
-fn ft8_pack_callsign(c28: &str) -> Option<U28> {
 
+/// std_call_to_c28.f90 does not tell the whole story with call packing
+/// Note that 4 letter calls would be failing this algorithm
+/// pack28 from wsjtx fortran prepares to find the digits and match properly
+fn ft8_try_pack_stdcall(c28: &str) -> Option<U28> {
     /*
     char c6[6] = { ' ', ' ', ' ', ' ', ' ', ' ' };
 
@@ -265,54 +267,67 @@ fn ft8_pack_callsign(c28: &str) -> Option<U28> {
     }
     */
 
-    let c28 = left_pad(c28, &CALL1_CHARSET);
     dbg!(&c28);
 
     let char6: Vec<char> = c28.chars().collect();
-    let mut i = [0i32; 6]; 
+    let mut i = [0u32; 6]; 
 
-    // NBNB the behaviour with unexpected characters matches the
+    // NBNB the behaviour with unexpected characters differs to the
     // behaviour of reference packer std_call_to_c28.f90
     // which does not fail on chars in unexpected positions
+    // really an algo error which should be trapped
+    // can't let through as round trip would fail anyway
     i[0] = match CALL1_CHARSET.set.find(char6[0]) {
         Some(n) => {
-            n as i32
+            n as U28
         },
-        None => { -1 }
+        None => { 
+            return None;
+        }
     };
     i[1] = match CALL2_CHARSET.set.find(char6[1]) {
         Some(n) => {
-            n as i32
+            n as U28
         },
-        None => { -1 }
+        None => { 
+            return None;
+        }
     };
     i[2] = match CALL3_CHARSET.set.find(char6[2]) {
         Some(n) => {
-            n as i32
+            n as U28
         },
-        None => { -1 }
+        None => { 
+            return None;
+         }
     };
     i[3] = match CALL4_CHARSET.set.find(char6[3]) {
         Some(n) => {
-            n as i32
+            n as U28
         },
-        None => { -1 }
+        None => {
+            return None;
+        }
     };
     i[4] = match CALL4_CHARSET.set.find(char6[4]) {
         Some(n) => {
-            n as i32
+            n as U28
         },
-        None => { -1 }
+        None => { 
+            return None;
+        }
     };
     i[5] = match CALL4_CHARSET.set.find(char6[5]) {
         Some(n) => {
-            n as i32
+            n as U28
         },
-        None => { -1 }
+        None => { 
+            return None;
+        }
     };
 
-    let n28: i32 = 
-        C28_STD_CALLS as i32
+    let n28: U28 = 
+        C28_STD_CALLS as U28
         + 36 * 10 * 27 * 27 * 27 * i[0]
         + 10 * 27 * 27 * 27 * i[1]
         + 27 * 27 * 27 * i[2]
@@ -320,10 +335,46 @@ fn ft8_pack_callsign(c28: &str) -> Option<U28> {
         + 27 * i[4]
         + i[5];
 
-    dbg!(n28);
+    // dbg!(n28);
 
-    Some(n28 as U28)
+    Some(n28)
 }
+
+fn ft8_pack_stdcall(c28: &str) -> Option<U28> {
+    let c28 = c28.trim();
+    
+    let trimmed_length = c28.len();
+    if trimmed_length < 3 {
+        return None;
+    }
+
+    // try 0 leading space
+    let mut s = format!("{}    ", c28);
+    s.truncate(6);
+    let result = ft8_try_pack_stdcall(&s);
+    if result.is_some() {
+        return result;
+    }
+
+    // try 1 leading space
+    let mut s = format!(" {}   ", c28);
+    s.truncate(6);
+    let result = ft8_try_pack_stdcall(&s);
+    if result.is_some() {
+        return result;
+    }
+
+    // try 2 leading spaces
+    let mut s = format!("  {}   ", c28);
+    s.truncate(6);
+    let result = ft8_try_pack_stdcall(&s);
+    if result.is_some() {
+        return result;
+    }
+
+    None
+}
+
 
 fn ft8_pack_h22call(c28: &str) -> Option<U28> {
     todo!("Pack h22 call")
@@ -351,7 +402,7 @@ fn ft8_pack_c28(c28: &str) -> Option<U28> {
             ft8_pack_h22call(c28)
         },
         _ => {
-            ft8_pack_callsign(c28)
+            ft8_pack_stdcall(c28)
         }
     }
 }
@@ -986,9 +1037,13 @@ mod tests {
 
     #[test]
     fn test_pack_callsign() {
-        assert_eq!(ft8_pack_callsign(&"K1JT").unwrap(), 6040944);
-        assert_eq!(ft8_pack_callsign(&"VK2ZTY").unwrap(), 237001541);
-        assert_eq!(ft8_pack_callsign(&"VK2EA").unwrap(), 12339350);
+        assert_eq!(ft8_pack_stdcall(&"VK2ZTY").unwrap(), 237001541);
+        assert_eq!(ft8_pack_stdcall(&"VK2EA").unwrap(), 236985694);
+        assert_eq!(ft8_pack_stdcall(&"K1JT").unwrap(), 10222009);
+        assert_eq!(ft8_pack_stdcall(&"E2A").unwrap(), 9053611);
+        assert_eq!(ft8_pack_stdcall(&"3D0XYZ").unwrap(), 37178403);
+        assert_eq!(ft8_pack_stdcall(&"3D0").unwrap(), 37160206);
+        assert_eq!(ft8_pack_stdcall(&"A33A").unwrap(), 84852844);
     }
 
     fn test_unpack_callsign() {
