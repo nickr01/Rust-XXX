@@ -32,18 +32,21 @@ use cpal::{
 };
 // use cpal::{Sample, SupportedStreamConfig};
 use cpal::traits::{
-    // HostTrait, 
+    HostTrait, 
     DeviceTrait, 
     StreamTrait
 };
 
+// use cpal::{StreamConfig, SupportedStreamConfig};
+// use cpal::{Sample, SupportedStreamConfig};
+// use cpal::traits::{ HostTrait, DeviceTrait, 
+//     // StreamTrait
+// };
+
 // use crate::constant::{INPUT_BUFSIZE, InputBufWriter};
 // use crate::rustxxx::InputBufReader;
-// use crate::rustxxx::AudioSampleBuffer;
-use transport::rustxxx::{
-    AudioSampleBuffer, 
-    // Runtime
-};
+use rustxxx::rustxxx::AudioSampleBuffer;
+use rustxxx::rustxxx::*;
 // use crate::rustxxx::InputBufWriter;
 
 // use ringbuf::{traits::*, HeapRb, SharedRb};
@@ -58,7 +61,7 @@ use ringbuf::traits::Split;
 //use ringbuffer_spsc::ringbuffer;
 
 // mod rustxxx;
-mod cpal_helper;
+// mod cpal_helper;
 // mod crc;
 // mod decode;
 // mod encode;
@@ -132,6 +135,27 @@ mod cpal_helper;
         //     );
         // }
 
+
+pub const FT8: Protocol = Protocol::new(
+    Secs(0.16),
+    Secs(15.0),
+    true,
+    BitCount(3),
+    SymbolCount(58),
+    SymbolCount(79),             // Total channel symbols (FT8_NS + FT8_ND)
+    SymbolCount(7),     // sync group length
+    RepeatCount(3),        // Number of sync groups
+    SymbolCount(0),
+    SymbolCount(36),    // Offset between sync groups
+    [3, 1, 4, 0, 6, 5, 2],    //　Costas array
+    BitCount(174),        // Number of bits in the encoded message (payload with LDPC checksum bits)
+    BitCount(91),         // Number of payload bits (including CRC)
+    [0, 1, 3, 2, 5, 6, 4, 7],
+    [0, 1, 3, 2, 6, 4, 5, 7],
+    CrcParams::new(BitCount(5),BitMap(0x2757), BitCount(14), 0, 0),
+    2.0f32,
+    SymbolCount(1),
+);
         
 #[derive(clap::Parser, std::fmt::Debug)]
 #[command(version, about = "Rust-XXX FT8-like modem testbed", long_about = None)]
@@ -166,8 +190,8 @@ struct Opt {
 
 #[cfg(any(feature = "enable_rx", test))]
 fn do_audio_file_input(
-    runtime: transport::rustxxx::Runtime, 
-    input_buff_writer: &mut transport::rustxxx::AudioBufWriter, 
+    runtime: rustxxx::rustxxx::Runtime, 
+    input_buff_writer: &mut rustxxx::rustxxx::AudioBufWriter, 
     input_file: String,
     from_channels: &mut usize,
     from_rate: &mut u32
@@ -330,7 +354,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
 
     // let loop_back = opt.loop_back.unwrap();
 
-    let runtime: &'static transport::rustxxx::Runtime = &transport::rustxxx::TEST_FT8_RUNTIME;
+    let runtime: &'static rustxxx::rustxxx::Runtime = &rustxxx::rustxxx::TEST_FT8_RUNTIME;
 
     println!("Supported hosts:\n  {:?}", cpal::ALL_HOSTS);
     let available_hosts = cpal::available_hosts();
@@ -387,24 +411,24 @@ fn rx_main() -> Result<(), anyhow::Error> {
     let mut _audio_output_to_channels = 0; 
     let mut _audio_output_to_rate = 0;
 
-    let audio_input_buffer: AudioSampleBuffer = ringbuf::HeapRb::<f32>::new(transport::rustxxx::AUDIO_INPUT_BUFSIZE);
-    let audio_output_buffer: AudioSampleBuffer = ringbuf::HeapRb::<f32>::new(transport::rustxxx::AUDIO_OUTPUT_BUFSIZE);
+    let audio_input_buffer: AudioSampleBuffer = ringbuf::HeapRb::<f32>::new(rustxxx::rustxxx::AUDIO_INPUT_BUFSIZE);
+    let audio_output_buffer: AudioSampleBuffer = ringbuf::HeapRb::<f32>::new(rustxxx::rustxxx::AUDIO_OUTPUT_BUFSIZE);
 
     let (mut audio_input_buff_writer, mut audio_input_buff_reader) = audio_input_buffer.split();
-    // let mut audio_input_buff_writer: transport::rustxxx::ThreadedAudioBufWriter = std::sync::Arc::new(std::sync::Mutex::new(_audio_input_buff_writer));
-    // let mut audio_input_buff_reader: transport::rustxxx::ThreadedAudioBufReader = std::sync::Arc::new(std::sync::Mutex::new(_audio_input_buff_reader));
+    // let mut audio_input_buff_writer: rustxxx::rustxxx::ThreadedAudioBufWriter = std::sync::Arc::new(std::sync::Mutex::new(_audio_input_buff_writer));
+    // let mut audio_input_buff_reader: rustxxx::rustxxx::ThreadedAudioBufReader = std::sync::Arc::new(std::sync::Mutex::new(_audio_input_buff_reader));
 
     let (mut _audio_output_buff_writer, mut audio_output_buff_reader) = audio_output_buffer.split();
-    // let mut _audio_output_buff_writer: transport::rustxxx::ThreadedAudioBufWriter = std::sync::Arc::new(std::sync::Mutex::new(_audio_output_buff_writer));
-    // let mut audio_output_buff_reader: transport::rustxxx::ThreadedAudioBufReader = std::sync::Arc::new(std::sync::Mutex::new(_audio_output_buff_reader));
+    // let mut _audio_output_buff_writer: rustxxx::rustxxx::ThreadedAudioBufWriter = std::sync::Arc::new(std::sync::Mutex::new(_audio_output_buff_writer));
+    // let mut audio_output_buff_reader: rustxxx::rustxxx::ThreadedAudioBufReader = std::sync::Arc::new(std::sync::Mutex::new(_audio_output_buff_reader));
 
     #[cfg(feature = "audio_pass_test")]
     {
         audio_output_buff_reader = audio_input_buff_reader;
     };
 
-    let mut receive_pipeline= transport::pipeline::Pipeline::new(
-        &proto_ft8::ft8::FT8, 
+    let mut receive_pipeline= rustxxx::pipeline::Pipeline::new(
+        &FT8, 
         runtime,
     );
 
@@ -416,7 +440,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
         // let input_buff = circular_buffer::CircularBuffer::<{constant::INPUT_BUFSIZE}, f32>::boxed();
         // eg cargo run -- --input-device 'coreaudio:AppleUSBAudioEngine:ZOOM Corporation:UAC-232:2100000:1,2'
 
-        let (audio_input_device, audio_input_config) = crate::cpal_helper::get_audio_input_device_default_config(&host, &audio_input_device_name)?;
+        let (audio_input_device, audio_input_config) = get_audio_input_device_default_config(&host, &audio_input_device_name)?;
         dbg!(&audio_input_config);
 
         // Will be running the input stream on a separate thread.
@@ -434,7 +458,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
 
         fn audio_input_data_callback(
             input: &[f32], 
-            writer: &mut transport::rustxxx::AudioBufWriter,
+            writer: &mut rustxxx::rustxxx::AudioBufWriter,
         ) {
             // if let Ok(mut guard) = writer.try_lock() 
             {
@@ -484,7 +508,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
     } else if let Some(audio_output_device_name) = opt.output_device {
         dbg!(&audio_output_device_name);
 
-        let (audio_output_device, audio_output_config) = cpal_helper::get_audio_output_device_default_config(&host, &audio_output_device_name)?;
+        let (audio_output_device, audio_output_config) = get_audio_output_device_default_config(&host, &audio_output_device_name)?;
         dbg!(&audio_output_config);
 
         let audio_output_from_channels = runtime.channels().0;
@@ -495,7 +519,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
 
         dbg!(audio_output_from_channels, _audio_output_to_channels, audio_output_from_rate, _audio_output_to_rate);
 
-        fn audio_output_data_callback(output: &mut [f32], reader: &mut transport::rustxxx::AudioBufReader) {
+        fn audio_output_data_callback(output: &mut [f32], reader: &mut rustxxx::rustxxx::AudioBufReader) {
             // if let Ok(mut guard) = reader.try_lock() 
             {
                 // let reader = guard.as_mut();
@@ -592,4 +616,233 @@ fn rx_main() -> Result<(), anyhow::Error> {
     }
 
     Ok(())
+}
+
+pub fn get_audio_input_device_by_id(host: &cpal::Host, audio_input_device_id: &String) -> Result<cpal::Device, anyhow::Error> {
+    let audio_input_device_id: &cpal::DeviceId = &audio_input_device_id.parse()?;
+    dbg!(audio_input_device_id);
+    match host.device_by_id(audio_input_device_id) {
+        Some(device) => Ok(device),
+        None => { return Err(anyhow::anyhow!("Cannot get input device by id {}", audio_input_device_id)) }
+    }
+}
+
+pub fn get_audio_input_device_by_name(host: &cpal::Host, audio_input_device_name: &String) -> Result<cpal::Device, anyhow::Error> {
+    dbg!(audio_input_device_name);
+    for device in host.input_devices()? {
+        let desc =  device.description()?;
+        let desc = desc.name();
+        if desc == audio_input_device_name {
+            return Ok(device);
+        }
+    }
+    Err(anyhow::anyhow!("Cannot get input device by name {}", audio_input_device_name))
+}
+        
+pub fn get_audio_input_device(host: &cpal::Host, audio_input_device_name: &String) -> Result<cpal::Device, anyhow::Error> {
+    if audio_input_device_name.is_empty() {
+        match host.default_input_device() {
+            Some(device) => Ok(device),
+            None => { return Err(anyhow::anyhow!("Cannot get default input device")) }
+        }
+    } else {
+        match get_audio_input_device_by_name(host, audio_input_device_name) {
+            Ok(device) => { Ok(device) },
+            Err(_) => {
+                get_audio_input_device_by_id(host, audio_input_device_name)
+            }
+        }
+    }
+}
+
+pub fn get_audio_input_device_default_config(host: &cpal::Host, audio_input_device_name: &String,) -> 
+    Result<(cpal::Device, cpal::SupportedStreamConfig), anyhow::Error> {
+    let audio_input_device = get_audio_input_device(host, audio_input_device_name)?;
+    if audio_input_device.supports_input() {
+        dbg!();
+        let config = audio_input_device.default_input_config()?;
+        Ok((audio_input_device, config))
+    } else {
+        dbg!();
+        Err(anyhow::anyhow!("Input device does not support input {}", audio_input_device_name))
+    }
+}
+
+pub fn get_audio_output_device_by_id(host: &cpal::Host, audio_output_device_id: &String) -> Result<cpal::Device, anyhow::Error> {
+    let audio_output_device_id: &cpal::DeviceId = &audio_output_device_id.parse()?;
+    dbg!(audio_output_device_id);
+
+    match host.device_by_id(audio_output_device_id) {
+        Some(device) => Ok(device),
+        None => { return Err(anyhow::anyhow!("Cannot get output device by id {}", audio_output_device_id)) }
+    }
+}
+
+pub fn get_audio_output_device_by_name(host: &cpal::Host, audio_output_device_name: &String) -> Result<cpal::Device, anyhow::Error> {
+    dbg!(audio_output_device_name);
+
+    for device in host.output_devices()? {
+        let desc =  device.description()?;
+        let desc = desc.name();
+        if desc == audio_output_device_name {
+            return Ok(device);
+        }
+    }
+    Err(anyhow::anyhow!("Cannot get output device by name {}", audio_output_device_name))
+}
+        
+pub fn get_audio_output_device(host: &cpal::Host, audio_output_device_name: &String) -> Result<cpal::Device, anyhow::Error> {
+    if audio_output_device_name.is_empty() {
+        match host.default_output_device() {
+            Some(device) => Ok(device),
+            None => { return Err(anyhow::anyhow!("Cannot get default output device")) }
+        }
+    } else {
+        match get_audio_output_device_by_name(host, audio_output_device_name) {
+            Ok(device) => { Ok(device) },
+            Err(_) => {
+                get_audio_output_device_by_id(host, audio_output_device_name)
+            }
+        }
+    }
+}
+
+pub fn get_audio_output_device_default_config(host: &cpal::Host, audio_output_device_name: &String,) -> 
+    Result<(cpal::Device, cpal::SupportedStreamConfig), anyhow::Error> {
+    let audio_output_device = get_audio_output_device(host, audio_output_device_name)?;
+    if audio_output_device.supports_output() {
+        dbg!();
+        let config = audio_output_device.default_output_config()?;
+        Ok((audio_output_device, config))
+    } else {
+        dbg!();
+        Err(anyhow::anyhow!("output device does not support output {}", audio_output_device_name))
+    }
+}
+
+// fn get_audio_output_device(host: &cpal::Host, audio_output_device_name: &String) -> Result<cpal::Device, anyhow::Error> {
+//     if audio_output_device_name.is_empty() {
+//         match host.default_output_device() {
+//             Some(device) => Ok(device),
+//             None => { return Err(anyhow::anyhow!("Cannot get default output device")) }
+//         }
+//     } else {
+//         let audio_output_device_id: &cpal::DeviceId = &audio_output_device_name.parse()?;
+//         dbg!(audio_output_device_id);
+
+//         match host.device_by_id(audio_output_device_id) {
+//             Some(device) => Ok(device),
+//             None => { return Err(anyhow::anyhow!("Cannot get output device by id {}", audio_output_device_name)) }
+//         }
+//     }
+// }
+
+// fn get_audio_output_device_default_config(host: &cpal::Host, audio_output_device_name: &String,) -> 
+//     Result<(cpal::Device, cpal::SupportedStreamConfig), anyhow::Error> {
+//     let audio_output_device = get_audio_output_device(host, audio_output_device_name)?;
+//     if audio_output_device.supports_output() {
+//         dbg!();
+//         let config = audio_output_device.default_output_config()?;
+//         Ok((audio_output_device, config))
+//     } else {
+//         dbg!();
+//         Err(anyhow::anyhow!("Output device does not support output {}", audio_output_device_name))
+//     }
+// }
+
+// fn sample_format(format: cpal::SampleFormat) -> hound::SampleFormat {
+//     if format.is_float() {
+//         hound::SampleFormat::Float
+//     } else {
+//         hound::SampleFormat::Int
+//     }
+// }
+
+// fn wav_spec_from_config(config: &cpal::SupportedStreamConfig) -> hound::WavSpec {
+//     hound::WavSpec {
+//         channels: config.channels() as _,
+//         sample_rate: config.sample_rate() as _,
+//         bits_per_sample: (config.sample_format().sample_size() * 8) as _,
+//         sample_format: sample_format(config.sample_format()),
+//     }
+// }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Https://docs.rs/jack/latest/jack/
+
+    #[test]
+    fn test_audio_input_device_by_name() {
+        let host = cpal::default_host();
+        let name: String = "Loopback Audio".to_string();
+        let _ = get_audio_input_device_by_name(&host, &name)
+            .expect("Cannot get device by name {}");
+    }
+
+    #[test]
+    fn test_audio_input_device_by_id() {
+        let host = cpal::default_host();
+        let id: String = "coreaudio:com.rogueamoeba.Loopback:FDC858DA-EA9D-469B-9B86-2C4ADC20537E".to_string();
+        let _ = get_audio_input_device_by_id(&host, &id)
+            .expect("Cannot get device by name");
+    }
+
+    #[test]
+    fn test_audio_input_config_by_name() {
+        let host = cpal::default_host();
+        let name: String = "Loopback Audio".to_string();
+        let _ = get_audio_input_device_by_name(&host, &name)
+            .expect("Cannot get device by name");
+    }
+
+    #[test]
+    fn test_audio_input_device_default_config_by_name() {
+        let host = cpal::default_host();
+        let name: String = "Loopback Audio".to_string();
+        let (_, _) = get_audio_input_device_default_config(&host, &name)
+            .expect("Cannot get device and config");
+    }
+
+    #[test]
+    fn test_audio_input_device_default_config_by_id() {
+        let host = cpal::default_host();
+        let id: String = "coreaudio:com.rogueamoeba.Loopback:FDC858DA-EA9D-469B-9B86-2C4ADC20537E".to_string();
+        let (_, _) = get_audio_input_device_default_config(&host, &id)
+            .expect("Cannot get device and config");
+    }
+
+    #[test]
+    fn test_audio_output_device_by_name() {
+        let host = cpal::default_host();
+        let name: String = "MacBook Pro Speakers".to_string();
+        let _ = get_audio_output_device_by_name(&host, &name)
+            .expect("Cannot get device by name");
+    }
+
+    #[test]
+    fn test_audio_output_device_by_id() {
+        let host = cpal::default_host();
+        let id: String = "coreaudio:BuiltInSpeakerDevice".to_string();
+        let _ = get_audio_output_device_by_id(&host, &id)
+            .expect("Cannot get device by id");
+    }
+
+    #[test]
+    fn test_audio_output_device_default_config_by_name() {
+        let host = cpal::default_host();
+        let id: String = "MacBook Pro Speakers".to_string();
+        let (_, _) = get_audio_output_device_default_config(&host, &id)
+            .expect("Cannot get device and config");
+    }
+
+    #[test]
+    fn test_audio_output_device_default_config_by_id() {
+        let host = cpal::default_host();
+        let id: String = "coreaudio:BuiltInSpeakerDevice".to_string();
+        let (_, _) = get_audio_output_device_default_config(&host, &id)
+            .expect("Cannot get device and config");
+    }
 }

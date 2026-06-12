@@ -1,17 +1,15 @@
-[workspace.package]
-#name = "rustxxx-workspace"
+[package]
+name = "rustxxx"
 version = "0.1.0"
 edition = "2024"
 
-[workspace]
-resolver = "2"
-members = [
-    "crates/transport",
-    "crates/proto_ft8",
-    "examples/ft8_streams", 
-]
+[features]
+default = ["enable_tx", "enable_rx"]
+enable_rx = []
+enable_tx = []
+audio_pass_test = []
 
-[workspace.dependencies]
+[dependencies]
 "wav_io" = "0.1"
 "rustfft" = "6"
 "realfft" = "3"
@@ -36,7 +34,11 @@ ringbuf = "0.5.0"
 rubato = "3.0.0"
 audioadapter-buffers = "3.0.0"
 audioadapter = "3.0.0"
-transport = { path = "crates/transport" }
-proto_ft8 = { path = "crates/proto_ft8" }
+#transport = { path = "crates/transport" }
 minifb = "0.28.0"
+lazy_static = "1.5.0"
 
+[dev-dependencies]
+
+[[example]]
+name = "ft8_streams"
