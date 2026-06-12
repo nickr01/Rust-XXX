@@ -52,6 +52,6 @@ pub fn charn(mut c: u8, table_idx: u8) -> char {
     '_' // unknown character, should never get here
 }
 
-pub fn _in_range(c: char, min: char, max: char) -> bool {
+pub fn in_range_inclusive(c: char, min: char, max: char) -> bool {
     (c as u8 >= min as u8) && (c as u8 <= max as u8)
 }

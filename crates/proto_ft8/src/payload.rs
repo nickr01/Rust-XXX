@@ -376,7 +376,6 @@ fn ft8_pack_stdcall(c28: &str) -> Option<U28> {
     None
 }
 
-
 fn ft8_pack_h22call(c28: &str) -> Option<U28> {
     todo!("Pack h22 call")
 }
@@ -407,6 +406,10 @@ fn ft8_pack_c28(c28: &str) -> Option<U28> {
         }
     }
 }
+
+// fn ft8_pack_c28r1(c28r1: &str) -> Option<U28, bool> {
+//     Some(None, false)
+// }
 
 fn ft8_unpack_stdcall(
     c28: U28,
@@ -588,11 +591,13 @@ fn ft8_unpack_c28(
 }
 
 fn ft8_pack_grid4(grid4: &str) -> Option<U15> {
+    assert_ne!(grid4, "RR73");
     let gstr: Vec<char> = grid4.chars().collect();
-    if text::_in_range(gstr[0], 'A', 'R')
-        && text::_in_range(gstr[1], 'A', 'R')
-        && text::_in_range(gstr[2], '0', '9')
-        && text::_in_range(gstr[3], '0', '9')
+    if 
+        text::in_range_inclusive(gstr[0], 'A', 'R')
+        && text::in_range_inclusive(gstr[1], 'A', 'R')
+        && gstr[2].is_ascii_digit() 
+        && gstr[3].is_ascii_digit()
     {
         let mut igrid4: u16 = gstr[0] as u16 - 'A' as u16;
         igrid4 = igrid4 * 18 + (gstr[1] as u16 - 'A' as u16);
@@ -603,11 +608,12 @@ fn ft8_pack_grid4(grid4: &str) -> Option<U15> {
     None
 }
 
-fn ft8_parse_report(g15: &str) -> Option<U15> {
+fn ft8_pack_report(g15: &str) -> Option<U15> {
     // Parse report: +dd /-dd /R+dd /R-dd
-    // TODO: check the range of dd
+    todo!("check the range of dd");
     let gstr: Vec<char> = g15.chars().collect();
     if gstr[0] == 'R' {
+        todo!("this is in the wrong place - R detection should be higher in parse");
         let dd = text::_dd_to_int(&g15.chars().take(1).collect::<String>());
         let irpt = (35 + dd) as u16;
         return Some(U15((MAXGRID4 + irpt) | 0x8000)); // ir = 1
@@ -620,8 +626,12 @@ fn ft8_parse_report(g15: &str) -> Option<U15> {
 
 fn ft8_pack_g15(g15: &str) -> Option<U15> {
     dbg!(g15);
+    let g15 = g15.trim();
 
     match g15 {
+        "" => {
+            return Some(U15(MAXGRID4 + 1)); // !!!!!
+        }
         "RRR" => {
             return Some(U15(MAXGRID4 + 2));
         },
@@ -637,57 +647,60 @@ fn ft8_pack_g15(g15: &str) -> Option<U15> {
                     return Some(result);
                 },
                 None => {
-                    return ft8_parse_report(g15);
-                    // !?&*!!! how do we get here?
-                    Some(U15(MAXGRID4 + 1))
+                    return ft8_pack_report(g15);
                 }
             }
         }
     }
 }
 
-// // Pack Type 1 (Standard 77-bit message) and Type 2 (ditto, with a "/P" call)
-// fn ft8_pack_type1(type1_msg: &str) -> Option<Vec<u8>> {
-//     dbg!(type1_msg);
+// Pack Type 1 (Standard 77-bit message) and Type 2 (ditto, with a "/P" call)
+fn ft8_pack_type1(type1_msg: &str) -> Option<Vec<u8>> {
+    dbg!(type1_msg);
 
-//     // Locate the first delimiter
-//     let token: Vec<&str> = type1_msg.split(' ').collect();
-//     let n28a = ft8_pack_std_call(token[0]);
-//     let n28b = ft8_pack_std_call(token[1]);
+    // Locate the first delimiter
+    // c28[/r1] c28[/r1] [R1 ]g15
+    let token: Vec<&str> = type1_msg.split(' ').collect();
 
-//     if !n28a.is_some() || !n28b.is_some() {
-//         return None;
-//     }
+    let n28a = ft8_pack_stdcall(token[0]);
+    if n28a.is_none() {
+        return None;
+    }
 
-//     let n28a = n28a.unwrap();
-//     let n28b = n28b.unwrap();
+    let n28b = ft8_pack_stdcall(token[1]);
+    if n28b.is_none() {
+        return None;
+    }
 
-//     let igrid4 =  ft8_pack_grid4(if token.len() > 2 { token[2] } else { " " })
-//         .expect("expected a packed grid4");
+    let n28a = n28a.unwrap();
+    let n28b = n28b.unwrap();
 
-//     let i3 = 1u8; // No suffix or /R
+    let igrid4 =  ft8_pack_grid4(if token.len() > 2 { token[2] } else { " " })
+        .expect("expected a packed grid4");
 
-//     // TODO: check for suffixes
+    let i3 = 1u8; // No suffix or /R
 
-//     // Shift in ipa and ipb bits into n28a and n28b
-//     let n28a = (n28a as u32) << 1; // ipa = 0
-//     let n28b = (n28b as u32) << 1; // ipb = 0
+    // TODO: check for suffixes
 
-//     // Pack into (28 + 1) + (28 + 1) + (1 + 15) + 3 bits
-//     let mut b77 = Vec::with_capacity(FT8._ldpc_k_bytes().0);
-//     b77.push((n28a >> 21) as u8);
-//     b77.push((n28a >> 13) as u8);
-//     b77.push((n28a >> 5) as u8);
-//     b77.push((n28a << 3) as u8 | (n28b >> 26) as u8);
-//     b77.push((n28b >> 18) as u8);
-//     b77.push((n28b >> 10) as u8);
-//     b77.push((n28b >> 2) as u8);
-//     b77.push((n28b << 6) as u8 | (igrid4 >> 10) as u8);
-//     b77.push((igrid4 >> 2) as u8);
-//     b77.push((igrid4 << 6) as u8 | (i3 << 3));
+    // Shift in ipa and ipb bits into n28a and n28b
+    let n28a = (n28a.0 as u32) << 1; // ipa = 0
+    let n28b = (n28b.0 as u32) << 1; // ipb = 0
+
+    // Pack into (28 + 1) + (28 + 1) + (1 + 15) + 3 bits
+    let mut b77 = Vec::with_capacity(FT8._ldpc_k_bytes().0);
+    b77.push((n28a >> 21) as u8);
+    b77.push((n28a >> 13) as u8);
+    b77.push((n28a >> 5) as u8);
+    b77.push((n28a << 3) as u8 | (n28b >> 26) as u8);
+    b77.push((n28b >> 18) as u8);
+    b77.push((n28b >> 10) as u8);
+    b77.push((n28b >> 2) as u8);
+    b77.push((n28b << 6) as u8 | (igrid4.0 >> 10) as u8);
+    b77.push((igrid4.0 >> 2) as u8);
+    b77.push((igrid4.0 << 6) as u8 | (i3 << 3));
     
-//     Some(b77)
-// }
+    Some(b77)
+}
 
 
 // fn ft8_unpack_type1or2(

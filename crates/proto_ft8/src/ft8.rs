@@ -85,7 +85,7 @@ pub const U28_MAX: UType28 = 2_u32.pow(28);
 // const MAX22: U71 = 0x400000; // 4194304;
 // const test1: U71 = NTOKENS + MAX22;
 
-pub const MAXGRID4: u16 = 32400;
+pub const MAXGRID4: u16 = 10 * 10 * 18 * 18;
 
 pub const FT8_MESSAGE_BITS: usize = 71;
 pub const A71_BYTES: usize = (FT8_MESSAGE_BITS + 1) / 8; // 9;
