@@ -171,93 +171,85 @@ impl Pipeline {
 
     pub fn write_sample_buffer(
         &mut self,
-        reader: &mut rustxxx::AudioBufReader,
+        audio_in: &mut Vec<f32>,
+        // reader: &mut rustxxx::AudioBufReader,
         resample_context: &mut ResampleContext,
     ) -> Result<Vec<message::Message>, rustxxx::XxxError> {
         {
-            let mut mono_samples = Vec::new();
-            // if let Ok(mut guard) = reader.try_lock() 
-            {
-                // let reader = guard.as_mut();
-
-                // dbg!(reader.occupied_len());
-
-                let planned_load = Pipeline::BUFLEN * resample_context.from_channels;
-                if reader.occupied_len() & !1 >= planned_load { // force even consumption
+            let planned_load = Pipeline::BUFLEN * resample_context.from_channels;
+            if audio_in.len() & !1 >= planned_load { // force even consumption
+                let mut mono_samples = Vec::new();
+                {
                     let count_to_load = planned_load; // coerce to controlled buffer size - maybe not necessary
-                    let samples_iter = reader.pop_iter();
                     {
                         let mut count = 0;
-                        for sample in samples_iter {
+                        while count < count_to_load {
+                            let sample = audio_in.pop().unwrap();
                             if resample_context.from_channels == 1 || count & 1 == 0 {
                                 mono_samples.push(sample);
                             };
                             count += 1;
-                            if count >= count_to_load {
-                                break;
-                            }
-                        }
+                        };
                     }
                 }
                 // assert_eq!(reader.occupied_len(),  count_to_load - planned_load);
-            }
 
-            // dbg!(count_to_load, mono_samples.len());
-            // now do the sample_rate if necessary
-            let samples_at_new_rate = if resample_context.from_rate == self.receiver.runtime.target_input_sample_rate().0 as u32 {
-                mono_samples
-            } else {
-                // let audio_clip = vec![0.0; 2*10000];
+                // dbg!(count_to_load, mono_samples.len());
+                // now do the sample_rate if necessary
+                let samples_at_new_rate = if resample_context.from_rate == self.receiver.runtime.target_input_sample_rate().0 as u32 {
+                    mono_samples
+                } else {
+                    // let audio_clip = vec![0.0; 2*10000];
 
-                // wrap it with an InterleavedSlice Adapter
-                let nbr_input_frames = mono_samples.len(); // audio_clip.len() / 2;
-                let input_adapter = InterleavedSlice::new(&mono_samples, 1, nbr_input_frames).unwrap();
+                    // wrap it with an InterleavedSlice Adapter
+                    let nbr_input_frames = mono_samples.len(); // audio_clip.len() / 2;
+                    let input_adapter = InterleavedSlice::new(&mono_samples, 1, nbr_input_frames).unwrap();
 
-                // create a buffer for the output
-                let out_len = (mono_samples.len() as f64 * resample_context.resampler.resample_ratio()) as usize;
-                // dbg!(mono_samples.len(), out_len);
-                let mut outdata: Vec<f32> = vec![0f32;out_len];
-                let outdata_capacity = outdata.len();
-                let mut output_adapter =
-                    InterleavedSlice::new_mut(
-                        &mut outdata, 1, outdata_capacity
-                    ).unwrap();
+                    // create a buffer for the output
+                    let out_len = (mono_samples.len() as f64 * resample_context.resampler.resample_ratio()) as usize;
+                    // dbg!(mono_samples.len(), out_len);
+                    let mut outdata: Vec<f32> = vec![0f32;out_len];
+                    let outdata_capacity = outdata.len();
+                    let mut output_adapter =
+                        InterleavedSlice::new_mut(
+                            &mut outdata, 1, outdata_capacity
+                        ).unwrap();
 
-                // Preparations
-                let mut indexing = Indexing {
-                    input_offset: 0,
-                    output_offset: 0,
-                    active_channels_mask: None,
-                    partial_len: None,
+                    // Preparations
+                    let mut indexing = Indexing {
+                        input_offset: 0,
+                        output_offset: 0,
+                        active_channels_mask: None,
+                        partial_len: None,
+                    };
+
+                    let mut input_frames_left = nbr_input_frames;
+                    let mut input_frames_next = resample_context.resampler.input_frames_next();
+
+                    // Loop over all full chunks.
+                    // There will be some unprocessed input frames left after the last full chunk.
+                    // see the `process_f64` example for how to handle those
+                    // using `partial_len` of the indexing struct.
+                    // It is also possible to use the `process_all_into_buffer` method
+                    // to process the entire file (including any last partial chunk) with a single call.
+                    while input_frames_left >= input_frames_next {
+                        let (frames_read, frames_written) = resample_context.resampler
+                            .process_into_buffer(&input_adapter, &mut output_adapter, Some(&indexing))
+                            .unwrap();
+
+                        indexing.input_offset += frames_read;
+                        indexing.output_offset += frames_written;
+                        input_frames_left -= frames_read;
+                        input_frames_next = resample_context.resampler.input_frames_next();
+                    }
+                    outdata
                 };
 
-                let mut input_frames_left = nbr_input_frames;
-                let mut input_frames_next = resample_context.resampler.input_frames_next();
-
-                // Loop over all full chunks.
-                // There will be some unprocessed input frames left after the last full chunk.
-                // see the `process_f64` example for how to handle those
-                // using `partial_len` of the indexing struct.
-                // It is also possible to use the `process_all_into_buffer` method
-                // to process the entire file (including any last partial chunk) with a single call.
-                while input_frames_left >= input_frames_next {
-                    let (frames_read, frames_written) = resample_context.resampler
-                        .process_into_buffer(&input_adapter, &mut output_adapter, Some(&indexing))
-                        .unwrap();
-
-                    indexing.input_offset += frames_read;
-                    indexing.output_offset += frames_written;
-                    input_frames_left -= frames_read;
-                    input_frames_next = resample_context.resampler.input_frames_next();
+                // this is occasionally expensive triggering decode processing into message_hash
+                for sample in samples_at_new_rate {
+                    self.write_sample(sample)?;
                 }
-                outdata
-            };
-
-            // this is occasionally expensive triggering decode processing into message_hash
-            for sample in samples_at_new_rate {
-                self.write_sample(sample)?;
             }
-
             // return the message_hash content if already returned
             // mark as reported
             // clean the message_hash - remove older than message length secs

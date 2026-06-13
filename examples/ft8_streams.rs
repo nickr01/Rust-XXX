@@ -47,7 +47,7 @@ use ft8_message::{ft8_pack_msg, ft8_unpack_msg};
 
 // use crate::constant::{INPUT_BUFSIZE, InputBufWriter};
 // use crate::rustxxx::InputBufReader;
-use rustxxx::rustxxx::AudioSampleBuffer;
+// use rustxxx::rustxxx::AudioSampleBuffer;
 use rustxxx::rustxxx::*;
 // use crate::rustxxx::InputBufWriter;
 
@@ -137,6 +137,14 @@ use ringbuf::traits::Split;
         //     );
         // }
 
+pub type AudioSampleBuffer = ringbuf::SharedRb<ringbuf::storage::Heap<f32>>; // SharedRb<ringbuf::storage::Heap<f32>>;
+
+pub type AudioBufWriter = ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, true, false>; 
+pub type AudioBufReader = ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, false, true>;
+
+// pub type AudioBufReader = std::sync::Arc<std::sync::Mutex<ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, false, true>>>;
+// pub type AudioBufWriter = std::sync::Arc<std::sync::Mutex<ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, true, false>>>;
+
 
 pub const FT8: Protocol = Protocol::new(
     Secs(0.16),
@@ -193,7 +201,7 @@ struct Opt {
 #[cfg(any(feature = "enable_rx", test))]
 fn do_audio_file_input(
     runtime: rustxxx::rustxxx::Runtime, 
-    input_buff_writer: &mut rustxxx::rustxxx::AudioBufWriter, 
+    input_buff_writer: &mut AudioBufWriter, 
     input_file: String,
     from_channels: &mut usize,
     from_rate: &mut u32
@@ -460,7 +468,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
 
         fn audio_input_data_callback(
             input: &[f32], 
-            writer: &mut rustxxx::rustxxx::AudioBufWriter,
+            writer: &mut AudioBufWriter,
         ) {
             // if let Ok(mut guard) = writer.try_lock() 
             {
@@ -521,7 +529,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
 
         dbg!(audio_output_from_channels, _audio_output_to_channels, audio_output_from_rate, _audio_output_to_rate);
 
-        fn audio_output_data_callback(output: &mut [f32], reader: &mut rustxxx::rustxxx::AudioBufReader) {
+        fn audio_output_data_callback(output: &mut [f32], reader: &mut AudioBufReader) {
             // if let Ok(mut guard) = reader.try_lock() 
             {
                 // let reader = guard.as_mut();
@@ -574,26 +582,37 @@ fn rx_main() -> Result<(), anyhow::Error> {
             audio_input_from_rate, 
         );
 
+        let mut audio_buff: Vec<f32> = Vec::new();
+
         // this will be our main event loop
         while receive_pipeline.continue_run() {
+            {
+                // unload the ringbuf into a simple Vec
+                let audio_iter = audio_input_buff_reader.pop_iter();
+                for sample in audio_iter {
+                    audio_buff.push(sample);
+                }
+                assert!(audio_buff.len() < AUDIO_INPUT_BUFSIZE);
+            }
             let messages = receive_pipeline.write_sample_buffer(
-                &mut audio_input_buff_reader,
+                &mut audio_buff,
                 &mut resample_context
             )
                 .context("Cannot run the receiver").unwrap();
 
             receive_pipeline.update_spectrogram();
 
-            // for msg in messages {
-            //     match proto_ft8::unpack_ft8::ft8_unpack_to_string(&msg.codeword()) {
-            //         Some(msg) => {
-            //             dbg!(&msg);
-            //         },
-            //         None => {
-            //             dbg!("Bad unpack");
-            //         }
-            //     }
-            // }
+            for msg in messages {
+                dbg!(&msg);
+                // match ft8_message::ft8_unpack_msg(&msg.codeword()) {
+                //     Some(msg) => {
+                //         dbg!(&msg);
+                //     },
+                //     None => {
+                //         dbg!("Bad unpack");
+                //     }
+                // }
+            }
         }   
     }
 
