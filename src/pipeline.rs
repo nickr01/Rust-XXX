@@ -4,7 +4,9 @@ use crate::detector;
 #[cfg(any(feature = "enable_rx", test))]
 use crate::message;
 use crate::receiver;
-use crate::rustxxx;
+
+use crate::error;
+use crate::types;
 use crate::debug;
 
 use audioadapter_buffers::direct::InterleavedSlice;
@@ -43,8 +45,8 @@ impl Pipeline {
     const CHANNELS: usize = 1;
 
     pub fn new(
-        protocol: &'static rustxxx::Protocol,
-        runtime: &'static rustxxx::Runtime,
+        protocol: &'static types::Protocol,
+        runtime: &'static types::Runtime,
     ) -> Pipeline {
         let receiver = receiver::Receiver::new(protocol, runtime);
         let nfft = receiver.nfft;
@@ -67,7 +69,7 @@ impl Pipeline {
             assert_eq!(buf.len(), init_size);
         }
 
-        let detector = detector::Detector::new(*runtime, *protocol,rustxxx::RepeatCount(nfft));
+        let detector = detector::Detector::new(*runtime, *protocol,types::RepeatCount(nfft));
         let correlator = correlator::Correlator::new(protocol, runtime);
 
         assert!(detector.wf.time_bins() <= detector.wf.time_buf_capacity()); // capacity must be power of 2;
@@ -155,7 +157,7 @@ impl Pipeline {
         self.debug_portal.update();
     }
 
-    fn write_sample(&mut self, sample: f32) -> Result<(), rustxxx::XxxError> {
+    fn write_sample(&mut self, sample: f32) -> Result<(), error::XxxError> {
         let _buf_consumed = self.receiver.load_sample_into_waterfall_lines(
             sample,
             &mut self.rfft_nfft_f,
@@ -175,7 +177,7 @@ impl Pipeline {
         &mut self,
         mono_samples: &[f32; RX_IN_BUFLEN],
         resample_context: &mut ResampleContext,
-    ) -> Result<Vec<message::Message>, rustxxx::XxxError> {
+    ) -> Result<Vec<message::Message>, error::XxxError> {
         {
             // let planned_load = Pipeline::sample_buf_size(resample_context); // BUFLEN * resample_context.from_channels;
             // assert_eq!(planned_load & 1, 0); // even
@@ -255,7 +257,7 @@ impl Pipeline {
         };
 
         let stale_time =
-            rustxxx::Secs(
+            types::Secs(
                 (self.detector.wf.time_base().0 as f32 / self.receiver.runtime.rx_symbol_osr().0 as f32) 
                 * self.receiver.protocol.symbol_period().0
                 - self.receiver.protocol.total_frame_time().0

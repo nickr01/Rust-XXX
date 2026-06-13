@@ -1,19 +1,20 @@
 // Layer4 -CRC
 // use std::{os::unix::process, result::*};
 
-use crate::rustxxx;
+use crate::error;
+use crate::types;
 
 // use crc::{Algorithm, Crc};
 
 // need for Traits
 use bitvec::prelude::*;
 
-impl rustxxx::Modem {
+impl types::Modem {
     fn _crc_compute(&self, codeword: &[u8]) -> u16 {
-        assert!(codeword.len() >= self.protocol._ldpc_p_bytes().0);
+        assert!(codeword.len() >= self.protocol()._ldpc_p_bytes().0);
         let codeword_bits = codeword.view_bits::<Msb0>();
 
-        let mut payload: Vec<u8> = vec![0; self.protocol._ldpc_p_padded_bytes().0]; 
+        let mut payload: Vec<u8> = vec![0; self.protocol()._ldpc_p_padded_bytes().0]; 
         // Vec::with_capacity(self.protocol._ldpc_p_padded_bytes().0);
         // payload.resize(self.protocol._ldpc_p_padded_bytes().0, 0);
 
@@ -25,22 +26,22 @@ impl rustxxx::Modem {
         // "The CRC is calculated on the source-encoded message, zero-extended from 77 to 82 bits. 
         // Whole bytes for library crc calc input??
         payload_bits[
-            payload_buflen_bits-self.protocol._ldpc_p().0-self.protocol._crc_pad_bits().0..payload_buflen_bits-self.protocol._crc_pad_bits().0
+            payload_buflen_bits-self.protocol()._ldpc_p().0-self.protocol()._crc_pad_bits().0..payload_buflen_bits-self.protocol()._crc_pad_bits().0
         ].copy_from_bitslice(
-            &codeword_bits[0..self.protocol._ldpc_p().0]
+            &codeword_bits[0..self.protocol()._ldpc_p().0]
         );
 
-        self.crc_calc.checksum(&payload)
+        self.crc_calc().checksum(&payload)
     }
 
     #[cfg(any(feature = "enable_tx", test))]
     fn _crc_store(&self, crc_arg: u16, payload: &[u8]) -> Vec<u8> {
-        assert_eq!(payload.len(), self.protocol._ldpc_p_bytes().0);
+        assert_eq!(payload.len(), self.protocol()._ldpc_p_bytes().0);
         let mut crc = crc_arg;
         let mut cw_crc = payload.to_owned();
-        cw_crc.resize(self.protocol._ldpc_k_bytes().0, 0);
+        cw_crc.resize(self.protocol()._ldpc_k_bytes().0, 0);
         let codeword_bits = cw_crc.view_bits_mut::<Msb0>();
-        for i in self.protocol._ldpc_p().0..self.protocol.ldpc_k().0 {
+        for i in self.protocol()._ldpc_p().0..self.protocol().ldpc_k().0 {
             codeword_bits.set(i, crc & 0x2000 != 0);
             crc <<= 1;
         }
@@ -49,10 +50,10 @@ impl rustxxx::Modem {
 
     #[cfg(any(feature = "enable_rx", test))]
     pub fn _crc_read(&self, codeword: &[u8]) -> u16 {
-        assert_eq!(codeword.len(), self.protocol._ldpc_k_bytes().0);
+        assert_eq!(codeword.len(), self.protocol()._ldpc_k_bytes().0);
         let mut crc: u16 = 0;
         let codeword_bits = codeword.view_bits::<Msb0>();
-        for i in self.protocol._ldpc_p().0..self.protocol.ldpc_k().0 {
+        for i in self.protocol()._ldpc_p().0..self.protocol().ldpc_k().0 {
             crc <<= 1;
             if codeword_bits[i] {
                 crc |= 1;
@@ -63,7 +64,7 @@ impl rustxxx::Modem {
 
     #[cfg(any(feature = "enable_rx", test))]
     pub fn _crc_check(&self, codeword: &[u8]) -> bool {
-        assert_eq!(codeword.len(), self.protocol._ldpc_k_bytes().0);
+        assert_eq!(codeword.len(), self.protocol()._ldpc_k_bytes().0);
          let crc1 = self._crc_read(codeword);
         let crc2 = self._crc_compute(codeword);
         crc1 == crc2
@@ -77,36 +78,36 @@ impl rustxxx::Modem {
 
     // these are the action stubs
     #[cfg(any(feature = "enable_tx", test))]
-    pub fn _l4_crc_add(&self, cw: &[u8]) -> Result<Vec<u8>, rustxxx::XxxError>{
-        assert_eq!(cw.len(), self.protocol._ldpc_p_bytes().0);
+    pub fn _l4_crc_add(&self, cw: &[u8]) -> Result<Vec<u8>, error::XxxError>{
+        assert_eq!(cw.len(), self.protocol()._ldpc_p_bytes().0);
         Ok(self._crc_add(cw))
     }
 
     #[cfg(test)]
-    pub fn _l4_crc_remove(&self, cw_crc: &Vec<u8>) -> Result<Vec<u8>, rustxxx::XxxError> {
+    pub fn _l4_crc_remove(&self, cw_crc: &Vec<u8>) -> Result<Vec<u8>, error::XxxError> {
         if self._crc_check(cw_crc) {
             let mut cw = cw_crc.to_owned();
-            cw.resize(self.protocol._ldpc_p_bytes().0, 0);
-            let resid_bits = (self.protocol._ldpc_k_bytes().0 - self.protocol._ldpc_p_bytes().0) % 8;
+            cw.resize(self.protocol()._ldpc_p_bytes().0, 0);
+            let resid_bits = (self.protocol()._ldpc_k_bytes().0 - self.protocol()._ldpc_p_bytes().0) % 8;
             if resid_bits > 0 {
                 let codeword_bits = cw.view_bits_mut::<Msb0>();
-                for i in self.protocol._ldpc_p().0..self.protocol._ldpc_p().0 + resid_bits {
+                for i in self.protocol()._ldpc_p().0..self.protocol()._ldpc_p().0 + resid_bits {
                     codeword_bits.set(i, false);
                 }
             }
-            assert_eq!(cw.len(), self.protocol._ldpc_p_bytes().0);
+            assert_eq!(cw.len(), self.protocol()._ldpc_p_bytes().0);
             Ok(cw)
         } else {
             dbg!("bad crc");
-            Err(rustxxx::XxxError::_BadCrc)
+            Err(error::XxxError::_BadCrc)
         }
     }
 
     #[cfg(test)]
-    pub fn l4_outbound(&self, ttl: isize, cw: &Vec<u8>) -> Result<Vec<u8>, rustxxx::XxxError> {
-        assert_eq!(cw.len(), self.protocol._ldpc_p_bytes().0);
+    pub fn l4_outbound(&self, ttl: isize, cw: &Vec<u8>) -> Result<Vec<u8>, error::XxxError> {
+        assert_eq!(cw.len(), self.protocol()._ldpc_p_bytes().0);
         let cw_crc = self._l4_crc_add(cw)?;
-        assert_eq!(cw_crc.len(), self.protocol._ldpc_k_bytes().0);
+        assert_eq!(cw_crc.len(), self.protocol()._ldpc_k_bytes().0);
         if ttl == 0 {
             self.l4_inbound(&cw_crc)
         } else {
@@ -115,10 +116,10 @@ impl rustxxx::Modem {
     }
 
     #[cfg(test)]
-    pub fn l4_inbound(&self, cw_crc: &Vec<u8>) -> Result<Vec<u8>, rustxxx::XxxError> {
-        assert_eq!(cw_crc.len(), self.protocol._ldpc_k_bytes().0);
+    pub fn l4_inbound(&self, cw_crc: &Vec<u8>) -> Result<Vec<u8>, error::XxxError> {
+        assert_eq!(cw_crc.len(), self.protocol()._ldpc_k_bytes().0);
         let cw = self._l4_crc_remove(cw_crc)?;
-        assert_eq!(cw.len(), self.protocol._ldpc_p_bytes().0);
+        assert_eq!(cw.len(), self.protocol()._ldpc_p_bytes().0);
         self.l5_top_inbound(&cw)
     }
 }
@@ -126,6 +127,7 @@ impl rustxxx::Modem {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support;
 
     struct CrcTestData {
         payload: u128,
@@ -142,20 +144,20 @@ mod tests {
         checksum: 0b_1111_0011_0010, // see crc1.rs
     };
 
-    fn test_roundtrips(modem: &mut rustxxx::Modem, crctestdata: &CrcTestData) {
+    fn test_roundtrips(modem: &mut types::Modem, crctestdata: &CrcTestData) {
         // assert_eq!(modem.protocol, &rustxxx::FT8);
         // construct a full message into codeword buffer
         // let mut codeword: [u8; XXX.ldpc_n_bytes()] = [0; XXX.ldpc_n_bytes()];
 
-        let mut codeword: Vec<u8> = Vec::with_capacity(modem.protocol._ldpc_p_bytes().0);
-        codeword.resize(modem.protocol._ldpc_p_bytes().0, 0);
+        let mut codeword: Vec<u8> = Vec::with_capacity(modem.protocol()._ldpc_p_bytes().0);
+        codeword.resize(modem.protocol()._ldpc_p_bytes().0, 0);
         // copy the test binary payload into the codeword buffer 
         {
             let codeword_bits = codeword.view_bits_mut::<Msb0>();
-            codeword_bits[0..modem.protocol._ldpc_p().0].store_be::<u128>(crctestdata.payload);
+            codeword_bits[0..modem.protocol()._ldpc_p().0].store_be::<u128>(crctestdata.payload);
         }
 
-        assert_eq!(codeword.len(), modem.protocol._ldpc_p_bytes().0);
+        assert_eq!(codeword.len(), modem.protocol()._ldpc_p_bytes().0);
 
         let crc = {
             let crc = modem._crc_compute(&codeword);
@@ -180,10 +182,10 @@ mod tests {
 
     #[test]
     fn test_layer4() {
-        let mut modem: rustxxx::Modem = rustxxx::Modem::new(
-            &rustxxx::TEST_PROTOCOL, 
-            &rustxxx::TEST_FT8_RUNTIME, 
-            rustxxx::TEST_FREQUENCY
+        let mut modem: types::Modem = types::Modem::new(
+            &test_support::TEST_PROTOCOL, 
+            &test_support::TEST_FT8_RUNTIME, 
+            Some(test_support::TEST_FREQUENCY)
         );
         test_roundtrips(&mut modem, &L5P0);
         test_roundtrips(&mut modem, &L5P1);

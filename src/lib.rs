@@ -1,4 +1,5 @@
-pub mod rustxxx;
+pub mod types;
+pub mod error;
 pub mod pipeline;
 pub mod message;
 
@@ -13,6 +14,7 @@ mod candidate;
 
 mod test_generator;
 mod test_parity;
+mod test_support;
 
 mod layer0; // Audio
 mod layer1; // sync

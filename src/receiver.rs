@@ -4,7 +4,7 @@ use crate::decoder;
 use crate::detector;
 use crate::detector::DetectFFT;
 use crate::message;
-use crate::rustxxx;
+use crate::types;
 use crate::waterfall;
 
 // use crate::waterfall::Waterfall;
@@ -20,16 +20,16 @@ use crate::waterfall;
 pub struct Receiver {
     pub start_time: std::time::Instant,
     pub nfft: usize, 
-    pub protocol: &'static rustxxx::Protocol,
-    pub runtime: &'static rustxxx::Runtime,
+    pub protocol: &'static types::Protocol,
+    pub runtime: &'static types::Runtime,
 }
 
 #[cfg(any(feature = "enable_rx", test))]
 impl Receiver {
 
     pub fn new(
-        protocol: &'static rustxxx::Protocol,
-        runtime: &'static rustxxx::Runtime, 
+        protocol: &'static types::Protocol,
+        runtime: &'static types::Runtime, 
     ) -> Receiver {
         dbg!(runtime.band_width());
         
@@ -84,10 +84,10 @@ impl Receiver {
                         // dbg!(candidates.len());
                         // dbg!(&candidates);
 
-                        let mut modem: rustxxx::Modem = rustxxx::Modem::new(
+                        let mut modem: types::Modem = types::Modem::new(
                             self.protocol, 
                             self.runtime, 
-                            rustxxx::TEST_FREQUENCY
+                            None
                         );
 
                         let decoder = decoder::Decoder::new(self.protocol, self.runtime);
@@ -98,12 +98,12 @@ impl Receiver {
                             let logls = decoder.extract_normalised_likelihood(&detector.wf, c);
 
                             let time_secs =
-                                rustxxx::Secs(
+                                types::Secs(
                                    ((c.time_stamp().0 + c.time_index().0 as u32) as f32 / detector.wf.time_osr.0 as f32) * self.protocol.symbol_period().0
                                 );
 
                             let freq_hz =
-                                rustxxx::Hz(
+                                types::Hz(
                                     ((c.freq_index().0 as f32 + 1.0)/ detector.wf.freq_osr.0 as f32) / self.protocol.symbol_period().0
                                 );
 

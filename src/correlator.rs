@@ -1,17 +1,17 @@
-use crate::rustxxx;
+use crate::types;
 use crate::debug;
 use crate::candidate;
 use crate::waterfall;
 
 pub struct Correlator {
-    protocol: &'static rustxxx::Protocol,
-    runtime: &'static rustxxx::Runtime,
+    protocol: &'static types::Protocol,
+    runtime: &'static types::Runtime,
 }
 
 impl Correlator {
     pub fn new(
-        protocol: &'static rustxxx::Protocol,
-        runtime: &'static rustxxx::Runtime, 
+        protocol: &'static types::Protocol,
+        runtime: &'static types::Runtime, 
     ) -> Correlator {
         Correlator {
             protocol,
@@ -35,7 +35,7 @@ impl Correlator {
         {
             let score = self.score_sync_correlation(
                 wf, 
-                rustxxx::FreqIndex(freq_index),
+                types::FreqIndex(freq_index),
             );
             if score < self.runtime.sync_min_score()  {
                 continue;
@@ -44,8 +44,8 @@ impl Correlator {
             candidates.push(
                 candidate::Candidate::new(
                     wf.time_base(),
-                    rustxxx::TimeIndex(0),
-                    rustxxx::FreqIndex(freq_index),
+                    types::TimeIndex(0),
+                    types::FreqIndex(freq_index),
                     score, 
                 )
             );
@@ -62,7 +62,7 @@ impl Correlator {
     pub fn score_sync_correlation(
         &self, 
         wf: &waterfall::Waterfall, 
-        freq_index_base: rustxxx::FreqIndex
+        freq_index_base: types::FreqIndex
     ) -> f32 {
         if wf.symbols_stored() < self.protocol.nd().0 {
             return 0.0;
@@ -88,7 +88,7 @@ impl Correlator {
                 //The starting position of the Costas array is bits 0, 36, and 72.
                 let sync_symbol_index = (sync_block_index + costas_index) * wf.time_osr.0;
 
-                let time_index = rustxxx::TimeIndex(sync_symbol_index); 
+                let time_index = types::TimeIndex(sync_symbol_index); 
                 if time_index.0 > wf.time_bins_stored() { // } - wf.time_osr.0 {
                     dbg!("run out of lines", time_index.0);
                     continue;

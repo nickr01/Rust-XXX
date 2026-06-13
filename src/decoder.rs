@@ -1,5 +1,5 @@
 use crate::candidate;
-use crate::rustxxx;
+use crate::types;
 use crate::message;
 
 // use crate::rustxxx::Secs;
@@ -24,15 +24,15 @@ pub type DecodeHash = std::collections::HashMap<Vec<u8>, message::Message>;
 
 #[cfg(any(feature = "enable_rx", test))]
 pub struct Decoder {
-    protocol: &'static rustxxx::Protocol,
-    runtime: &'static rustxxx::Runtime,
+    protocol: &'static types::Protocol,
+    runtime: &'static types::Runtime,
 }
 
 #[cfg(any(feature = "enable_rx", test))]
 impl Decoder {
     pub fn new(
-        protocol: &'static rustxxx::Protocol,
-        runtime: &'static rustxxx::Runtime, 
+        protocol: &'static types::Protocol,
+        runtime: &'static types::Runtime, 
     ) -> Decoder {
         Decoder {
             protocol,
@@ -42,10 +42,10 @@ impl Decoder {
 
     pub fn decode(
         &self,
-        time_secs: rustxxx::Secs,
-        freq_hz: rustxxx::Hz,
+        time_secs: types::Secs,
+        freq_hz: types::Hz,
         c_score: f32,
-        modem: &mut rustxxx::Modem, 
+        modem: &mut types::Modem, 
         logls: &Vec<layer3::LogL>,
     ) -> Option<message::Message> {
         let mut r = modem.ecc_decode_bp(&logls, self.runtime.ldpc_max_iteration().0);
@@ -101,7 +101,7 @@ impl Decoder {
             } else {
                 self.extract_symbol(
                     wf, 
-                    rustxxx::TimeIndex(time_index),
+                    types::TimeIndex(time_index),
                     c.freq_index()
                 )
             };
@@ -117,8 +117,8 @@ impl Decoder {
     fn extract_symbol(
         &self, 
         wf: &waterfall::Waterfall, 
-        time_index: rustxxx::TimeIndex,
-        freq_index: rustxxx::FreqIndex,
+        time_index: types::TimeIndex,
+        freq_index: types::FreqIndex,
     ) -> layer3::LogL {
         let wfl = &wf.line(time_index.0);
 
@@ -148,7 +148,7 @@ impl Decoder {
     }
 
     fn normalize_logl(&self, logls: &mut [layer3::LogL]) {
-        assert_eq!(rustxxx::SymbolCount(logls.len()), self.protocol.nd());
+        assert_eq!(types::SymbolCount(logls.len()), self.protocol.nd());
  
         let mut sum = 0.0f32;
         let mut sum_of_squares = 0.0f32;

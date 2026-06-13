@@ -1,5 +1,5 @@
-use crate::rustxxx;
-use crate::rustxxx::RepeatCount;
+use crate::types;
+use crate::types::RepeatCount;
 use crate::waterfall;
 
 use realfft::RealToComplex;
@@ -27,7 +27,7 @@ pub struct Detector {
 #[cfg(any(feature = "enable_rx", test))]
 fn build_window_function_samples(
     nfft: usize, 
-    runtime: &rustxxx::Runtime
+    runtime: &types::Runtime
 ) -> Vec<f32> {
     let mut window_function_samples = Vec::with_capacity(nfft);
     let fft_norm = 2.0f32 / nfft as f32;
@@ -43,8 +43,8 @@ pub type DetectorInputBuffs = Vec<Vec<f32>>;
 #[cfg(any(feature = "enable_rx", test))]
 impl Detector {
     pub fn new(
-        runtime: rustxxx::Runtime, 
-        protocol: rustxxx::Protocol,
+        runtime: types::Runtime, 
+        protocol: types::Protocol,
 
         // real_fft: &mut realfft::RealFftPlanner<f32>,
         nfft: RepeatCount,

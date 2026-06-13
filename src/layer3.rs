@@ -1,7 +1,9 @@
 // Layer3 -ECC
 // use std::result::*;
 
-use crate::rustxxx;
+use crate::error;
+use crate::types;
+
 use crate::test_generator;
 use crate::test_parity;
 
@@ -17,7 +19,7 @@ pub struct LogL {
 
 #[cfg(any(feature = "enable_rx", test))]
 impl LogL {
-    pub fn new(protocol: &rustxxx::Protocol) -> LogL {
+    pub fn new(protocol: &types::Protocol) -> LogL {
         let bits: Vec<f32> = vec![0.0; protocol.token_bits().0];
         LogL {
             bits
@@ -67,7 +69,7 @@ fn fast_atanh(x: f32) -> f32 {
     }
 }
 
-impl rustxxx::Modem {
+impl types::Modem {
         // Encode via LDPC a 91-bit message and return a 174-bit codeword.
     // The generator matrix has dimensions (87,87).
     // The code is a (174,91) regular LDPC code with column weight 3.
@@ -88,25 +90,25 @@ impl rustxxx::Modem {
         // let mut msg: Vec<u8> = Vec::with_capacity(self.protocol.ldpc_k_bytes());  //  = [0u8; XXX.ldpc_k_bytes()];
         // msg.copy_from_slice(&self.codeword[0..self.protocol.ldpc_k_bytes()]);
         let mut cw_crc_ecc = cw_crc.to_owned();
-        cw_crc_ecc.resize(self.protocol.ldpc_n_bytes().0, 0);
+        cw_crc_ecc.resize(self.protocol().ldpc_n_bytes().0, 0);
         let cw_crc_ecc_bits = cw_crc_ecc.view_bits_mut::<Msb0>();
 
         // Compute the LDPC checksum bits in the original message and store them back into codeword
         // for i in 0..self.protocol.ldpc_m().0 {
-        for (i, row) in test_generator::XXX_LDPC_GENERATOR.iter().enumerate().take(self.protocol.ldpc_m().0) {
+        for (i, row) in test_generator::XXX_LDPC_GENERATOR.iter().enumerate().take(self.protocol().ldpc_m().0) {
             // implementation of bitwise multiplication and parity checking
             // Normally nsum would contain the result of dot product between message and kXXX_LDPC_generator[i],
             // but we only compute the sum modulo 2.
             let mut nsum = 0u8;
 
-            for (j, m) in cw_crc.iter().enumerate().take(self.protocol._ldpc_k_bytes().0) {
+            for (j, m) in cw_crc.iter().enumerate().take(self.protocol()._ldpc_k_bytes().0) {
                 let bits = m & row[j]; // bitwise AND (bitwise multiplication)
                 // let bits = m & _XXX_LDPC_GENERATOR[i][j]; // bitwise AND (bitwise multiplication)
                 nsum ^= _ecc_parity8(bits); // bitwise XOR (addition modulo 2)
             }
 
             if !nsum.is_multiple_of(2) {
-                cw_crc_ecc_bits.set(self.protocol.ldpc_k().0 + i, true);
+                cw_crc_ecc_bits.set(self.protocol().ldpc_k().0 + i, true);
             }
         }
         cw_crc_ecc
@@ -129,7 +131,7 @@ impl rustxxx::Modem {
     pub fn ecc_check_errors(&self, cw_crc_ecc: &[u8]
         // codeword: &[u8; XXX.ldpc_n_bytes()]
     ) -> usize {
-        assert_eq!(cw_crc_ecc.len(), self.protocol.ldpc_n_bytes().0);
+        assert_eq!(cw_crc_ecc.len(), self.protocol().ldpc_n_bytes().0);
 
         let mut errors: usize = 0;
         let codeword_bits = cw_crc_ecc.view_bits::<Msb0>();
@@ -184,24 +186,24 @@ impl rustxxx::Modem {
         logls: &[LogL], // bits
         max_iters: usize,
         // plain_bytes: &mut [u8; XXX.ldpc_n_bytes()],
-    ) -> Result<Vec<u8>, rustxxx::XxxError> {
+    ) -> Result<Vec<u8>, error::XxxError> {
         // dbg!("ecc_decode_bp");
 
-        assert_eq!(logls.len(), self.protocol.nd().0);
-        let mut plain_bytes: Vec<u8> = vec![0; self.protocol.ldpc_n_bytes().0]; 
+        assert_eq!(logls.len(), self.protocol().nd().0);
+        let mut plain_bytes: Vec<u8> = vec![0; self.protocol().ldpc_n_bytes().0]; 
         // Vec::with_capacity(self.protocol.ldpc_n_bytes().0);
         // plain_bytes.resize(self.protocol.ldpc_n_bytes().0, 0);
 
         //Initialize inspection message e
-        let mut tov: Vec<[f32; 7]> = Vec::with_capacity(self.protocol.ldpc_n().0);
-        tov.resize(self.protocol.ldpc_n().0, [0f32; 7]);
+        let mut tov: Vec<[f32; 7]> = Vec::with_capacity(self.protocol().ldpc_n().0);
+        tov.resize(self.protocol().ldpc_n().0, [0f32; 7]);
 
         //Initialize bit message
-        let mut toc: Vec<[f32; 7]> = Vec::with_capacity(self.protocol.ldpc_m().0);
-        toc.resize(self.protocol.ldpc_m().0,[0.0f32; 7]);
+        let mut toc: Vec<[f32; 7]> = Vec::with_capacity(self.protocol().ldpc_m().0);
+        toc.resize(self.protocol().ldpc_m().0,[0.0f32; 7]);
 
         //Initialize with the maximum value that can have the minimum number of errors
-        let mut min_errors = self.protocol.ldpc_m().0;
+        let mut min_errors = self.protocol().ldpc_m().0;
 
         //Loop as many times as the product-sum algorithm repeats
         for _it in 0..max_iters {
@@ -242,14 +244,14 @@ impl rustxxx::Modem {
             //Update the bit message M from the bit node n connected to each check node m
             //Use log likelihood to determine whether each check node m has a higher probability of 0 or 1 from the perspective of the bit node.
             // for m in 0..self.protocol.ldpc_m().0 {
-            for (m, toc_item) in toc.iter_mut().enumerate().take(self.protocol.ldpc_m().0) {
+            for (m, toc_item) in toc.iter_mut().enumerate().take(self.protocol().ldpc_m().0) {
                     //Extract the elements of each row of the check matrix
                 for (n_idx, &n) in test_parity::XXX_LDPC_NM[m].iter().enumerate() {
                     if n != 0 {
                         //Find the bit node n connected to the check node
                         let n = n - 1;
                         //The received value of codeword[n] (bit position n) is set as the initial value.
-                        let mut tnm = logls[n/self.protocol.token_bits().0].bits[n % self.protocol.token_bits().0];
+                        let mut tnm = logls[n/self.protocol().token_bits().0].bits[n % self.protocol().token_bits().0];
                         //Add check message e of bit node n (excluding messages coming from node m)
                         // for m_idx in 0..3 {
                         for (m_idx, tov_item) in tov[n].iter().enumerate().take(3) {
@@ -268,7 +270,7 @@ impl rustxxx::Modem {
             //Update check message E from check node m connected to each bit node n
             //Use log likelihood to determine whether each bit node n has a higher probability of 0 or 1 from the viewpoint of the check node
             // for n in 0..self.protocol.ldpc_n().0 {
-            for (n, tov_n) in tov.iter_mut().enumerate().take(self.protocol.ldpc_n().0) {
+            for (n, tov_n) in tov.iter_mut().enumerate().take(self.protocol().ldpc_n().0) {
                 for (m_idx, tov_item) in tov_n.iter_mut().enumerate().take(3) {
                     //Find check node m connected to bit node n
                     let m = test_parity::XXX_LDPC_MN[n][m_idx] - 1;
@@ -287,7 +289,7 @@ impl rustxxx::Modem {
         if min_errors == 0 {
             Ok(plain_bytes)
         } else {
-            Err(rustxxx::XxxError::_BadEcc)
+            Err(error::XxxError::_BadEcc)
         }
     }
 
@@ -300,11 +302,11 @@ impl rustxxx::Modem {
         logls: &[LogL], // bits!!
         max_iters: usize,
         // plain_bytes: &mut [u8; XXX.ldpc_n_bytes()],
-    ) -> Result<Vec<u8>, rustxxx::XxxError> {
+    ) -> Result<Vec<u8>, error::XxxError> {
         // dbg!("ecc_decode_bitflip");
 
-        assert_eq!(logls.len(), self.protocol.nd().0);
-        let mut plain_bytes: Vec<u8> = vec![0; self.protocol.ldpc_n_bytes().0]; 
+        assert_eq!(logls.len(), self.protocol().nd().0);
+        let mut plain_bytes: Vec<u8> = vec![0; self.protocol().ldpc_n_bytes().0]; 
         // Vec::with_capacity(self.protocol.ldpc_n_bytes().0);
         // plain_bytes.resize(self.protocol.ldpc_n_bytes().0, 0);
 
@@ -325,7 +327,7 @@ impl rustxxx::Modem {
             let plain = plain_bytes.view_bits_mut::<Msb0>();
 
             //Determine whether each bit in the codeword has more 0 or 1 based on each check node
-            let mut votes = vec![vec![0; 2]; self.protocol.ldpc_n().0];
+            let mut votes = vec![vec![0; 2]; self.protocol().ldpc_n().0];
 
             //Extract elements of check node
             for e in test_parity::XXX_LDPC_NM.iter() {
@@ -347,7 +349,7 @@ impl rustxxx::Modem {
                 }
             }
             // Update each bit of decoding result plain based on voting results
-            for i in 0..self.protocol.ldpc_n().0 {
+            for i in 0..self.protocol().ldpc_n().0 {
                 //If the target bit is 0 and the voting result is 1, it will be flipped to 1.
                 if !plain[i] && (votes[i][1] > votes[i][0]) {
                     plain.set(i, true);
@@ -363,31 +365,31 @@ impl rustxxx::Modem {
             }
         }
         //Error if it does not end after the specified repetition
-        Err(rustxxx::XxxError::_BadEcc)
+        Err(error::XxxError::_BadEcc)
     }
 
     // These are the action stubs
     #[cfg(any(feature = "enable_tx", test))]
-    pub fn _l3_ecc_add(&self, cw_crc: &[u8]) -> Result<Vec<u8>, rustxxx::XxxError> {
+    pub fn _l3_ecc_add(&self, cw_crc: &[u8]) -> Result<Vec<u8>, error::XxxError> {
         // TODO encode args not right yet
         Ok(self._ecc_encode(cw_crc))
     }
 
     #[cfg(test)]
-    pub fn _l3_ecc_remove(&self, cw_crc_ecc: &[u8]) ->Result<Vec<u8>, rustxxx::XxxError> {
+    pub fn _l3_ecc_remove(&self, cw_crc_ecc: &[u8]) ->Result<Vec<u8>, error::XxxError> {
         if self.ecc_check_errors(cw_crc_ecc) == 0 {
             // let codeword_bits = self.codeword.view_bits_mut::<Msb0>();
             // for i in self.protocol.ldpc_k()..self.protocol.ldpc_n() {
             //     // codeword_bits.set(i, false);
             // }
-            Ok(cw_crc_ecc[0..self.protocol._ldpc_k_bytes().0].to_vec())
+            Ok(cw_crc_ecc[0..self.protocol()._ldpc_k_bytes().0].to_vec())
         } else {
-            Err(rustxxx::XxxError::_BadEcc)
+            Err(error::XxxError::_BadEcc)
         }
     }
 
     #[cfg(test)]
-    pub fn l3_outbound(&self, ttl: isize, cw_crc: &Vec<u8>) -> Result<Vec<u8>, rustxxx::XxxError>{
+    pub fn l3_outbound(&self, ttl: isize, cw_crc: &Vec<u8>) -> Result<Vec<u8>, error::XxxError>{
         let cw_crc_ecc = self._l3_ecc_add(cw_crc)?;
         if ttl == 0 {
             self.l3_inbound(&cw_crc_ecc)
@@ -397,7 +399,7 @@ impl rustxxx::Modem {
     }
 
     #[cfg(test)]
-    pub fn l3_inbound(&self, cw_crc_ecc: &Vec<u8>) ->Result<Vec<u8>, rustxxx::XxxError> {
+    pub fn l3_inbound(&self, cw_crc_ecc: &Vec<u8>) ->Result<Vec<u8>, error::XxxError> {
         let cw_crc = self._l3_ecc_remove(cw_crc_ecc)?;
         self.l4_inbound(&cw_crc)
     }
@@ -406,11 +408,11 @@ impl rustxxx::Modem {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // use test_utils::*;
+    use crate::test_support;
 
-    const L4M0: [u8; rustxxx::TEST_PROTOCOL.ldpc_n_bytes().0] = [ 0xff, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    const L4M0: [u8; test_support::TEST_PROTOCOL.ldpc_n_bytes().0] = [ 0xff, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
-    fn test_roundtrip(modem: &mut rustxxx::Modem, l4_message: Vec<u8>) {
+    fn test_roundtrip(modem: &mut types::Modem, l4_message: Vec<u8>) {
         // let mut _l2_codeword= l4_message;  // msg inc crc in place
 
         let cw_crc_ecc = modem._ecc_encode(
@@ -423,17 +425,17 @@ mod tests {
         // assert_eq!(modem.ecc_check_errors(&modem.codeword), 0); // check is in bits with no errors
 
         let cw_crc_ecc_bits = cw_crc_ecc.view_bits::<Msb0>();
-        let mut cw_crc_ecc_bits_f32: Vec<f32> = Vec::with_capacity(modem.protocol.ldpc_n().0);
-        cw_crc_ecc_bits_f32.resize(modem.protocol.ldpc_n().0, 0f32);
+        let mut cw_crc_ecc_bits_f32: Vec<f32> = Vec::with_capacity(modem.protocol().ldpc_n().0);
+        cw_crc_ecc_bits_f32.resize(modem.protocol().ldpc_n().0, 0f32);
 
 
         let mut cw_crc_ecc_logls: Vec<LogL> = Vec::new();
-        cw_crc_ecc_logls.resize(modem.protocol.ldpc_n().0 / modem.protocol.token_bits().0, LogL::new(modem.protocol));
-        assert_eq!(cw_crc_ecc_logls.len(), modem.protocol.nd().0);
+        cw_crc_ecc_logls.resize(modem.protocol().ldpc_n().0 / modem.protocol().token_bits().0, LogL::new(modem.protocol()));
+        assert_eq!(cw_crc_ecc_logls.len(), modem.protocol().nd().0);
         {
             let mut i = 0;
-            for ls_idx in 0..modem.protocol.nd().0 {
-                for bit in 0..modem.protocol.token_bits().0 {
+            for ls_idx in 0..modem.protocol().nd().0 {
+                for bit in 0..modem.protocol().token_bits().0 {
                     cw_crc_ecc_logls[ls_idx].bits[bit] = if !cw_crc_ecc_bits[i] { -0.01 } else { 1.0 };
                     i += 1;
                 }
@@ -473,10 +475,10 @@ mod tests {
     }
     #[test]
     fn test_layer3() {
-        let mut modem: rustxxx::Modem = rustxxx::Modem::new(
-            &rustxxx::TEST_PROTOCOL, 
-            &rustxxx::TEST_FT8_RUNTIME, 
-            rustxxx::TEST_FREQUENCY
+        let mut modem: types::Modem = types::Modem::new(
+            &test_support::TEST_PROTOCOL, 
+            &test_support::TEST_FT8_RUNTIME, 
+            Some(test_support::TEST_FREQUENCY)
         );
 
         test_roundtrip(&mut modem, L4M0.to_vec());

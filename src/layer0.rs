@@ -3,9 +3,10 @@
 // Layer0 Audio - gfsk
 // use std::result::*;
 
-use crate::rustxxx;
+use crate::error;
+use crate::types;
 
-impl rustxxx::Modem {
+impl types::Modem {
     /// Computes a GFSK smoothing pulse.
     /// The pulse is theoretically infinitely long, however, here it's truncated at 3 times the symbol length.
     /// This means the pulse array has to have space for 3*n_spsym elements.
@@ -16,7 +17,7 @@ impl rustxxx::Modem {
     #[cfg(any(feature = "enable_tx", test))]
     pub fn _gfsk_pulse(&self, n_spsym: usize, pulse: &mut [f32]) {
 
-        let mut symbol_bt = self.protocol._symbol_bt();
+        let mut symbol_bt = self.protocol()._symbol_bt();
         // Generate an error function with a length three times the symbol length using the Bt product 2
         if cfg!(feature = "disable_gfsk") {
             symbol_bt = 99.0;
@@ -25,7 +26,7 @@ impl rustxxx::Modem {
         ///< symbol smoothing filter bandwidth factor (BT
         const GFSK_CONST_K: f32 = 5.336446f32;
 
-        for (i, p) in pulse.iter_mut().enumerate().take(self.protocol.token_bits().0 * n_spsym) {
+        for (i, p) in pulse.iter_mut().enumerate().take(self.protocol().token_bits().0 * n_spsym) {
             let t = i as f32 / n_spsym as f32 - 1.5;
             let arg1 = GFSK_CONST_K * symbol_bt * (t + 0.5);
             let arg2 = GFSK_CONST_K * symbol_bt * (t - 0.5);
@@ -46,21 +47,21 @@ impl rustxxx::Modem {
     #[cfg(any(feature = "enable_tx", test))]
     fn _gfsk_synth(&self, l0_tones: &[u8]) -> Vec<f32> {
         // let sym_period = self.protocol.symbol_period();
-        let n_spsym = (0.5 + self._runtime._target_output_sample_rate().0) as usize; // Samples per symbol
+        let n_spsym = (0.5 + self.runtime()._target_output_sample_rate().0) as usize; // Samples per symbol
         
-        let n_wave = self.protocol.total_symbols_nn().0 * n_spsym; // Number of output samples
+        let n_wave = self.protocol().total_symbols_nn().0 * n_spsym; // Number of output samples
         let mut signal = Vec::with_capacity(n_wave);
 
         // let symbols = l0_tones;
-        let f0 = self._freq_hz;
+        let f0 = self.freq_hz().unwrap();
 
         // let n_spsym = (0.5 + signal_rate * symbol_period) as usize; // Samples per symbol
         // let n_wave = n_sym * n_spsym; // Number of output samples
 
-        let n_sym = self.protocol.total_symbols_nn();
+        let n_sym = self.protocol().total_symbols_nn();
         const MAGIC_NUM: f32 = 0.5;
-        let n_spsym = (MAGIC_NUM + self._runtime._target_output_sample_rate().0) as usize; // Samples per symbol
-        let n_wave = self.protocol.total_symbols_nn().0 * n_spsym; // Number of output samples
+        let n_spsym = (MAGIC_NUM + self.runtime()._target_output_sample_rate().0) as usize; // Samples per symbol
+        let n_wave = self.protocol().total_symbols_nn().0 * n_spsym; // Number of output samples
 
         let hmod = 1.0f32;
 
@@ -71,10 +72,10 @@ impl rustxxx::Modem {
 
         // Shift frequency up by f0
         for _ in 0..(n_wave + 2 * n_spsym) {
-            dphi.push(std::f32::consts::TAU * f0 / self._runtime._target_output_sample_rate().0);
+            dphi.push(std::f32::consts::TAU * f0 / self.runtime()._target_output_sample_rate().0);
         }
 
-        let mut pulse = vec![0.0; self.protocol.token_bits().0 * n_spsym];
+        let mut pulse = vec![0.0; self.protocol().token_bits().0 * n_spsym];
 
         self._gfsk_pulse(n_spsym, &mut pulse);
 
@@ -90,7 +91,7 @@ impl rustxxx::Modem {
 
         for (i, sym) in l0_tones.iter().enumerate().take(n_sym.0) {
             let ib = i * n_spsym;
-            for j in 0..self.protocol.token_bits().0 * n_spsym {
+            for j in 0..self.protocol().token_bits().0 * n_spsym {
                 dphi[j + ib] += dphi_peak * (*sym as f32) * pulse[j];
             }
         }
@@ -133,16 +134,16 @@ impl rustxxx::Modem {
     }
 
     #[cfg(any(feature = "enable_rx", test))]
-    fn _gfsk_decode(&self, _signal: &Vec<f32>) -> Result<Vec<u8>, rustxxx::XxxError> {
+    fn _gfsk_decode(&self, _signal: &Vec<f32>) -> Result<Vec<u8>, error::XxxError> {
         // call monitor and receiver
-        Err(rustxxx::XxxError::_ToDo)
+        Err(error::XxxError::_ToDo)
     }
 
     // These are the action stubs
     #[cfg(any(feature = "enable_tx", test))]
     pub fn _l0_gfsk_synth(&self, l0_tones: &[u8],
         // l0_tones: &[u8; XXX.nn()]
-    ) -> Result<Vec<f32>, rustxxx::XxxError>{
+    ) -> Result<Vec<f32>, error::XxxError>{
         Ok(self._gfsk_synth(l0_tones))
     }
 
@@ -150,13 +151,13 @@ impl rustxxx::Modem {
     pub fn _l0_gfsk_undo(&self, 
         signal: &Vec<f32>,
         // l0_tones: &[u8; XXX.nn()]
-    ) ->Result<Vec<u8>, rustxxx::XxxError> {
+    ) ->Result<Vec<u8>, error::XxxError> {
         // let bad = [1u8; XXX.nn()];
         self._gfsk_decode(signal)
     }
 
     #[cfg(any(test))]
-    pub fn l0_outbound(&self, ttl: isize, l0_tones: &Vec<u8>) -> Result<Vec<u8>, rustxxx::XxxError> {
+    pub fn l0_outbound(&self, ttl: isize, l0_tones: &Vec<u8>) -> Result<Vec<u8>, error::XxxError> {
         let _signal = self._l0_gfsk_synth(l0_tones)?;
 
         if ttl == 0 {
@@ -168,7 +169,7 @@ impl rustxxx::Modem {
     }
 
     #[cfg(any(test))]
-    pub fn _l0_inbound(&self, signal: &Vec<f32>) ->Result<Vec<u8>, rustxxx::XxxError> {
+    pub fn _l0_inbound(&self, signal: &Vec<f32>) ->Result<Vec<u8>, error::XxxError> {
         let l0_tones = self._l0_gfsk_undo(signal)?;
         self.l1_inbound(&l0_tones)
     }
@@ -177,6 +178,7 @@ impl rustxxx::Modem {
 #[cfg(test)]
 mod tests {
     // use super::*;
+    use crate::test_support;
 
     // Https://docs.rs/jack/latest/jack/
 

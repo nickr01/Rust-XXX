@@ -1,9 +1,5 @@
 use std::sync::OnceLock;
 
-use thiserror::Error;
-
-// use crate::rx_streamed::StreamReceiver; // - for library level errors
-
 // These all should be powers of 2 for ringbuf
 pub const AUDIO_INPUT_BUFSIZE: usize = 2_usize.pow(21); // 22 for file // 20
 pub const WATERFALL_BUF_SIZE: usize = 2_usize.pow(9); // This really should be dynamic
@@ -293,6 +289,34 @@ pub struct Runtime {
 const NYQUIST: f32 = 2.0;
 
 impl Runtime {
+    pub const fn new(
+        band_width: Hz,  // **
+        channels: RepeatCount, 
+        _bit_depth: BitCount,
+        rx_symbol_osr: OverSampleMultiplier, // **
+        rx_freq_osr: OverSampleMultiplier, // **
+        // detector_underload_divisor: RepeatCount, // detector underloads - to increase time res for correlator
+        sync_min_score: f32,
+        sub_bands: RepeatCount,
+        ldpc_max_iteration: RepeatCount,
+        auto_segment: bool,
+        // subtracts: RepeatCount,
+        window_function: WindowFunction,
+    ) -> Runtime {
+        Runtime {
+            band_width,
+            channels, 
+            _bit_depth,
+            rx_symbol_osr,
+            rx_freq_osr,
+            sync_min_score,
+            sub_bands,
+            ldpc_max_iteration,
+            auto_segment,
+            window_function,
+        }
+    }
+
     pub const fn rx_freq_osr(&self) -> OverSampleMultiplier {
         self.rx_freq_osr
     }
@@ -381,28 +405,11 @@ impl Runtime {
     
 }
 
-pub const TEST_FT8_RUNTIME: Runtime = Runtime {
-    // should be indep of bandwidth and freq_osr but not there yet
-    band_width: Hz(6000.0),  // this is the real design layer - app layer can chose a portion often 250-2500
-    channels: RepeatCount(1), 
-    _bit_depth: BitCount(32),
-    rx_symbol_osr: OverSampleMultiplier(4), // 4
-    rx_freq_osr: OverSampleMultiplier(2), // 2
-    // detector_underload_divisor: RepeatCount(1), // 2 as per WB2FKO doc
-    sync_min_score: 1.0, // 0.4, // 10,
-    sub_bands: RepeatCount(1),
-    ldpc_max_iteration: RepeatCount(20),
-    auto_segment: false, // true, 
-    // subtracts: RepeatCount(1),
-    window_function: WindowFunction::_Hann,  // Hann in the FT8_lib c code, or Blackman
-};
-pub const TEST_FREQUENCY: f32 = 1500.0;
-
 pub struct Modem {
-    pub protocol: &'static Protocol,
-    pub _runtime: &'static Runtime,
-    pub _freq_hz: f32,
-    pub crc_calc: crc::Crc<u16>,
+    protocol: &'static Protocol,
+    runtime: &'static Runtime,
+    freq_hz: Option<f32>,
+    crc_calc: crc::Crc<u16>,
 }
 
 static CRC_ALG: OnceLock<crc::Algorithm<u16>> = std::sync::OnceLock::new();
@@ -424,7 +431,11 @@ fn get_crc_alg(protocol:&'static Protocol) -> &'static crc::Algorithm<u16> {
 }
 
 impl Modem {
-    pub fn new(protocol:&'static Protocol, runtime: &'static Runtime, freq_hz: f32) -> Modem {
+    pub fn new(
+        protocol:&'static Protocol, 
+        runtime: &'static Runtime, 
+        freq_hz: Option<f32>
+    ) -> Modem {
         // This is a recurrent calculation except for the added 0.5
         // what is 0.5 added for - it probably is related to the N/2 + 1 calc
         // let n_spsym = (0.5 + runtime.sample_rate() as f32 * protocol.symbol_period) as usize; // Samples per symbol 
@@ -448,97 +459,33 @@ impl Modem {
 
         Modem {
             protocol,
-            _runtime: runtime,
-            _freq_hz: freq_hz,
+            runtime,
+            freq_hz,
             crc_calc
         }
     }
+
+    pub fn protocol(&self) -> &'static Protocol {
+        self.protocol
+    }
+
+    pub fn runtime(&self) -> &'static Runtime {
+        self.runtime
+    }
+
+    pub fn freq_hz(&self) -> Option<f32> {
+        self.freq_hz
+    }
+
+    pub fn crc_calc(&self) -> &crc::Crc<u16> {
+        &self.crc_calc
+    }
 }
-
-#[derive(Error, Debug)]
-#[non_exhaustive]
-pub enum XxxError {
-    #[error("TODO")]
-    _ToDo,
-    // #[error("Bad CRC: crc={0}")]
-    // _BadCrc(u32),
-    #[error("Bad CRC")]
-    _BadCrc,
-    #[error("Bad ECC")]
-    _BadEcc,
-    #[error("Bad Msg")]
-    _BadMsg,
-    #[error("Incomplete Data")]
-    _DataIncomplete,
-    #[error("Error Message: {0}")]
-    _ErrorMessage(String),
-    // Configuration(Box<dyn Error + Sync + Send>),
-    // InvalidArgument(String),
-    // Database(Box<dyn DatabaseError>),
-    // Io(Error),
-    // Tls(Box<dyn Error + Sync + Send>),
-    // Protocol(String),
-    #[error("Col not found {0}")]
-    _ColNotFound(usize),
-    #[error("Row not found {0}")]
-    _RowNotFound(usize),
-    #[error("Index too high {0}")]
-    _IndexTooHigh(usize),
-    #[error("Index too low {0}")]
-    _IndexTooLow(usize),
-    // TypeNotFound {
-    //     type_name: String,
-    // },
-    // ColumnIndexOutOfBounds {
-    //     index: usize,
-    //     len: usize,
-    // },
-    // ColumnNotFound(String),
-    // ColumnDecode {
-    //     index: String,
-    //     source: Box<dyn Error + Sync + Send>,
-    // },
-    // Encode(Box<dyn Error + Sync + Send>),
-    // Decode(Box<dyn Error + Sync + Send>),
-    // AnyDriverError(Box<dyn Error + Sync + Send>),
-    // PoolTimedOut,
-    // PoolClosed,
-    // WorkerCrashed,
-    // Migrate(Box<MigrateError>),
-    // InvalidSavePointStatement,
-    // BeginFailed,
-}
-
-
-// this is a clone of FT8
-pub const TEST_PROTOCOL: Protocol = Protocol::new(
-    Secs(0.16),
-    Secs(15.0),
-    true,
-    BitCount(3),
-    SymbolCount(58),
-    SymbolCount(79),             // Total channel symbols (FT8_NS + FT8_ND)
-    SymbolCount(7),     // sync group length
-    RepeatCount(3),        // Number of sync groups
-    SymbolCount(0),
-    SymbolCount(36),    // Offset between sync groups
-    [3, 1, 4, 0, 6, 5, 2],    //　Costas array
-    BitCount(174),        // Number of bits in the encoded message (payload with LDPC checksum bits)
-    BitCount(91),         // Number of payload bits (including CRC)
-    [0, 1, 3, 2, 5, 6, 4, 7],
-    [0, 1, 3, 2, 6, 4, 5, 7],
-    CrcParams::new(BitCount(5), BitMap(0x2757), BitCount(14), 0, 0),
-    // crc_polynomial: BitMap(0x2757),   // CRC-14 polynomial without the leading (MSB) 1 0x2757 {8174,8174,18,18,4,4,2,2}
-    // crc_width: BitCount(14),
-    // crc_start: 0,
-    // crc_xor: 0,
-    2.0f32,
-    SymbolCount(1),
-);
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support;
 
     pub fn check(protocol: &Protocol) -> bool { 
         (BitCount(protocol.nd().0 * protocol.token_bits().0) == protocol.ldpc_n())
@@ -552,7 +499,7 @@ mod tests {
 
     #[test]
     fn test_constant() {
-        assert!(check(&TEST_PROTOCOL));
+        assert!(check(&test_support::TEST_PROTOCOL));
         // assert!(check(&_JS8A));
         // assert!(check(&_LT8A));
     }

@@ -1,12 +1,13 @@
 // use std::result::*;
 // use bitvec::prelude::*;
-use crate::rustxxx;
+use crate::types;
+use crate::error;
 
 // const _L5_0: [u8; FT8.ldpc_n_bytes()] = [ 0xff, 0xa5, 0x5a, 0x33, 0xfe, 0xff, 6, 7, 8, 9, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
-impl rustxxx::Modem {
+impl types::Modem {
     #[cfg(any(feature = "enable_tx", test))]
-    fn _modulate(&self, cw:&[u8]) -> Result<Vec<f32>, rustxxx::XxxError> {
+    fn _modulate(&self, cw:&[u8]) -> Result<Vec<f32>, error::XxxError> {
         let r4 = self._l4_crc_add(cw).expect("Failed to add crc");
         let r3 = self._l3_ecc_add(&r4).expect("Failed to add ecc");
         let r2 = self._l2_gray_encode(&r3).expect("Failed to gray encode");
@@ -19,8 +20,8 @@ impl rustxxx::Modem {
     // }
 
     #[cfg(test)]
-    pub fn l5_top_outbound(&mut self, ttl: isize, cw:&Vec<u8>) -> Result<Vec<u8>, rustxxx::XxxError> {
-        assert_eq!(cw.len(), self.protocol._ldpc_p_bytes().0);
+    pub fn l5_top_outbound(&mut self, ttl: isize, cw:&Vec<u8>) -> Result<Vec<u8>, error::XxxError> {
+        assert_eq!(cw.len(), self.protocol()._ldpc_p_bytes().0);
         if ttl == 0 {
             self.l5_top_inbound(cw)
         } else {
@@ -29,7 +30,7 @@ impl rustxxx::Modem {
     }
 
     #[cfg(test)]
-    pub fn l5_top_inbound(&self, payload:&Vec<u8>) -> Result<Vec<u8>, rustxxx::XxxError> {
+    pub fn l5_top_inbound(&self, payload:&Vec<u8>) -> Result<Vec<u8>, error::XxxError> {
         Ok(payload.clone()) // reflector
     }
 }

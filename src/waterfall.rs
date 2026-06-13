@@ -1,4 +1,4 @@
-use crate::rustxxx;
+use crate::types;
 
 #[derive(Debug)]
 pub struct FreqBinRange {
@@ -18,7 +18,7 @@ pub type WflDataType = f32;
 #[derive(PartialEq)]
 
 pub struct WaterfallLine {
-    freq_osr: rustxxx::OverSampleMultiplier,
+    freq_osr: types::OverSampleMultiplier,
     pub mags: Vec<WflDataType>,
     pub mag_dbs: Vec<WflDataType>,
 }
@@ -26,7 +26,7 @@ pub struct WaterfallLine {
 impl WaterfallLine {
     pub fn new(
         freq_bins: usize,
-        freq_osr: rustxxx::OverSampleMultiplier,
+        freq_osr: types::OverSampleMultiplier,
     ) -> Self {
         let mags: Vec<WflDataType> = vec![0.0; freq_bins];
         let mag_dbs: Vec<WflDataType> = vec![0.0; freq_bins];
@@ -65,7 +65,7 @@ impl WaterfallLine {
     // }
 }
 
-type WaterFallLines = Box<circular_buffer::CircularBuffer::<{rustxxx::WATERFALL_BUF_SIZE}, WaterfallLine>>;
+type WaterFallLines = Box<circular_buffer::CircularBuffer::<{types::WATERFALL_BUF_SIZE}, WaterfallLine>>;
 pub struct Waterfall {
     pub load_base: u32,
 
@@ -74,8 +74,8 @@ pub struct Waterfall {
 
     pub freq_bins: usize,
 
-    pub time_osr: rustxxx::OverSampleMultiplier,   // number of time subdivisions
-    pub freq_osr: rustxxx::OverSampleMultiplier,   // number of frequency subdivisions ?>=2
+    pub time_osr: types::OverSampleMultiplier,   // number of time subdivisions
+    pub freq_osr: types::OverSampleMultiplier,   // number of frequency subdivisions ?>=2
 
     wflines: WaterFallLines,
     pub magsums: Vec<f32>,
@@ -85,10 +85,10 @@ impl Waterfall {
     pub fn new(
         time_bins: usize,
         freq_bins: usize,
-        time_osr: rustxxx::OverSampleMultiplier,
-        freq_osr: rustxxx::OverSampleMultiplier,
+        time_osr: types::OverSampleMultiplier,
+        freq_osr: types::OverSampleMultiplier,
     ) -> Self {
-        let wflines: WaterFallLines = circular_buffer::CircularBuffer::<{rustxxx::WATERFALL_BUF_SIZE}, WaterfallLine>::boxed();
+        let wflines: WaterFallLines = circular_buffer::CircularBuffer::<{types::WATERFALL_BUF_SIZE}, WaterfallLine>::boxed();
         let magsums: Vec<f32> = vec!(0.0; freq_bins);
 
         Waterfall {
@@ -128,8 +128,8 @@ impl Waterfall {
         self.wflines.pop_front()
     }
 
-    pub fn time_base(&self) -> rustxxx::TimeStamp {
-        rustxxx::TimeStamp(self.load_base-self.time_bins_stored() as u32)
+    pub fn time_base(&self) -> types::TimeStamp {
+        types::TimeStamp(self.load_base-self.time_bins_stored() as u32)
     }
 
     pub fn time_bins(&self) -> usize {

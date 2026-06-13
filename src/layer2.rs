@@ -1,12 +1,13 @@
 //Layer2 bit level <-> Gray Code
 // use std::result::*;
 
-use crate::rustxxx;
+use crate::error;
+use crate::types;
 
 // use generator::XXX_LDPC_GENERATOR;
 // use crc::*;
 
-impl rustxxx::Modem {
+impl types::Modem {
     // pub fn xx8_encode(payload: &[u8; XXX.ldpc_k_bytes()], tones: &mut [usize; XXX.nn()]) {
     //     let mut a91 = [0u8; XXX.ldpc_k_bytes()]; //Store 77 bits of payload + 14 bits CRC
 
@@ -24,12 +25,12 @@ impl rustxxx::Modem {
         codeword: &[u8],  // [u8; XXX.ldpc_n_bytes()], 
         // self.l2_tones: &mut [u8; XXX.nd()]
     ) -> Vec<u8> {
-        let mut l2_tones: Vec<u8> = Vec::with_capacity(self.protocol.nd().0);
+        let mut l2_tones: Vec<u8> = Vec::with_capacity(self.protocol().nd().0);
 
         let mut mask = 0x80u8; // Mask to extract 1 bit from self.codeword
         let mut i_byte = 0usize; // Index of the current byte of the self.codeword
 
-        for _i_tone in 0..self.protocol.nd().0 {
+        for _i_tone in 0..self.protocol().nd().0 {
             // Extract 3 bits from self.codeword at i-th position
             let mut bits3 = 0u8;
 
@@ -65,7 +66,7 @@ impl rustxxx::Modem {
             //Convert 3bit to 8 tones
             //Since it is a Gray code, the Hamming distance (the number of bits that differ) from the bit pattern of the adjacent tone is 1.
             //Even if the frequency changes due to Doppler etc., there is a high possibility that it can be corrected by error correction.
-            l2_tones.push(self.protocol.gray_map()[bits3 as usize]);
+            l2_tones.push(self.protocol().gray_map()[bits3 as usize]);
         }
         l2_tones
     }
@@ -77,19 +78,19 @@ impl rustxxx::Modem {
     ) -> Vec<u8> {
         // Message structure: S7 D29 S7 D29 S7
         // Total symbols: 79 (XXX.nn())
-        let mut codeword: Vec<u8> = vec![0; self.protocol.ldpc_n_bytes().0]; // Vec::with_capacity(self.protocol.ldpc_n_bytes().0); // )&mut [u8; XXX.ldpc_n_bytes()], 
+        let mut codeword: Vec<u8> = vec![0; self.protocol().ldpc_n_bytes().0]; // Vec::with_capacity(self.protocol.ldpc_n_bytes().0); // )&mut [u8; XXX.ldpc_n_bytes()], 
         // codeword.resize(self.protocol.ldpc_n_bytes().0, 0);
 
         let mut mask = 0x80u8; // Mask to set 1 bit into self.codeword
         let mut i_byte = 0usize; // Index of the current byte of the self.codeword
 
         // for i_tone in 0..self.protocol.nd().0 {
-        for l2_tone in l2_tones.iter().take(self.protocol.nd().0) {
+        for l2_tone in l2_tones.iter().take(self.protocol().nd().0) {
             // Convert 8 tones to 3bit
             // Extract the 3 bits into self.codeword at i-th position
 
             // let bits3 = self.protocol._gray_rmap()[l2_tones[i_tone] as usize];
-            let bits3 = self.protocol._gray_rmap()[*l2_tone as usize];
+            let bits3 = self.protocol()._gray_rmap()[*l2_tone as usize];
 
             // dbg!(bits3);
 
@@ -127,7 +128,7 @@ impl rustxxx::Modem {
     #[cfg(any(feature = "enable_tx", test))]
      pub fn _l2_gray_encode(&self, 
         codeword: &[u8] // mut [u8; XXX.ldpc_n_bytes()]
-    ) -> Result<Vec<u8>, rustxxx::XxxError>{
+    ) -> Result<Vec<u8>, error::XxxError>{
         // let mut tones = [0u8; XXX.nd()];
         // codeword -> l2_tones        
         Ok(self._gray_encode(codeword))
@@ -136,7 +137,7 @@ impl rustxxx::Modem {
     #[cfg(test)]
     pub fn _l2_gray_decode(&self, 
         l2_tones: &[u8], // [u8; XXX.nd()]
-    ) ->Result<Vec<u8>, rustxxx::XxxError> {
+    ) ->Result<Vec<u8>, error::XxxError> {
         // l2_tones -> codeword
         // let mut codeword = [0u8; XXX.ldpc_n_bytes()];
         Ok(self._gray_decode(l2_tones))
@@ -145,7 +146,7 @@ impl rustxxx::Modem {
     #[cfg(test)]
     pub fn l2_outbound(&self, ttl: isize, 
         codeword: &Vec<u8> // mut [u8; XXX.ldpc_n_bytes()]
-    ) -> Result<Vec<u8>, rustxxx::XxxError>{
+    ) -> Result<Vec<u8>, error::XxxError>{
         // let mut tones = [0u8; XXX.nd()];
         // codeword -> l2_tones
         let l2_tones = self._l2_gray_encode(codeword)?;
@@ -159,7 +160,7 @@ impl rustxxx::Modem {
     #[cfg(test)]
     pub fn l2_inbound(&self, 
         l2_tones: &Vec<u8>, // [u8; XXX.nd()]
-    ) ->Result<Vec<u8>, rustxxx::XxxError> {
+    ) ->Result<Vec<u8>, error::XxxError> {
         // l2_tones -> codeword
         // let mut codeword = [0u8; XXX.ldpc_n_bytes()];
         let cw_crc_ecc = self._l2_gray_decode(l2_tones)?;
@@ -170,6 +171,7 @@ impl rustxxx::Modem {
 #[cfg(test)]
 mod tests {
     // use super::*;
+    // use crate::test_support;
 
     // fn recheck_config(modem: &rustxxx::Modem) {
     //     assert_eq!(modem.protocol.nd().0 * modem.protocol.token_bits().0, modem.protocol.ldpc_n().0);

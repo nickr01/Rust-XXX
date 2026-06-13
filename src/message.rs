@@ -1,12 +1,12 @@
 use std::borrow::Cow;
 
-use crate::rustxxx;
+use crate::types;
 
 #[derive(Debug)]
 #[derive(Clone)]
 pub struct Message {
-    pub time_secs: rustxxx::Secs,
-    pub freq_hz: rustxxx::Hz,
+    pub time_secs: types::Secs,
+    pub freq_hz: types::Hz,
     pub c_score: f32,
     pub codeword: Vec<u8>, // used also as key
     pub delivered: bool,
@@ -14,8 +14,8 @@ pub struct Message {
 
 impl Message {
     pub fn new(
-        time_secs: rustxxx::Secs,
-        freq_hz: rustxxx::Hz,
+        time_secs: types::Secs,
+        freq_hz: types::Hz,
         c_score: f32,
         codeword: Vec<u8>,
     ) -> Message {
@@ -48,7 +48,7 @@ impl Message {
         self.delivered = true;
     }
 
-    pub fn is_stale(&self, stale_time: rustxxx::Secs) -> bool {
+    pub fn is_stale(&self, stale_time: types::Secs) -> bool {
         // dbg!(self.time_secs.0, stale_time.0);
         return self.time_secs.0 < stale_time.0
     }

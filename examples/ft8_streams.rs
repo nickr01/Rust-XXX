@@ -48,7 +48,7 @@ use ft8_message::{ft8_pack_msg, ft8_unpack_msg};
 // use crate::constant::{INPUT_BUFSIZE, InputBufWriter};
 // use crate::rustxxx::InputBufReader;
 // use rustxxx::rustxxx::AudioSampleBuffer;
-use rustxxx::rustxxx::*;
+use rustxxx::types::*;
 // use crate::rustxxx::InputBufWriter;
 
 // use ringbuf::{traits::*, HeapRb, SharedRb};
@@ -166,7 +166,23 @@ pub const FT8: Protocol = Protocol::new(
     2.0f32,
     SymbolCount(1),
 );
-        
+
+pub const FT8_RUNTIME: Runtime = Runtime::new(
+    // should be indep of bandwidth and freq_osr but not there yet
+    Hz(6000.0),  // this is the real design layer - app layer can chose a portion often 250-2500
+    RepeatCount(1), 
+    BitCount(32),
+    OverSampleMultiplier(4), // 4
+    OverSampleMultiplier(2), // 2
+    // detector_underload_divisor: RepeatCount(1), // 2 as per WB2FKO doc
+    1.0, // 0.4, // 10,
+    RepeatCount(1),
+    RepeatCount(20),
+    false, // true, 
+    // subtracts: RepeatCount(1),
+    WindowFunction::_Hann,  // Hann in the FT8_lib c code, or Blackman
+);
+
 #[derive(clap::Parser, std::fmt::Debug)]
 #[command(version, about = "Rust-XXX FT8-like modem testbed", long_about = None)]
 struct Opt {
@@ -200,7 +216,7 @@ struct Opt {
 
 #[cfg(any(feature = "enable_rx", test))]
 fn do_audio_file_input(
-    runtime: rustxxx::rustxxx::Runtime, 
+    runtime: rustxxx::types::Runtime, 
     input_buff_writer: &mut AudioBufWriter, 
     input_file: String,
     from_channels: &mut usize,
@@ -364,7 +380,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
 
     // let loop_back = opt.loop_back.unwrap();
 
-    let runtime: &'static rustxxx::rustxxx::Runtime = &rustxxx::rustxxx::TEST_FT8_RUNTIME;
+    let runtime: &'static rustxxx::types::Runtime = &FT8_RUNTIME;
 
     println!("Supported hosts:\n  {:?}", cpal::ALL_HOSTS);
     let available_hosts = cpal::available_hosts();
@@ -421,8 +437,8 @@ fn rx_main() -> Result<(), anyhow::Error> {
     let mut _audio_output_to_channels = 0; 
     let mut _audio_output_to_rate = 0;
 
-    let audio_input_buffer: AudioSampleBuffer = ringbuf::HeapRb::<f32>::new(rustxxx::rustxxx::AUDIO_INPUT_BUFSIZE);
-    let audio_output_buffer: AudioSampleBuffer = ringbuf::HeapRb::<f32>::new(rustxxx::rustxxx::AUDIO_OUTPUT_BUFSIZE);
+    let audio_input_buffer: AudioSampleBuffer = ringbuf::HeapRb::<f32>::new(rustxxx::types::AUDIO_INPUT_BUFSIZE);
+    let audio_output_buffer: AudioSampleBuffer = ringbuf::HeapRb::<f32>::new(rustxxx::types::AUDIO_OUTPUT_BUFSIZE);
 
     let (mut audio_input_buff_writer, mut audio_input_buff_reader) = audio_input_buffer.split();
     // let mut audio_input_buff_writer: rustxxx::rustxxx::ThreadedAudioBufWriter = std::sync::Arc::new(std::sync::Mutex::new(_audio_input_buff_writer));
@@ -438,7 +454,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
     };
 
     let mut receive_pipeline= rustxxx::pipeline::Pipeline::new(
-        &rustxxx::rustxxx::TEST_PROTOCOL, //  &FT8, 
+        &FT8, 
         runtime,
     );
 
@@ -596,12 +612,10 @@ fn rx_main() -> Result<(), anyhow::Error> {
                 {
                     // unload the ringbuf into a sized Vec to pass to rustxxx
                     let audio_iter = audio_input_buff_reader.pop_iter();
-                    for (n, sample) in audio_iter.enumerate().take(audio_read_size) {
-                        if resample_context.from_channels == 1 {
-                            audio_buff[n] = sample;
-                        } else if n & 0 == 0 {
-                            audio_buff[n/2] = sample;
-                        }
+                    let mut n = 0;
+                    for sample in audio_iter.step_by(from_channels).take(audio_read_size) {
+                        audio_buff[n] = sample;
+                        n += 1;
                     }
                 }
                 let messages = receive_pipeline.write_mono_sample_buffer(
