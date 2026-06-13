@@ -3,7 +3,6 @@ use crate::correlator;
 use crate::decoder;
 use crate::detector;
 use crate::detector::DetectFFT;
-use crate::message;
 use crate::types;
 use crate::waterfall;
 

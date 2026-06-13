@@ -1,7 +1,6 @@
 pub mod types;
 pub mod error;
 pub mod pipeline;
-pub mod message;
 
 mod receiver;
 mod detector;

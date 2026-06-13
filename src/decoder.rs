@@ -1,6 +1,5 @@
 use crate::candidate;
 use crate::types;
-use crate::message;
 
 // use crate::rustxxx::Secs;
 // use crate::rustxxx::TimeStamp;
@@ -20,7 +19,7 @@ fn max4(a: f32, b: f32, c: f32, d: f32) -> f32 {
     max2(max2(a, b), max2(c, d))
 }
 
-pub type DecodeHash = std::collections::HashMap<Vec<u8>, message::Message>;
+pub type DecodeHash = std::collections::HashMap<Vec<u8>, types::Message>;
 
 #[cfg(any(feature = "enable_rx", test))]
 pub struct Decoder {
@@ -47,7 +46,7 @@ impl Decoder {
         c_score: f32,
         modem: &mut types::Modem, 
         logls: &Vec<layer3::LogL>,
-    ) -> Option<message::Message> {
+    ) -> Option<types::Message> {
         let mut r = modem.ecc_decode_bp(&logls, self.runtime.ldpc_max_iteration().0);
         if r.is_err() {
             r = modem.ecc_decode_bitflip(&logls, self.runtime.ldpc_max_iteration().0);
@@ -65,7 +64,7 @@ impl Decoder {
                     None
                 } else {
                     // dbg!("Non-blank message");
-                    let msg = message::Message::new(
+                    let msg = types::Message::new(
                         time_secs,
                         freq_hz,
                         c_score,

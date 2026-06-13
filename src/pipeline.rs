@@ -1,8 +1,8 @@
 use crate::correlator;
 use crate::decoder;
 use crate::detector;
+
 #[cfg(any(feature = "enable_rx", test))]
-use crate::message;
 use crate::receiver;
 
 use crate::error;
@@ -177,7 +177,7 @@ impl Pipeline {
         &mut self,
         mono_samples: &[f32; RX_IN_BUFLEN],
         resample_context: &mut ResampleContext,
-    ) -> Result<Vec<message::Message>, error::XxxError> {
+    ) -> Result<Vec<types::Message>, error::XxxError> {
         {
             // let planned_load = Pipeline::sample_buf_size(resample_context); // BUFLEN * resample_context.from_channels;
             // assert_eq!(planned_load & 1, 0); // even
@@ -264,8 +264,8 @@ impl Pipeline {
             );
 
         // report the current undelivered msgs and check stale status
-        let mut delivery_msgs: Vec<message::Message> = Vec::new();
-        let mut stale_msgs: Vec<message::Message> = Vec::new();
+        let mut delivery_msgs: Vec<types::Message> = Vec::new();
+        let mut stale_msgs: Vec<types::Message> = Vec::new();
 
         for msg in self.message_hash.values() {
             if !msg.is_delivered() {
