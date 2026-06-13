@@ -23,6 +23,9 @@ pub struct ResampleContext {
 }
 
 #[cfg(any(feature = "enable_rx", test))]
+pub const RX_IN_BUFLEN: usize = Pipeline::CHUNK_SIZE;
+
+#[cfg(any(feature = "enable_rx", test))]
 pub struct Pipeline {
     pub receiver: receiver::Receiver,
     rfft_nfft_f: detector::DetectFFT,
@@ -38,7 +41,6 @@ impl Pipeline {
     const CHUNK_SIZE: usize = 8192 ; // 2048 is too little to keep up with 48K audio stream
     const SUB_CHUNK: usize = 1;  // maybe can tune this
     const CHANNELS: usize = 1;
-    const BUFLEN: usize = Pipeline::CHUNK_SIZE;
 
     pub fn new(
         protocol: &'static rustxxx::Protocol,
@@ -169,41 +171,41 @@ impl Pipeline {
         self.debug_portal.continue_run()
     }
 
-    pub fn write_sample_buffer(
+    pub fn write_mono_sample_buffer(
         &mut self,
-        audio_in: &mut Vec<f32>,
-        // reader: &mut rustxxx::AudioBufReader,
+        mono_samples: &[f32; RX_IN_BUFLEN],
         resample_context: &mut ResampleContext,
     ) -> Result<Vec<message::Message>, rustxxx::XxxError> {
         {
-            let planned_load = Pipeline::BUFLEN * resample_context.from_channels;
-            if audio_in.len() & !1 >= planned_load { // force even consumption
-                let mut mono_samples = Vec::new();
-                {
-                    let count_to_load = planned_load; // coerce to controlled buffer size - maybe not necessary
-                    {
-                        let mut count = 0;
-                        while count < count_to_load {
-                            let sample = audio_in.pop().unwrap();
-                            if resample_context.from_channels == 1 || count & 1 == 0 {
-                                mono_samples.push(sample);
-                            };
-                            count += 1;
-                        };
-                    }
-                }
+            // let planned_load = Pipeline::sample_buf_size(resample_context); // BUFLEN * resample_context.from_channels;
+            // assert_eq!(planned_load & 1, 0); // even
+            // assert_eq!(mono_samples.len(), planned_load);
+            // if audio_in.len() & !1 >= planned_load { // force even consumption
+            {
+                // todo!("remove this step - expect mono");
+                // let mut mono_samples = Vec::with_capacity(Pipeline::BUFLEN);
+                // if resample_context.from_channels == 1 {
+                //     mono_samples = mono_in.clone();
+                // } else {
+                //     for (i, sample) in mono_in.iter().enumerate() {
+                //         if resample_context.from_channels == 1 || i & 1 == 0 {
+                //             mono_samples.push(*sample);
+                //         };
+                //     };
+                // }
+
                 // assert_eq!(reader.occupied_len(),  count_to_load - planned_load);
 
                 // dbg!(count_to_load, mono_samples.len());
                 // now do the sample_rate if necessary
                 let samples_at_new_rate = if resample_context.from_rate == self.receiver.runtime.target_input_sample_rate().0 as u32 {
-                    mono_samples
+                    Vec::from(mono_samples)
                 } else {
                     // let audio_clip = vec![0.0; 2*10000];
 
                     // wrap it with an InterleavedSlice Adapter
                     let nbr_input_frames = mono_samples.len(); // audio_clip.len() / 2;
-                    let input_adapter = InterleavedSlice::new(&mono_samples, 1, nbr_input_frames).unwrap();
+                    let input_adapter = InterleavedSlice::new(mono_samples, 1, nbr_input_frames).unwrap();
 
                     // create a buffer for the output
                     let out_len = (mono_samples.len() as f64 * resample_context.resampler.resample_ratio()) as usize;
@@ -250,9 +252,6 @@ impl Pipeline {
                     self.write_sample(sample)?;
                 }
             }
-            // return the message_hash content if already returned
-            // mark as reported
-            // clean the message_hash - remove older than message length secs
         };
 
         let stale_time =
@@ -278,14 +277,14 @@ impl Pipeline {
         }
 
         for msg in delivery_msgs.iter() {
-            // dbg!("Updating msg DELIVER flag");
+            dbg!("Updating msg DELIVER flag");
             self.message_hash.remove(msg.key());         
             assert!(msg.is_delivered());
             self.message_hash.insert(msg.key().clone(), msg.clone());         
         }
 
         for msg in stale_msgs.iter() {
-            // dbg!("Deleting STALE msg");
+            dbg!("Deleting STALE msg");
             assert!(msg.is_delivered());
             self.message_hash.remove(msg.key());         
         }

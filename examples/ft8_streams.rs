@@ -438,7 +438,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
     };
 
     let mut receive_pipeline= rustxxx::pipeline::Pipeline::new(
-        &FT8, 
+        &rustxxx::rustxxx::TEST_PROTOCOL, //  &FT8, 
         runtime,
     );
 
@@ -577,41 +577,51 @@ fn rx_main() -> Result<(), anyhow::Error> {
         // use proto_ft8::protocol::FT8;
 
         // could not init this until know the input info
+
+        use rustxxx::pipeline::{self, Pipeline};
         let mut resample_context = receive_pipeline.resample_context(
             audio_input_from_channels, 
             audio_input_from_rate, 
         );
 
-        let mut audio_buff: Vec<f32> = Vec::new();
+        let mut audio_buff = [0f32; pipeline::RX_IN_BUFLEN];
+        let from_channels = resample_context.from_channels;
+        let audio_read_size = pipeline::RX_IN_BUFLEN * from_channels;
 
         // this will be our main event loop
         while receive_pipeline.continue_run() {
-            {
-                // unload the ringbuf into a simple Vec
-                let audio_iter = audio_input_buff_reader.pop_iter();
-                for sample in audio_iter {
-                    audio_buff.push(sample);
+            use ringbuf::traits::Observer;
+
+            if audio_input_buff_reader.occupied_len() >= audio_read_size {
+                {
+                    // unload the ringbuf into a sized Vec to pass to rustxxx
+                    let audio_iter = audio_input_buff_reader.pop_iter();
+                    for (n, sample) in audio_iter.enumerate().take(audio_read_size) {
+                        if resample_context.from_channels == 1 {
+                            audio_buff[n] = sample;
+                        } else if n & 0 == 0 {
+                            audio_buff[n/2] = sample;
+                        }
+                    }
                 }
-                assert!(audio_buff.len() < AUDIO_INPUT_BUFSIZE);
-            }
-            let messages = receive_pipeline.write_sample_buffer(
-                &mut audio_buff,
-                &mut resample_context
-            )
-                .context("Cannot run the receiver").unwrap();
+                let messages = receive_pipeline.write_mono_sample_buffer(
+                    &audio_buff,
+                    &mut resample_context
+                )
+                    .context("Cannot run the receiver").unwrap();
 
-            receive_pipeline.update_spectrogram();
-
-            for msg in messages {
-                dbg!(&msg);
-                // match ft8_message::ft8_unpack_msg(&msg.codeword()) {
-                //     Some(msg) => {
-                //         dbg!(&msg);
-                //     },
-                //     None => {
-                //         dbg!("Bad unpack");
-                //     }
-                // }
+                for msg in messages {
+                    dbg!(&msg);
+                    // match ft8_message::ft8_unpack_msg(&msg.codeword()) {
+                    //     Some(msg) => {
+                    //         dbg!(&msg);
+                    //     },
+                    //     None => {
+                    //         dbg!("Bad unpack");
+                    //     }
+                    // }
+                }
+                receive_pipeline.update_spectrogram();
             }
         }   
     }
