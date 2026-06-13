@@ -39,6 +39,7 @@ minifb = "0.28.0"
 lazy_static = "1.5.0"
 
 [dev-dependencies]
+ft8_message = { git = "https://github.com/nickr01/ft8_message", version = "0.1.0" }
 
 [[example]]
 name = "ft8_streams"

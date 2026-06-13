@@ -43,6 +43,8 @@ use cpal::traits::{
 //     // StreamTrait
 // };
 
+use ft8_message::{ft8_pack_msg, ft8_unpack_msg};
+
 // use crate::constant::{INPUT_BUFSIZE, InputBufWriter};
 // use crate::rustxxx::InputBufReader;
 use rustxxx::rustxxx::AudioSampleBuffer;
