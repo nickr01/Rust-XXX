@@ -1,4 +1,8 @@
+#[cfg(any(feature = "enable_rx", test))]
+use core::error as core_error;
+
 use crate::candidate;
+use crate::error;
 use crate::types;
 
 // use crate::rustxxx::Secs;
@@ -46,7 +50,7 @@ impl Decoder {
         c_score: f32,
         modem: &mut types::Modem, 
         logls: &Vec<layer3::LogL>,
-    ) -> Option<types::Message> {
+    ) -> Result<Option<types::Message>, error::XxxError> {
         let mut r = modem.ecc_decode_bp(&logls, self.runtime.ldpc_max_iteration().0);
         if r.is_err() {
             r = modem.ecc_decode_bitflip(&logls, self.runtime.ldpc_max_iteration().0);
@@ -61,24 +65,23 @@ impl Decoder {
                 // dbg!("got past ecc");
                 if codeword_vec.is_empty() {
                     // dbg!("Blank message :(");
-                    None
+                    Ok(None)
                 } else {
-                    todo!("prop err");
                     // dbg!("Non-blank message");
-                    let codeword = types::Message::from_vec(codeword_vec).unwrap();
+                    let mut codeword_vec = codeword_vec;
+                    codeword_vec.truncate(16); // only want these - no need to mask
+                    let codeword = types::Message::from_vec(codeword_vec)?;
                     let msg = types::Message::new(
                         time_secs,
                         freq_hz,
                         c_score,
                         codeword,
                     );
-                    Some(msg)
+                    Ok(Some(msg))
                 }
             }
             Err(_) => {
-                    todo!("prop err");
-                // dbg!("Bad ECC");
-                None
+                Err(error::XxxError::_BadEcc)
             }
         }
     }

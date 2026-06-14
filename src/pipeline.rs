@@ -165,7 +165,7 @@ impl Pipeline {
             &mut self.detector, 
             &mut self.correlator,
             &mut self.message_hash
-        );
+        )?;
         Ok(())
     }
 
@@ -279,14 +279,14 @@ impl Pipeline {
         }
 
         for msg in delivery_msgs.iter() {
-            dbg!("Updating msg DELIVER flag");
+            // dbg!("Updating msg DELIVER flag");
             self.message_hash.remove(msg.key());         
             assert!(msg.is_delivered());
             self.message_hash.insert(msg.key().clone(), msg.clone());         
         }
 
         for msg in stale_msgs.iter() {
-            dbg!("Deleting STALE msg");
+            // dbg!("Deleting STALE msg");
             assert!(msg.is_delivered());
             self.message_hash.remove(msg.key());         
         }

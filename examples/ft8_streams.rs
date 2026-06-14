@@ -621,8 +621,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
                 let messages = receive_pipeline.write_mono_sample_buffer(
                     &audio_buff,
                     &mut resample_context
-                )
-                    .context("Cannot run the receiver").unwrap();
+                )?;
 
                 for msg in messages {
                     dbg!(&msg);

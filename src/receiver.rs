@@ -1,8 +1,12 @@
-use crate::candidate;
+#[cfg(any(feature = "enable_rx", test))]
+use core::error as core_error;
+
+// use crate::candidate;
 use crate::correlator;
 use crate::decoder;
 use crate::detector;
 use crate::detector::DetectFFT;
+use crate::error;
 use crate::types;
 use crate::waterfall;
 
@@ -65,7 +69,7 @@ impl Receiver {
         detector: &mut detector::Detector,
         correlator: &mut correlator::Correlator,
         message_hash: &mut decoder::DecodeHash
-    ) -> usize {
+    ) -> Result<usize, error::XxxError> {
         // dbg!("entry");
         // TODO: disable or remove this
         assert!(!self.runtime.auto_segment()); // blocking auto for the moment
@@ -106,17 +110,40 @@ impl Receiver {
                                     ((c.freq_index().0 as f32 + 1.0)/ detector.wf.freq_osr.0 as f32) / self.protocol.symbol_period().0
                                 );
 
-                            match decoder.decode(time_secs, freq_hz, c.score(), &mut modem, &logls) {
-                                Some(message) => {
-                                    if !message.is_empty() {
-                                        if !message_hash.contains_key(message.key()) {
-                                            message_hash.insert(message.key().clone(), message);
-                                            success += 1;
+                            let decode_result = decoder.decode(time_secs, freq_hz, c.score(), &mut modem, &logls);
+                            
+                            match decode_result {
+                                Ok(om) => {
+                                    match om {
+                                        Some(message) => {
+                                            if !message.is_empty() {
+                                                // dbg!("test storing msg");
+                                                if !message_hash.contains_key(message.key()) {
+                                                    // dbg!("yes storing msg");
+                                                    message_hash.insert(message.key().clone(), message);
+                                                    success += 1;
+                                                }
+                                                pass_decodes += success;
+                                            } else {
+                                                dbg!("unexpected empty msg!");
+                                            }
+                                        },
+                                        None => {
+                                            dbg!("expected empty msg");
                                         }
-                                        pass_decodes += success;
                                     }
+
                                 },
-                                None => {}
+                                Err(error::XxxError::_BadEcc) => {
+                                    // dbg!("dropping ecc_error");
+                                }
+                                Err(error::XxxError::_BadCrc) => {
+                                    dbg!("dropping crc_error");
+                                },
+                                Err(error) => {
+                                    dbg!("trapping other error");
+                                    return Err(error);
+                                }
                             }
                         };
                     };
@@ -124,7 +151,7 @@ impl Receiver {
                 None => {},
             }
         }
-        pass_decodes
+        Ok(pass_decodes)
     }
 
     fn proc_nfft_buffer(
@@ -134,7 +161,7 @@ impl Receiver {
         detector: &mut detector::Detector,
         correlator: &mut correlator::Correlator,
         message_hash: &mut decoder::DecodeHash,
-    ) -> usize {
+    ) -> Result<usize, error::XxxError> {
         // dbg!(fft_input_vec.len());
         let mut pass_decodes = 0;
         assert_eq!(fft_input_vec.len(), self.nfft); 
@@ -145,7 +172,7 @@ impl Receiver {
                 detector,
                 correlator,
                 message_hash,
-            );
+            )?;
             let _wfl = &detector.wf.pop_line();
             // TODO: push _wfl into subtractor queue
             if pass_decodes > 0 
@@ -153,7 +180,7 @@ impl Receiver {
                 // dbg!(pass_decodes);
             };
         }
-        pass_decodes
+        Ok(pass_decodes)
     }
 
     // consume sample into waterfall
@@ -164,7 +191,7 @@ impl Receiver {
         detector: &mut detector::Detector,
         correlator: &mut correlator::Correlator,
         message_hash: &mut decoder::DecodeHash,
-    ) -> usize {
+    ) -> Result<usize, error::XxxError> {
         let mut bufs_consumed: usize = 0;
 
         for buf in detector_input_bufs.iter_mut()
@@ -176,14 +203,14 @@ impl Receiver {
                     detector,
                     correlator,
                     message_hash,
-                );
+                )?;
                 buf.clear();
                 assert_eq!(buf.len(), 0);
                 bufs_consumed += 1;
             }     
             buf.push(sample * detector.window_function_samples[buf.len()]); // application of window happens here
         }
-        bufs_consumed
+        Ok(bufs_consumed)
     }
 
 

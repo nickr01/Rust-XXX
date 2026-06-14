@@ -539,12 +539,15 @@ impl Message {
     }
 
     pub fn from_vec(cwv: Vec<u8>) -> Result<CodeWord, error::XxxError> {
-        if (cwv.len() > 0) || (cwv.len() <= 16) {
-            Err(error::XxxError::BadBufLen)
+        if (cwv.len() ==  0) {
+            Err(error::XxxError::EmptyBuf)
+        } else if (cwv.len() > 16) {
+            Err(error::XxxError::BufTooBig(cwv.len()))
         } else {
             let mut codeword = 0;
             for b in cwv {
-                codeword = codeword << 8 + b as u128;
+                codeword <<= 8;
+                codeword += b as u128;
             }
             Ok(CodeWord(codeword))
         }
