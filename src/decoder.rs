@@ -19,7 +19,7 @@ fn max4(a: f32, b: f32, c: f32, d: f32) -> f32 {
     max2(max2(a, b), max2(c, d))
 }
 
-pub type DecodeHash = std::collections::HashMap<Vec<u8>, types::Message>;
+pub type DecodeHash = std::collections::HashMap<types::CodeWord, types::Message>;
 
 #[cfg(any(feature = "enable_rx", test))]
 pub struct Decoder {
@@ -57,13 +57,15 @@ impl Decoder {
             // dbg!("primary ecc_decode_bp decode");
         }
         match r {
-            Ok(codeword) => {
+            Ok(codeword_vec) => {
                 // dbg!("got past ecc");
-                if codeword.is_empty() {
+                if codeword_vec.is_empty() {
                     // dbg!("Blank message :(");
                     None
                 } else {
+                    todo!("prop err");
                     // dbg!("Non-blank message");
+                    let codeword = types::Message::from_vec(codeword_vec).unwrap();
                     let msg = types::Message::new(
                         time_secs,
                         freq_hz,
@@ -74,6 +76,7 @@ impl Decoder {
                 }
             }
             Err(_) => {
+                    todo!("prop err");
                 // dbg!("Bad ECC");
                 None
             }

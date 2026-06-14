@@ -13,6 +13,8 @@ pub enum XxxError {
     _BadCrc,
     #[error("Bad ECC")]
     _BadEcc,
+    #[error("Unexpected Buffer Length")]
+    BadBufLen,
     #[error("Bad Msg")]
     _BadMsg,
     #[error("Incomplete Data")]

@@ -1,5 +1,8 @@
 use std::sync::OnceLock;
 
+// use clap::error as clap_error;
+use crate::error;
+
 // These all should be powers of 2 for ringbuf
 pub const AUDIO_INPUT_BUFSIZE: usize = 2_usize.pow(21); // 22 for file // 20
 pub const WATERFALL_BUF_SIZE: usize = 2_usize.pow(9); // This really should be dynamic
@@ -482,13 +485,15 @@ impl Modem {
     }
 }
 
-#[derive(Debug)]
-#[derive(Clone)]
+#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
+pub struct CodeWord(pub u128);
+
+#[derive(Debug, Clone)]
 pub struct Message {
     pub time_secs: Secs,
     pub freq_hz: Hz,
     pub c_score: f32,
-    pub codeword: Vec<u8>, // used also as key
+    pub codeword: CodeWord, // used also as key
     pub delivered: bool,
 }
 
@@ -497,7 +502,7 @@ impl Message {
         time_secs: Secs,
         freq_hz: Hz,
         c_score: f32,
-        codeword: Vec<u8>,
+        codeword: CodeWord,
     ) -> Message {
         Message {
             time_secs,
@@ -508,16 +513,16 @@ impl Message {
         }
     }
 
-    pub fn codeword(&self) -> &Vec<u8> {
+    pub fn codeword(&self) -> &CodeWord {
         &self.codeword
     }
 
-    pub fn key(&self) -> &Vec<u8> {
-        self.codeword()
+    pub fn key(&self) -> &CodeWord {
+        &self.codeword()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.codeword.is_empty()
+        self.codeword.0 == 0
     }
 
     pub fn is_delivered(&self) -> bool {
@@ -531,6 +536,18 @@ impl Message {
     pub fn is_stale(&self, stale_time: Secs) -> bool {
         // dbg!(self.time_secs.0, stale_time.0);
         return self.time_secs.0 < stale_time.0
+    }
+
+    pub fn from_vec(cwv: Vec<u8>) -> Result<CodeWord, error::XxxError> {
+        if (cwv.len() > 0) || (cwv.len() <= 16) {
+            Err(error::XxxError::BadBufLen)
+        } else {
+            let mut codeword = 0;
+            for b in cwv {
+                codeword = codeword << 8 + b as u128;
+            }
+            Ok(CodeWord(codeword))
+        }
     }
 }
 
