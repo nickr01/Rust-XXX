@@ -624,15 +624,14 @@ fn rx_main() -> Result<(), anyhow::Error> {
                 )?;
 
                 for msg in messages {
-                    dbg!(&msg);
-                    // match ft8_message::ft8_unpack_msg(&msg.codeword()) {
-                    //     Some(msg) => {
-                    //         dbg!(&msg);
-                    //     },
-                    //     None => {
-                    //         dbg!("Bad unpack");
-                    //     }
-                    // }
+                    match ft8_message::ft8_unpack_msg(msg.codeword().0) {
+                        Some(msg) => {
+                            dbg!(&msg);
+                        },
+                        None => {
+                            dbg!("Bad unpack");
+                        }
+                    }
                 }
                 receive_pipeline.update_spectrogram();
             }
