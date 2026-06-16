@@ -15,12 +15,12 @@ mod test_generator;
 mod test_parity;
 mod test_support;
 
-mod layer0; // Audio
-mod layer1; // sync
-mod layer2; // gray
-mod layer3; // Ecc
-mod layer4; // Crc
-mod layer5; // Top - UCP-API or FT8 app layer connect here
+mod l0_wire; // Audio
+mod l1_sync; // sync
+mod l2_gray_code; // gray
+mod l3_ecc; // Ecc
+mod l4_crc; // Crc
+mod l5_top; // Top - UCP-API or FT8 app layer connect here
 
 #[cfg(test)]
 mod tests {

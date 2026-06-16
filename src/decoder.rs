@@ -9,7 +9,7 @@ use crate::types;
 // use crate::rustxxx::TimeStamp;
 use crate::waterfall;
 // use crate::unpack_ft8;
-use crate::layer3;
+use crate::l3_ecc;
 
 fn max2(a: f32, b: f32) -> f32 {
     if a >= b {
@@ -49,7 +49,7 @@ impl Decoder {
         freq_hz: types::Hz,
         c_score: f32,
         modem: &mut types::Modem, 
-        logls: &Vec<layer3::LogL>,
+        logls: &Vec<l3_ecc::LogL>,
     ) -> Result<Option<types::Message>, error::XxxError> {
         let mut r = modem.ecc_decode_bp(&logls, self.runtime.ldpc_max_iteration().0);
         if r.is_err() {
@@ -86,8 +86,8 @@ impl Decoder {
         }
     }
 
-    pub fn extract_normalised_likelihood(&self, wf: &waterfall::Waterfall, c: &candidate::Candidate) -> Vec<layer3::LogL> {
-        let mut logls: Vec<layer3::LogL> = Vec::new(); 
+    pub fn extract_normalised_likelihood(&self, wf: &waterfall::Waterfall, c: &candidate::Candidate) -> Vec<l3_ecc::LogL> {
+        let mut logls: Vec<l3_ecc::LogL> = Vec::new(); 
 
         //Extract 58 bits of symbols - 3 x bits->(syms in logls)
         for bit_idx in 0..self.protocol.nd().0 {
@@ -124,7 +124,7 @@ impl Decoder {
         wf: &waterfall::Waterfall, 
         time_index: types::TimeIndex,
         freq_index: types::FreqIndex,
-    ) -> layer3::LogL {
+    ) -> l3_ecc::LogL {
         let wfl = &wf.line(time_index.0);
 
         let token_tones = self.protocol.token_tones(); // 8
@@ -140,7 +140,7 @@ impl Decoder {
             *s2_item = mag as f32;
         }
 
-        let mut logl = layer3::LogL::new(self.protocol);
+        let mut logl = l3_ecc::LogL::new(self.protocol);
         //Find the log likelihood ratio (LLR) for each bit for each bit LLR = log(P(b=1)/P(b=0))
         //The LLR of MSB on the gray code is the maximum value of tone 4-7 (1) minus the maximum value of tone 0-3 (0)
         // subtract is divisio as the values are db = log(mag);
@@ -152,7 +152,7 @@ impl Decoder {
         logl
     }
 
-    fn normalize_logl(&self, logls: &mut [layer3::LogL]) {
+    fn normalize_logl(&self, logls: &mut [l3_ecc::LogL]) {
         assert_eq!(types::SymbolCount(logls.len()), self.protocol.nd());
  
         let mut sum = 0.0f32;
