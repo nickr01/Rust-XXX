@@ -53,7 +53,7 @@ impl types::Modem {
         let mut signal = Vec::with_capacity(n_wave);
 
         // let symbols = l0_tones;
-        let f0 = self.freq_hz().unwrap();
+        let f0 = self.freq_hz().unwrap().0;
 
         // let n_spsym = (0.5 + signal_rate * symbol_period) as usize; // Samples per symbol
         // let n_wave = n_sym * n_spsym; // Number of output samples
@@ -177,58 +177,58 @@ impl types::Modem {
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
+    use super::*;
     use crate::test_support;
 
     // Https://docs.rs/jack/latest/jack/
 
-    // const _L0RT0: [u8; rustxxx::FT8.total_symbols_nn().0] = [
-    //         3, 1, 4, 0, 6, 5, 2, 5, 5, 5, 
-    //         5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 
-    //         5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 
-    //         5, 5, 5, 5, 5, 5, 3, 1, 4, 0, 
-    //         6, 5, 2, 5, 5, 5, 5, 5, 5, 5, 
-    //         5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 
-    //         5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 
-    //         5, 5, 3, 1, 4, 0, 6, 5, 2
-    // ];
-    // const L0RT1: [u8; rustxxx::FT8.total_symbols_nn().0] = [
-    //         3, 1, 4, 0, 6, 5, 2, 0, 1, 2,
-    //         3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 
-    //         5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 
-    //         7, 0, 1, 2, 3, 4, 3, 1, 4, 0, 
-    //         6, 5, 2, 5, 6, 7, 0, 1, 2, 3, 
-    //         4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 
-    //         6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 
-    //         0, 1, 3, 1, 4, 0, 6, 5, 2
-    // ];
+    const _L0RT0: [u8; test_support::TEST_PROTOCOL.total_symbols_nn().0] = [
+            3, 1, 4, 0, 6, 5, 2, 5, 5, 5, 
+            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 
+            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 
+            5, 5, 5, 5, 5, 5, 3, 1, 4, 0, 
+            6, 5, 2, 5, 5, 5, 5, 5, 5, 5, 
+            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 
+            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 
+            5, 5, 3, 1, 4, 0, 6, 5, 2
+    ];
+    const L0RT1: [u8; test_support::TEST_PROTOCOL.total_symbols_nn().0] = [
+            3, 1, 4, 0, 6, 5, 2, 0, 1, 2,
+            3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 
+            5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 
+            7, 0, 1, 2, 3, 4, 3, 1, 4, 0, 
+            6, 5, 2, 5, 6, 7, 0, 1, 2, 3, 
+            4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 
+            6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 
+            0, 1, 3, 1, 4, 0, 6, 5, 2
+    ];
 
-    // fn test_roundtrip(modem: &mut rustxxx::Modem, l1_tones: &Vec<u8>)
-    // {
-    //     let _num_samples =
-    //         (0.5 + modem.protocol.total_symbols_nn().0 as f32 * rustxxx::TEST_FT8_RUNTIME._target_output_sample_rate().0) as usize;
-    //     // let num_silence = ((XXX.slot_time() *XXX.sample_rate() as f32) as usize -num_samples) /2;
-    //     // let mut samples = vec![0.0; num_samples];
+    fn test_roundtrip(modem: &mut types::Modem, l1_tones: &Vec<u8>)
+    {
+        let _num_samples =
+            (0.5 + modem.protocol().total_symbols_nn().0 as f32 * test_support::TEST_FT8_RUNTIME._target_output_sample_rate().0) as usize;
+        // let num_silence = ((XXX.slot_time() *XXX.sample_rate() as f32) as usize -num_samples) /2;
+        // let mut samples = vec![0.0; num_samples];
 
-    //     let l0_tones = l1_tones.clone();
-    //     modem._freq_hz = rustxxx::TEST_FREQUENCY;
-    //     let _signal = modem._gfsk_synth(&l0_tones);
+        let l0_tones = l1_tones.clone();
+        modem.set_freq_hz(test_support::TEST_FREQUENCY);
+        let _signal = modem._gfsk_synth(&l0_tones);
 
-    // //     #[cfg(feature = "gfsk_dump_wav")]
-    // //     {
-    // //         use wav_io::{*, header::WavHeader, header::SampleFormat, header::WavData};
-    // //         use std::fs::File;
-    // //         modem._dump_wav(&_signal);
-    // //     }
-    // }
+    //     #[cfg(feature = "gfsk_dump_wav")]
+    //     {
+    //         use wav_io::{*, header::WavHeader, header::SampleFormat, header::WavData};
+    //         use std::fs::File;
+    //         modem._dump_wav(&_signal);
+    //     }
+    }
 
-    // #[test]
-    // fn test_layer0() {
-    //     let mut modem: rustxxx::Modem = rustxxx::Modem::new(
-    //         &rustxxx::TEST_PROTOCOL, 
-    //         &rustxxx::TEST_FT8_RUNTIME, 
-    //         rustxxx::TEST_FREQUENCY
-    //     );
-    //     test_roundtrip(&mut modem, &L0RT1.to_vec());
-    // }
+    #[test]
+    fn test_layer0() {
+        let mut modem: types::Modem = types::Modem::new(
+            &test_support::TEST_PROTOCOL, 
+            &test_support::TEST_FT8_RUNTIME, 
+            test_support::TEST_FREQUENCY
+        );
+        test_roundtrip(&mut modem, &L0RT1.to_vec());
+    }
 }

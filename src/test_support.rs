@@ -42,4 +42,4 @@ pub const TEST_FT8_RUNTIME: Runtime = Runtime::new(
     WindowFunction::_Hann,  // Hann in the FT8_lib c code, or Blackman
 );
 
-pub const TEST_FREQUENCY: f32 = 1500.0;
+pub const TEST_FREQUENCY: Option<Hz> = Some(Hz(1500.0));

@@ -37,29 +37,39 @@ impl types::Modem {
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
-    // use crate::pack_ft8; // ::_pack77;
+    use super::*;
+    use crate::test_support;
 
-    // fn test_roundtrip(modem: &mut rustxxx::Modem, s: &str) {
-    //     for loopback_at in 0..6 {
-    //         let cw = pack_ft8::_pack77(s);
-    //         assert_eq!(cw.len(), modem.protocol._ldpc_p_bytes().0);
-    //         let loopback_result = modem.l5_top_outbound(loopback_at, &cw).unwrap();
-    //         assert_eq!(loopback_result, cw, "failed at loopback {}", loopback_at);
-    //     }
-    // }
+    fn test_roundtrip(modem: &mut types::Modem, cw: Vec<u8>) {
+        for loopback_at in 0..6 {
+            assert_eq!(cw.len(), modem.protocol()._ldpc_p_bytes().0);
+            let loopback_result = modem.l5_top_outbound(loopback_at, &cw).unwrap();
+            assert_eq!(loopback_result, cw, "failed at loopback {}", loopback_at);
+        }
+    }
 
     #[test]
     fn test() {
         
-        // let mut modem: rustxxx::Modem = rustxxx::Modem::new(
-        //     &rustxxx::TEST_PROTOCOL, 
-        //     &rustxxx::TEST_FT8_RUNTIME, 
-        //     rustxxx::TEST_FREQUENCY
-        // );
+        let mut modem: types::Modem = types::Modem::new(
+            &test_support::TEST_PROTOCOL, 
+            &test_support::TEST_FT8_RUNTIME, 
+            test_support::TEST_FREQUENCY
+        );
 
         // const M_0: &str = "CQ VK2ZTY QG61";        
-        // test_roundtrip(&mut modem, M_0);
+
+        let cw00: Vec<u8> = vec![0x00u8; modem.protocol()._ldpc_p_bytes().0];
+        test_roundtrip(&mut modem, cw00);
+
+        let cw80: Vec<u8> = vec![0x80u8; modem.protocol()._ldpc_p_bytes().0];
+        test_roundtrip(&mut modem, cw80);
+
+        let cw58: Vec<u8> = vec![0x58u8; modem.protocol()._ldpc_p_bytes().0];
+        test_roundtrip(&mut modem, cw58);
+
+        let cwf8: Vec<u8> = vec![0xf8u8; modem.protocol()._ldpc_p_bytes().0];
+        test_roundtrip(&mut modem, cwf8);
     }
 
 }

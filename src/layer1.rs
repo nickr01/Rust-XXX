@@ -106,10 +106,7 @@ mod tests {
     use crate::test_support;
 
     fn test_roundtrip(modem: &mut types::Modem, l2_tones: &Vec<u8>) {
-
         let l0_tones = modem._sync_insert(&l2_tones);
-        dbg!("{:?}", &l0_tones);
-
         let l2_tones_c = modem._sync_remove(&l0_tones);
         assert_eq!(*l2_tones, l2_tones_c);
     }
@@ -119,7 +116,7 @@ mod tests {
         let mut modem: types::Modem = types::Modem::new(
             &test_support::TEST_PROTOCOL, 
             &test_support::TEST_FT8_RUNTIME, 
-            Some(test_support::TEST_FREQUENCY)
+            test_support::TEST_FREQUENCY
         );
 
         test_roundtrip(&mut modem, &[0u8; test_support::TEST_PROTOCOL.nd().0].to_vec());

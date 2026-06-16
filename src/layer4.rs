@@ -185,7 +185,7 @@ mod tests {
         let mut modem: types::Modem = types::Modem::new(
             &test_support::TEST_PROTOCOL, 
             &test_support::TEST_FT8_RUNTIME, 
-            Some(test_support::TEST_FREQUENCY)
+            test_support::TEST_FREQUENCY
         );
         test_roundtrips(&mut modem, &L5P0);
         test_roundtrips(&mut modem, &L5P1);

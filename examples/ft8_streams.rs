@@ -43,7 +43,7 @@ use cpal::traits::{
 //     // StreamTrait
 // };
 
-use ft8_message::{ft8_pack_msg, ft8_unpack_msg};
+use ft8_message;
 
 // use crate::constant::{INPUT_BUFSIZE, InputBufWriter};
 // use crate::rustxxx::InputBufReader;
@@ -600,6 +600,8 @@ fn rx_main() -> Result<(), anyhow::Error> {
             audio_input_from_rate, 
         );
 
+        let ft8_context = ft8_message::FT8Context::new();
+        
         let mut audio_buff = [0f32; pipeline::RX_IN_BUFLEN];
         let from_channels = resample_context.from_channels;
         let audio_read_size = pipeline::RX_IN_BUFLEN * from_channels;
@@ -624,14 +626,10 @@ fn rx_main() -> Result<(), anyhow::Error> {
                 )?;
 
                 for msg in messages {
-                    match ft8_message::ft8_unpack_msg(msg.codeword().0) {
-                        Some(msg) => {
-                            dbg!(&msg);
-                        },
-                        None => {
-                            dbg!("Bad unpack");
-                        }
-                    }
+                    let cw = &msg.codeword().0;
+                    let cw: [u8; ft8_message::FT8_PAYLOAD_BYTES] = cw[..ft8_message::FT8_PAYLOAD_BYTES].try_into()?;
+                    let msg = ft8_context.ft8_payload_to_message(&cw)?;
+                    dbg!(&msg);
                 }
                 receive_pipeline.update_spectrogram();
             }

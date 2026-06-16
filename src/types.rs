@@ -411,7 +411,7 @@ impl Runtime {
 pub struct Modem {
     protocol: &'static Protocol,
     runtime: &'static Runtime,
-    freq_hz: Option<f32>,
+    freq_hz: Option<Hz>,
     crc_calc: crc::Crc<u16>,
 }
 
@@ -437,7 +437,7 @@ impl Modem {
     pub fn new(
         protocol:&'static Protocol, 
         runtime: &'static Runtime, 
-        freq_hz: Option<f32>
+        freq_hz: Option<Hz>
     ) -> Modem {
         // This is a recurrent calculation except for the added 0.5
         // what is 0.5 added for - it probably is related to the N/2 + 1 calc
@@ -476,8 +476,12 @@ impl Modem {
         self.runtime
     }
 
-    pub fn freq_hz(&self) -> Option<f32> {
+    pub fn freq_hz(&self) -> Option<Hz> {
         self.freq_hz
+    }
+
+    pub fn set_freq_hz(&mut self, freq: Option<Hz>) {
+        self.freq_hz = freq;
     }
 
     pub fn crc_calc(&self) -> &crc::Crc<u16> {
@@ -485,8 +489,8 @@ impl Modem {
     }
 }
 
-#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
-pub struct CodeWord(pub u128);
+#[derive(Hash, Eq, PartialEq, Debug, Clone)]
+pub struct CodeWord(pub Vec<u8>);
 
 #[derive(Debug, Clone)]
 pub struct Message {
@@ -522,7 +526,7 @@ impl Message {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.codeword.0 == 0
+        self.codeword.0.is_empty()
     }
 
     pub fn is_delivered(&self) -> bool {
@@ -544,12 +548,12 @@ impl Message {
         } else if (cwv.len() > 16) {
             Err(error::XxxError::BufTooBig(cwv.len()))
         } else {
-            let mut codeword = 0;
-            for b in cwv {
-                codeword <<= 8;
-                codeword += b as u128;
-            }
-            Ok(CodeWord(codeword))
+            // let mut codeword = 0;
+            // for b in cwv {
+            //     codeword <<= 8;
+            //     codeword += b as u128;
+            // }
+            Ok(CodeWord(cwv))
         }
     }
 }

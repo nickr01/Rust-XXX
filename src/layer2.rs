@@ -170,41 +170,37 @@ impl types::Modem {
 }
 #[cfg(test)]
 mod tests {
-    // use super::*;
-    // use crate::test_support;
+    use super::*;
+    use crate::test_support;
 
-    // fn recheck_config(modem: &rustxxx::Modem) {
-    //     assert_eq!(modem.protocol.nd().0 * modem.protocol.token_bits().0, modem.protocol.ldpc_n().0);
-    // }
+    fn recheck_config(modem: &types::Modem) {
+        assert_eq!(modem.protocol().nd().0 * modem.protocol().token_bits().0, modem.protocol().ldpc_n().0);
+    }
 
-    // fn test_roundtrip(modem: &rustxxx::Modem, codeword_in: &Vec<u8>) {
-    //     assert_eq!(codeword_in.len(), modem.protocol.ldpc_n_bytes().0);
-    //     // modem.codeword = codeword_in.clone();
+    fn test_roundtrip(modem: &types::Modem, codeword_in: &Vec<u8>) {
+        assert_eq!(codeword_in.len(), modem.protocol().ldpc_n_bytes().0);
+        // modem.codeword = codeword_in.clone();
 
-    //     // let mut tones = [0u8; XXX.nd()];
-    //     let tones = modem._gray_encode(codeword_in);
+        // let mut tones = [0u8; XXX.nd()];
+        let tones = modem._gray_encode(codeword_in);
 
-    //     // let mut codeword_out = [0u8; XXX.ldpc_n_bytes()];
-    //     let codeword_out = modem._gray_decode(&tones);
-    //     assert_eq!(codeword_out, *codeword_in);
-    // }
+        // let mut codeword_out = [0u8; XXX.ldpc_n_bytes()];
+        let codeword_out = modem._gray_decode(&tones);
+        assert_eq!(codeword_out, *codeword_in);
+    }
 
-    // const MSG0: [u8; rustxxx::FT8.ldpc_n_bytes().0] = [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0xfc];
-    // const MSG1: [u8; rustxxx::FT8.ldpc_n_bytes().0] = [67, 171, 17, 12, 2, 2, 76, 47, 161, 170, 70, 55, 40, 30, 2, 1, 0, 251, 55, 25, 213, 0xfc];
+    const MSG0: [u8; test_support::TEST_PROTOCOL.ldpc_n_bytes().0] = [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0xfc];
+    const MSG1: [u8; test_support::TEST_PROTOCOL.ldpc_n_bytes().0] = [67, 171, 17, 12, 2, 2, 76, 47, 161, 170, 70, 55, 40, 30, 2, 1, 0, 251, 55, 25, 213, 0xfc];
 
-    // #[test]
-    // fn test_layer2() {
-    //     let mut modem: rustxxx::Modem = rustxxx::Modem::new(
-    //         &rustxxx::TEST_PROTOCOL, 
-    //         &rustxxx::TEST_FT8_RUNTIME, 
-    //         rustxxx::TEST_FREQUENCY
-    //     );
-    //     recheck_config(&modem);
-
-    //     // test_roundtrip(&mut modem, &[0u8; FT8.ldpc_n_bytes()]);
-    //     // test_roundtrip(&mut modem, &[0xfcu8; PROTOCOL.ldpc_n_bytes()]);
-    //     // test_roundtrip(&mut modem, &[0xbc; PROTOCOL.ldpc_n_bytes()]);
-    //     test_roundtrip(&mut modem, &MSG0.to_vec());
-    //     test_roundtrip(&mut modem, &MSG1.to_vec());
-    // }
+    #[test]
+    fn test_layer2() {
+        let mut modem: types::Modem = types::Modem::new(
+            &test_support::TEST_PROTOCOL, 
+            &test_support::TEST_FT8_RUNTIME, 
+            test_support::TEST_FREQUENCY
+        );
+        recheck_config(&modem);
+        test_roundtrip(&mut modem, &MSG0.to_vec());
+        test_roundtrip(&mut modem, &MSG1.to_vec());
+    }
 }
