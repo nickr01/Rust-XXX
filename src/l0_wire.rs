@@ -6,6 +6,11 @@
 use crate::error;
 use crate::types;
 
+// tx here is output device dependent
+// currently audio synth
+// but could replace at this point with drive for external synth eg si2320
+// could be switchable and/or determine by config
+
 impl types::Modem {
     /// Computes a GFSK smoothing pulse.
     /// The pulse is theoretically infinitely long, however, here it's truncated at 3 times the symbol length.
