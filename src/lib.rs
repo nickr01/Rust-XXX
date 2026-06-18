@@ -1,11 +1,12 @@
-pub mod types;
+pub mod cpal_helper;
+pub mod debug;
 pub mod error;
 pub mod pipeline;
+pub mod types;
 
 mod receiver;
 mod detector;
 mod waterfall;
-mod debug;
 mod correlator;
 mod decoder;
 mod subtractor;

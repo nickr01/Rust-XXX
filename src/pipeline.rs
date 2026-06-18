@@ -29,13 +29,13 @@ pub const RX_IN_BUFLEN: usize = Pipeline::CHUNK_SIZE;
 
 #[cfg(any(feature = "enable_rx", test))]
 pub struct Pipeline {
-    pub receiver: receiver::Receiver,
+    receiver: receiver::Receiver,
     rfft_nfft_f: detector::DetectFFT,
     detector_input_bufs: detector::DetectorInputBuffs,
     correlator: correlator::Correlator,
     detector: detector::Detector,
     message_hash: decoder::DecodeHash,
-    debug_portal: debug::DebugPortal,
+    debug_portal: Option<debug::DebugPortal>,
 }
 
 #[cfg(any(feature = "enable_rx", test))]
@@ -74,10 +74,12 @@ impl Pipeline {
 
         assert!(detector.wf.time_bins() <= detector.wf.time_buf_capacity()); // capacity must be power of 2;
 
-        let debug_portal = debug::DebugPortal::new(debug::DrawSize {
+        let debug_window = debug::DebugWindow::new(debug::DrawSize {
             width: detector.wf.freq_bins(), 
             height: detector.wf.time_bins() + detector.wf.symbol_pad() * runtime.rx_symbol_osr().0, 
         }, );
+
+        let debug_portal = debug::DebugPortal::new(debug_window);
 
         Pipeline {
             receiver,
@@ -86,9 +88,10 @@ impl Pipeline {
             detector,
             correlator, 
             message_hash: HashMap::new(),
-            debug_portal: debug_portal,
+            debug_portal: Some(debug_portal),
         }
     }
+
 
     pub fn resample_context (
         &self,        
@@ -144,17 +147,27 @@ impl Pipeline {
         if spectrogram_height > 0 {
             use crate::debug::DrawSize;
 
-            debug::plot_spectrogram_to_buffer(
-                self.debug_portal.buf_as_mut(), 
-                &spectr2,
-                DrawSize{ width: spectr2.len()/spectrogram_height, height: spectrogram_height },
-            );
+            match &mut self.debug_portal {
+                Some(portal) => {
+                    debug::plot_spectrogram_to_buffer(
+                        portal.buf_as_mut(), 
+                        &spectr2,
+                        DrawSize{ width: spectr2.len()/spectrogram_height, height: spectrogram_height },
+                    );
+                },
+                None => {}
+            }
         }
     }
 
     pub fn update_spectrogram(&mut self) {
         self.draw_spectrogram();
-        self.debug_portal.update();
+        match &mut self.debug_portal {
+            Some(portal) => {
+                portal.update();
+            },
+            None => {}
+        }
     }
 
     fn write_sample(&mut self, sample: f32) -> Result<(), error::XxxError> {
@@ -170,7 +183,14 @@ impl Pipeline {
     }
 
     pub fn continue_run(&self) -> bool {
-        self.debug_portal.continue_run()
+        match &self.debug_portal {
+            Some(portal) => {
+                portal.continue_run()
+            },
+            None => {
+                true
+            }
+        }
     }
 
     pub fn write_mono_sample_buffer(

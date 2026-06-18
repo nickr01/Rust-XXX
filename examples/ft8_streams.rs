@@ -1,13 +1,9 @@
-// src/FT8_stream.rs
-
-// devices: i/o use clap
-// files: i/o use wav_io - but note compat issue with some rodio headers
-// (move js8record to use wav_io?)
-// why wav_io and not hound? - more recent and supports resampling
-
 // use std::sync::mpsc::Receiver;
 
-use anyhow::{Context, Result}; // - for user level
+use anyhow::{
+    // Context, 
+    Result
+}; // - for user level
 
 // use monitor::Waterfall;
 // use ringbuf::storage::Heap;
@@ -22,7 +18,6 @@ use anyhow::{Context, Result}; // - for user level
 // use wav_io::header::*;
 // use wav_io::*;
 
-
 // needed for Traits
 use clap::Parser;
 
@@ -32,7 +27,7 @@ use cpal::{
 };
 // use cpal::{Sample, SupportedStreamConfig};
 use cpal::traits::{
-    HostTrait, 
+    // HostTrait, 
     DeviceTrait, 
     StreamTrait
 };
@@ -45,11 +40,12 @@ use cpal::traits::{
 
 use ft8_message;
 
-// use crate::constant::{INPUT_BUFSIZE, InputBufWriter};
-// use crate::rustxxx::InputBufReader;
-// use rustxxx::rustxxx::AudioSampleBuffer;
+use rustxxx::cpal_helper;
+use rustxxx::debug;
+#[cfg(any(feature = "enable_rx", test))]
+use rustxxx::debug::DebugWindow;
+use rustxxx::pipeline;
 use rustxxx::types::*;
-// use crate::rustxxx::InputBufWriter;
 
 // use ringbuf::{traits::*, HeapRb, SharedRb};
 // use this for the waterfalll pipe
@@ -190,17 +186,17 @@ struct Opt {
     #[arg(short, long, default_value = "")]
     input_device: Option<String>,
 
-    /// The audio input file to use. 
-    #[arg(long)]
-    input_file: Option<String>,
+    // /// The audio input file to use. 
+    // #[arg(long)]
+    // input_file: Option<String>,
 
     /// The audio output device to use.
     #[arg(short, long, default_value = "")]
     output_device: Option<String>,
 
-    /// The audio input file to use. 
-    #[arg(long)]
-    output_file: Option<String>,
+    // /// The audio input file to use. 
+    // #[arg(long)]
+    // output_file: Option<String>,
 
     #[arg(short, long, default_value = "true")]
     loop_back: Option<bool>,
@@ -214,78 +210,78 @@ struct Opt {
     // speed: Speed,
 }
 
-#[cfg(any(feature = "enable_rx", test))]
-fn do_audio_file_input(
-    runtime: rustxxx::types::Runtime, 
-    input_buff_writer: &mut AudioBufWriter, 
-    input_file: String,
-    from_channels: &mut usize,
-    from_rate: &mut u32
-) -> Result<Option<cpal::Stream>, anyhow::Error>
-{
-    // const PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/", input_file, ".wav");
-    // let spec = wav_spec_from_config(&config);
-    // let writer = hound::WavWriter::create(PATH, spec)?;
-    // let writer = std::sync::Arc::new(std::sync::Mutex::new(Some(writer)));
+// #[cfg(any(feature = "enable_rx", test))]
+// fn do_audio_file_input(
+//     runtime: rustxxx::types::Runtime, 
+//     input_buff_writer: &mut AudioBufWriter, 
+//     input_file: &String,
+//     from_channels: &mut usize,
+//     from_rate: &mut u32
+// ) -> Result<Option<cpal::Stream>, anyhow::Error>
+// {
+//     // const PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/", input_file, ".wav");
+//     // let spec = wav_spec_from_config(&config);
+//     // let writer = hound::WavWriter::create(PATH, spec)?;
+//     // let writer = std::sync::Arc::new(std::sync::Mutex::new(Some(writer)));
 
-    // Input from file
-    let input_wav = std::fs::File::open(&input_file)
-        .context(format!("Cannot open input wav file {}", input_file))?;
+//     // Input from file
+//     let input_wav = std::fs::File::open(&input_file)
+//         .context(format!("Cannot open input wav file {}", input_file))?;
 
-    let (header, signal) = wav_io::read_from_file(input_wav)
-        .context(format!("Cannot read from wav file {}", input_file))?;
+//     let (header, signal) = wav_io::read_from_file(input_wav)
+//         .context(format!("Cannot read from wav file {}", input_file))?;
 
-    dbg!(&header);
+//     dbg!(&header);
 
-    *from_channels = header.channels as usize;
-    *from_rate = header.sample_rate as u32;
+//     *from_channels = header.channels as usize;
+//     *from_rate = header.sample_rate as u32;
 
-    // if header.channels != runtime.channels().0 as u16 {
-    //     let new_channels = runtime.channels().0 as u16;
-    //     dbg!(new_channels);
-    //     signal = wav_io::utils::stereo_to_mono(signal);
-    //     header.channels = new_channels;
-    // }
+//     // if header.channels != runtime.channels().0 as u16 {
+//     //     let new_channels = runtime.channels().0 as u16;
+//     //     dbg!(new_channels);
+//     //     signal = wav_io::utils::stereo_to_mono(signal);
+//     //     header.channels = new_channels;
+//     // }
 
-    // dbg!(runtime.target_input_sample_rate());
-    // {
-    //     let target_sample_rate = runtime.target_input_sample_rate().0 as u32;
-    //     if header.sample_rate != target_sample_rate {
-    //         dbg!(header.sample_rate, target_sample_rate);
-    //         signal = wav_io::resample::linear(
-    //             signal, 
-    //             runtime.channels().0 as u16, 
-    //             header.sample_rate, 
-    //             target_sample_rate
-    //         );
-    //         header.sample_rate = target_sample_rate;
-    //     }
-    // }
+//     // dbg!(runtime.target_input_sample_rate());
+//     // {
+//     //     let target_sample_rate = runtime.target_input_sample_rate().0 as u32;
+//     //     if header.sample_rate != target_sample_rate {
+//     //         dbg!(header.sample_rate, target_sample_rate);
+//     //         signal = wav_io::resample::linear(
+//     //             signal, 
+//     //             runtime.channels().0 as u16, 
+//     //             header.sample_rate, 
+//     //             target_sample_rate
+//     //         );
+//     //         header.sample_rate = target_sample_rate;
+//     //     }
+//     // }
 
-    // dbg!(runtime.subtracts());
+//     // dbg!(runtime.subtracts());
 
-    // let mut file_out = File::create("./out/resampled.wav").expect();
-    // writer::to_file(&mut file_out, &WavData::new(header, samples.clone())).expect();
+//     // let mut file_out = File::create("./out/resampled.wav").expect();
+//     // writer::to_file(&mut file_out, &WavData::new(header, samples.clone())).expect();
 
-    dbg!(signal.len());
+//     dbg!(signal.len());
 
-    dbg!(
-        runtime.rx_symbol_osr(),
-        runtime.rx_freq_osr()
-    );
+//     dbg!(
+//         runtime.rx_symbol_osr(),
+//         runtime.rx_freq_osr()
+//     );
 
-    // let input_buf = ringbuf::HeapRb::<f32>::new(signal.len());
-    // for testing we'll preload a buffer block
-    // if let Ok(mut guard) = input_buff_writer.try_lock() 
-    {
-        // let input_buff_writer = guard.as_mut();
-        for sample in signal.iter() {
-            input_buff_writer.try_push(*sample).expect("input_buf overrun");
-        }
-    }
+//     // let input_buf = ringbuf::HeapRb::<f32>::new(signal.len());
+//     // for testing we'll preload a buffer block
+//     // if let Ok(mut guard) = input_buff_writer.try_lock() 
+//     {
+//         // let input_buff_writer = guard.as_mut();
+//         for sample in signal.iter() {
+//             input_buff_writer.try_push(*sample).expect("input_buf overrun");
+//         }
+//     }
     
-    Ok(None)
-}
+//     Ok(None)
+// }
 
 // fn do_audio_file_output 
 //     if let Some(_output_file) = opt.output_file {
@@ -357,40 +353,95 @@ fn do_audio_file_input(
 
 // type WavWriterHandle = Arc<Mutex<Option<hound::WavWriter<BufWriter<File>>>>>;
 
-fn main() -> Result<(), anyhow::Error> {
-    #[cfg(any(feature = "enable_tx", test))]
-    tx_main()?;
-
-    #[cfg(any(feature = "enable_rx", test))]
-    rx_main()?;
-    
-    Ok(())
-}
-
 #[cfg(any(feature = "enable_tx", test))]
-fn tx_main() -> Result<(), anyhow::Error> {
+fn tx_main(
+    output_device: &Option<String>,
+    runtime: &'static rustxxx::types::Runtime,
+) -> Result<(), anyhow::Error> {
+    dbg!("Sender start");
+
+    let host = cpal::default_host();
+    
+    let mut _audio_output_to_channels = 0; 
+    let mut _audio_output_to_rate = 0;
+    let audio_output_buffer: AudioSampleBuffer = ringbuf::HeapRb::<f32>::new(rustxxx::types::AUDIO_OUTPUT_BUFSIZE);
+    let audio_err_callback = move |err| {
+        eprintln!("an error occurred on audio output stream: {err}");
+    };
+
+    let (mut _audio_output_buff_writer, mut audio_output_buff_reader) = audio_output_buffer.split();
+
+    let _audio_output_stream = if let Some(audio_output_device_name) = &output_device {
+        dbg!(&audio_output_device_name);
+
+        let (audio_output_device, audio_output_config) = cpal_helper::get_audio_output_device_default_config(&host, &audio_output_device_name)?;
+        dbg!(&audio_output_config);
+
+        let audio_output_from_channels = runtime.channels().0;
+        let audio_output_from_rate = runtime.target_input_sample_rate().0 as u32;
+
+        _audio_output_to_channels = audio_output_config.channels() as usize;
+        _audio_output_to_rate = audio_output_config.sample_rate();
+
+        dbg!(audio_output_from_channels, _audio_output_to_channels, audio_output_from_rate, _audio_output_to_rate);
+
+        fn audio_output_data_callback(output: &mut [f32], reader: &mut AudioBufReader) {
+            // if let Ok(mut guard) = reader.try_lock() 
+            {
+                // let reader = guard.as_mut();
+                let mut output_fell_behind = false;
+                for sample in output {
+                    *sample = match reader.try_pop() {
+                        Some(s) => s,
+                        None => {
+                            output_fell_behind = true;
+                            0.0
+                        }
+                    };
+                }
+                if output_fell_behind {
+                    // dbg!("output stream fell behind");
+                }
+            }
+        }
+
+        let audio_output_config: StreamConfig = audio_output_config.into();  
+        
+        // this will spawn a system thread that runs the callback
+        // callback should be lightweight
+        // NB when ownership of 'stream' is lost then it is shutdown!!
+        let audio_output_stream = audio_output_device.build_output_stream(
+            &audio_output_config,
+            move |data, _: &_| audio_output_data_callback(
+                data, 
+                &mut audio_output_buff_reader,
+            ),
+            audio_err_callback,
+            None, 
+        ).expect("Cannot create audio output stream");
+
+        audio_output_stream.play().expect("Cannot play audio output stream");
+        Some(audio_output_stream)
+    } else {
+        None
+    };
+
+    match _audio_output_stream {
+        Some(_stream) => {
+        },
+        None => {}
+    }
+
     Ok(())
 }
 
 #[cfg(any(feature = "enable_rx", test))]
-fn rx_main() -> Result<(), anyhow::Error> {
-    color_backtrace::install();
-    
-    let opt = Opt::parse();
+fn rx_main(
+    input_device: &Option<String>,
+    runtime: &'static rustxxx::types::Runtime,
+) -> Result<(), anyhow::Error> {
+    dbg!("Receiver start");
 
-    // let loop_back = opt.loop_back.unwrap();
-
-    let runtime: &'static rustxxx::types::Runtime = &FT8_RUNTIME;
-
-    println!("Supported hosts:\n  {:?}", cpal::ALL_HOSTS);
-    let available_hosts = cpal::available_hosts();
-    println!("Available hosts:\n  {available_hosts:?}");
-
-    for host_id in available_hosts {
-        println!("{}", host_id.name());
-    }
-
-    // Set up the CPAL input device and stream with the default input config.
     let host = cpal::default_host();
     
     // // Set up the CPAL output device and stream with the default output config.
@@ -426,7 +477,7 @@ fn rx_main() -> Result<(), anyhow::Error> {
     // let mut tones = [0usize; TEST_PROTOCOL.nn()];
 
     let audio_err_callback = move |err| {
-        eprintln!("an error occurred on audio stream: {err}");
+        eprintln!("an error occurred on audio input stream: {err}");
     };
 
     // these get init by the device init blocks
@@ -434,19 +485,12 @@ fn rx_main() -> Result<(), anyhow::Error> {
     // which leaves the audio thread callbacks as light as possible
     let mut audio_input_from_channels = 0; 
     let mut audio_input_from_rate = 0;
-    let mut _audio_output_to_channels = 0; 
-    let mut _audio_output_to_rate = 0;
 
     let audio_input_buffer: AudioSampleBuffer = ringbuf::HeapRb::<f32>::new(rustxxx::types::AUDIO_INPUT_BUFSIZE);
-    let audio_output_buffer: AudioSampleBuffer = ringbuf::HeapRb::<f32>::new(rustxxx::types::AUDIO_OUTPUT_BUFSIZE);
 
     let (mut audio_input_buff_writer, mut audio_input_buff_reader) = audio_input_buffer.split();
     // let mut audio_input_buff_writer: rustxxx::rustxxx::ThreadedAudioBufWriter = std::sync::Arc::new(std::sync::Mutex::new(_audio_input_buff_writer));
     // let mut audio_input_buff_reader: rustxxx::rustxxx::ThreadedAudioBufReader = std::sync::Arc::new(std::sync::Mutex::new(_audio_input_buff_reader));
-
-    let (mut _audio_output_buff_writer, mut audio_output_buff_reader) = audio_output_buffer.split();
-    // let mut _audio_output_buff_writer: rustxxx::rustxxx::ThreadedAudioBufWriter = std::sync::Arc::new(std::sync::Mutex::new(_audio_output_buff_writer));
-    // let mut audio_output_buff_reader: rustxxx::rustxxx::ThreadedAudioBufReader = std::sync::Arc::new(std::sync::Mutex::new(_audio_output_buff_reader));
 
     #[cfg(feature = "audio_pass_test")]
     {
@@ -458,15 +502,17 @@ fn rx_main() -> Result<(), anyhow::Error> {
         runtime,
     );
 
-    let _audio_input_stream = if let Some(audio_input_file_name) = opt.input_file {
-        do_audio_file_input(*runtime, &mut audio_input_buff_writer, audio_input_file_name, &mut audio_input_from_channels, &mut audio_input_from_rate)?
-    } else if let Some(audio_input_device_name) = opt.input_device {
+    let _audio_input_stream = 
+    //     if let Some(audio_input_file_name) = &opt.input_file {
+    //     do_audio_file_input(*runtime, &mut audio_input_buff_writer, audio_input_file_name, &mut audio_input_from_channels, &mut audio_input_from_rate)?
+    // } else 
+    if let Some(audio_input_device_name) = &input_device {
         dbg!(&audio_input_device_name);
 
         // let input_buff = circular_buffer::CircularBuffer::<{constant::INPUT_BUFSIZE}, f32>::boxed();
         // eg cargo run -- --input-device 'coreaudio:AppleUSBAudioEngine:ZOOM Corporation:UAC-232:2100000:1,2'
 
-        let (audio_input_device, audio_input_config) = get_audio_input_device_default_config(&host, &audio_input_device_name)?;
+        let (audio_input_device, audio_input_config) = cpal_helper::get_audio_input_device_default_config(&host, &audio_input_device_name)?;
         dbg!(&audio_input_config);
 
         // Will be running the input stream on a separate thread.
@@ -527,77 +573,15 @@ fn rx_main() -> Result<(), anyhow::Error> {
         None
     };
 
-    let _audio_output_stream = if let Some(_output_audio_file_name) = opt.output_file {
-        todo!();
-        // do_file_output(*runtime, &mut input_buff_writer, input_file_name, &mut from_channels, &mut from_rate)?
-        // None
-    } else if let Some(audio_output_device_name) = opt.output_device {
-        dbg!(&audio_output_device_name);
-
-        let (audio_output_device, audio_output_config) = get_audio_output_device_default_config(&host, &audio_output_device_name)?;
-        dbg!(&audio_output_config);
-
-        let audio_output_from_channels = runtime.channels().0;
-        let audio_output_from_rate = runtime.target_input_sample_rate().0 as u32;
-
-        _audio_output_to_channels = audio_output_config.channels() as usize;
-        _audio_output_to_rate = audio_output_config.sample_rate();
-
-        dbg!(audio_output_from_channels, _audio_output_to_channels, audio_output_from_rate, _audio_output_to_rate);
-
-        fn audio_output_data_callback(output: &mut [f32], reader: &mut AudioBufReader) {
-            // if let Ok(mut guard) = reader.try_lock() 
-            {
-                // let reader = guard.as_mut();
-                let mut output_fell_behind = false;
-                for sample in output {
-                    *sample = match reader.try_pop() {
-                        Some(s) => s,
-                        None => {
-                            output_fell_behind = true;
-                            0.0
-                        }
-                    };
-                }
-                if output_fell_behind {
-                    // dbg!("output stream fell behind");
-                }
-            }
-        }
-
-        let audio_output_config: StreamConfig = audio_output_config.into();  
-        
-        // this will spawn a system thread that runs the callback
-        // callback should be lightweight
-        // NB when ownership of 'stream' is lost then it is shutdown!!
-        let audio_output_stream = audio_output_device.build_output_stream(
-            &audio_output_config,
-            move |data, _: &_| audio_output_data_callback(
-                data, 
-                &mut audio_output_buff_reader,
-            ),
-            audio_err_callback,
-            None, 
-        ).expect("Cannot create audio output stream");
-
-        audio_output_stream.play().expect("Cannot play audio output stream");
-        Some(audio_output_stream)
-    } else {
-        None
-    };
-
     dbg!();
 
     // #[cfg(not(feature = "audio_pass_test"))] 
     {
         // use proto_ft8::protocol::FT8;
 
-        // could not init this until know the input info
-
-        use rustxxx::pipeline::{self, Pipeline};
+        // could not init this until know the input stream info
         let mut resample_context = receive_pipeline.resample_context(
-            audio_input_from_channels, 
-            audio_input_from_rate, 
+            audio_input_from_channels, audio_input_from_rate, 
         );
 
         let ft8_context = ft8_message::FT8Context::new();
@@ -650,240 +634,34 @@ fn rx_main() -> Result<(), anyhow::Error> {
         None => {}
     }
 
-    match _audio_output_stream {
-        Some(_stream) => {
-        },
-        None => {}
-    }
+    Ok(())
+}
+
+
+fn main() -> Result<(), anyhow::Error> {
+    color_backtrace::install();
+    let opt = Opt::parse();
+
+    // let loop_back = opt.loop_back.unwrap();
+    let runtime: &'static rustxxx::types::Runtime = &FT8_RUNTIME;
+
+    // println!("Supported hosts:\n  {:?}", cpal::ALL_HOSTS);
+    // let available_hosts = cpal::available_hosts();
+    // println!("Available hosts:\n  {available_hosts:?}");
+
+    // for host_id in available_hosts {
+    //     println!("{}", host_id.name());
+    // }
+
+    #[cfg(any(feature = "enable_tx", test))]
+    let tx_thread_handle = std::thread::spawn(move || { tx_main(&opt.output_device, &runtime) });
+
+    // keep receiver in main thread so it can use its debug window
+    #[cfg(any(feature = "enable_rx", test))]
+    rx_main(&opt.input_device, &runtime);
+    
+    let res = tx_thread_handle.join();
 
     Ok(())
 }
 
-pub fn get_audio_input_device_by_id(host: &cpal::Host, audio_input_device_id: &String) -> Result<cpal::Device, anyhow::Error> {
-    let audio_input_device_id: &cpal::DeviceId = &audio_input_device_id.parse()?;
-    dbg!(audio_input_device_id);
-    match host.device_by_id(audio_input_device_id) {
-        Some(device) => Ok(device),
-        None => { return Err(anyhow::anyhow!("Cannot get input device by id {}", audio_input_device_id)) }
-    }
-}
-
-pub fn get_audio_input_device_by_name(host: &cpal::Host, audio_input_device_name: &String) -> Result<cpal::Device, anyhow::Error> {
-    dbg!(audio_input_device_name);
-    for device in host.input_devices()? {
-        let desc =  device.description()?;
-        let desc = desc.name();
-        if desc == audio_input_device_name {
-            return Ok(device);
-        }
-    }
-    Err(anyhow::anyhow!("Cannot get input device by name {}", audio_input_device_name))
-}
-        
-pub fn get_audio_input_device(host: &cpal::Host, audio_input_device_name: &String) -> Result<cpal::Device, anyhow::Error> {
-    if audio_input_device_name.is_empty() {
-        match host.default_input_device() {
-            Some(device) => Ok(device),
-            None => { return Err(anyhow::anyhow!("Cannot get default input device")) }
-        }
-    } else {
-        match get_audio_input_device_by_name(host, audio_input_device_name) {
-            Ok(device) => { Ok(device) },
-            Err(_) => {
-                get_audio_input_device_by_id(host, audio_input_device_name)
-            }
-        }
-    }
-}
-
-pub fn get_audio_input_device_default_config(host: &cpal::Host, audio_input_device_name: &String,) -> 
-    Result<(cpal::Device, cpal::SupportedStreamConfig), anyhow::Error> {
-    let audio_input_device = get_audio_input_device(host, audio_input_device_name)?;
-    if audio_input_device.supports_input() {
-        dbg!();
-        let config = audio_input_device.default_input_config()?;
-        Ok((audio_input_device, config))
-    } else {
-        dbg!();
-        Err(anyhow::anyhow!("Input device does not support input {}", audio_input_device_name))
-    }
-}
-
-pub fn get_audio_output_device_by_id(host: &cpal::Host, audio_output_device_id: &String) -> Result<cpal::Device, anyhow::Error> {
-    let audio_output_device_id: &cpal::DeviceId = &audio_output_device_id.parse()?;
-    dbg!(audio_output_device_id);
-
-    match host.device_by_id(audio_output_device_id) {
-        Some(device) => Ok(device),
-        None => { return Err(anyhow::anyhow!("Cannot get output device by id {}", audio_output_device_id)) }
-    }
-}
-
-pub fn get_audio_output_device_by_name(host: &cpal::Host, audio_output_device_name: &String) -> Result<cpal::Device, anyhow::Error> {
-    dbg!(audio_output_device_name);
-
-    for device in host.output_devices()? {
-        let desc =  device.description()?;
-        let desc = desc.name();
-        if desc == audio_output_device_name {
-            return Ok(device);
-        }
-    }
-    Err(anyhow::anyhow!("Cannot get output device by name {}", audio_output_device_name))
-}
-        
-pub fn get_audio_output_device(host: &cpal::Host, audio_output_device_name: &String) -> Result<cpal::Device, anyhow::Error> {
-    if audio_output_device_name.is_empty() {
-        match host.default_output_device() {
-            Some(device) => Ok(device),
-            None => { return Err(anyhow::anyhow!("Cannot get default output device")) }
-        }
-    } else {
-        match get_audio_output_device_by_name(host, audio_output_device_name) {
-            Ok(device) => { Ok(device) },
-            Err(_) => {
-                get_audio_output_device_by_id(host, audio_output_device_name)
-            }
-        }
-    }
-}
-
-pub fn get_audio_output_device_default_config(host: &cpal::Host, audio_output_device_name: &String,) -> 
-    Result<(cpal::Device, cpal::SupportedStreamConfig), anyhow::Error> {
-    let audio_output_device = get_audio_output_device(host, audio_output_device_name)?;
-    if audio_output_device.supports_output() {
-        dbg!();
-        let config = audio_output_device.default_output_config()?;
-        Ok((audio_output_device, config))
-    } else {
-        dbg!();
-        Err(anyhow::anyhow!("output device does not support output {}", audio_output_device_name))
-    }
-}
-
-// fn get_audio_output_device(host: &cpal::Host, audio_output_device_name: &String) -> Result<cpal::Device, anyhow::Error> {
-//     if audio_output_device_name.is_empty() {
-//         match host.default_output_device() {
-//             Some(device) => Ok(device),
-//             None => { return Err(anyhow::anyhow!("Cannot get default output device")) }
-//         }
-//     } else {
-//         let audio_output_device_id: &cpal::DeviceId = &audio_output_device_name.parse()?;
-//         dbg!(audio_output_device_id);
-
-//         match host.device_by_id(audio_output_device_id) {
-//             Some(device) => Ok(device),
-//             None => { return Err(anyhow::anyhow!("Cannot get output device by id {}", audio_output_device_name)) }
-//         }
-//     }
-// }
-
-// fn get_audio_output_device_default_config(host: &cpal::Host, audio_output_device_name: &String,) -> 
-//     Result<(cpal::Device, cpal::SupportedStreamConfig), anyhow::Error> {
-//     let audio_output_device = get_audio_output_device(host, audio_output_device_name)?;
-//     if audio_output_device.supports_output() {
-//         dbg!();
-//         let config = audio_output_device.default_output_config()?;
-//         Ok((audio_output_device, config))
-//     } else {
-//         dbg!();
-//         Err(anyhow::anyhow!("Output device does not support output {}", audio_output_device_name))
-//     }
-// }
-
-// fn sample_format(format: cpal::SampleFormat) -> hound::SampleFormat {
-//     if format.is_float() {
-//         hound::SampleFormat::Float
-//     } else {
-//         hound::SampleFormat::Int
-//     }
-// }
-
-// fn wav_spec_from_config(config: &cpal::SupportedStreamConfig) -> hound::WavSpec {
-//     hound::WavSpec {
-//         channels: config.channels() as _,
-//         sample_rate: config.sample_rate() as _,
-//         bits_per_sample: (config.sample_format().sample_size() * 8) as _,
-//         sample_format: sample_format(config.sample_format()),
-//     }
-// }
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // Https://docs.rs/jack/latest/jack/
-
-    #[test]
-    fn test_audio_input_device_by_name() {
-        let host = cpal::default_host();
-        let name: String = "Loopback Audio".to_string();
-        let _ = get_audio_input_device_by_name(&host, &name)
-            .expect("Cannot get device by name {}");
-    }
-
-    #[test]
-    fn test_audio_input_device_by_id() {
-        let host = cpal::default_host();
-        let id: String = "coreaudio:com.rogueamoeba.Loopback:FDC858DA-EA9D-469B-9B86-2C4ADC20537E".to_string();
-        let _ = get_audio_input_device_by_id(&host, &id)
-            .expect("Cannot get device by name");
-    }
-
-    #[test]
-    fn test_audio_input_config_by_name() {
-        let host = cpal::default_host();
-        let name: String = "Loopback Audio".to_string();
-        let _ = get_audio_input_device_by_name(&host, &name)
-            .expect("Cannot get device by name");
-    }
-
-    #[test]
-    fn test_audio_input_device_default_config_by_name() {
-        let host = cpal::default_host();
-        let name: String = "Loopback Audio".to_string();
-        let (_, _) = get_audio_input_device_default_config(&host, &name)
-            .expect("Cannot get device and config");
-    }
-
-    #[test]
-    fn test_audio_input_device_default_config_by_id() {
-        let host = cpal::default_host();
-        let id: String = "coreaudio:com.rogueamoeba.Loopback:FDC858DA-EA9D-469B-9B86-2C4ADC20537E".to_string();
-        let (_, _) = get_audio_input_device_default_config(&host, &id)
-            .expect("Cannot get device and config");
-    }
-
-    #[test]
-    fn test_audio_output_device_by_name() {
-        let host = cpal::default_host();
-        let name: String = "MacBook Pro Speakers".to_string();
-        let _ = get_audio_output_device_by_name(&host, &name)
-            .expect("Cannot get device by name");
-    }
-
-    #[test]
-    fn test_audio_output_device_by_id() {
-        let host = cpal::default_host();
-        let id: String = "coreaudio:BuiltInSpeakerDevice".to_string();
-        let _ = get_audio_output_device_by_id(&host, &id)
-            .expect("Cannot get device by id");
-    }
-
-    #[test]
-    fn test_audio_output_device_default_config_by_name() {
-        let host = cpal::default_host();
-        let id: String = "MacBook Pro Speakers".to_string();
-        let (_, _) = get_audio_output_device_default_config(&host, &id)
-            .expect("Cannot get device and config");
-    }
-
-    #[test]
-    fn test_audio_output_device_default_config_by_id() {
-        let host = cpal::default_host();
-        let id: String = "coreaudio:BuiltInSpeakerDevice".to_string();
-        let (_, _) = get_audio_output_device_default_config(&host, &id)
-            .expect("Cannot get device and config");
-    }
-}

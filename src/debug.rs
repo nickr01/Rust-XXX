@@ -72,20 +72,19 @@ impl BorrowMut<[u32]> for BufferWrapper {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct DrawSize {
     pub width: usize,
     pub height: usize,
 }
 
-pub struct DebugPortal {
-    draw_size: DrawSize,
+pub struct DebugWindow {
     window: minifb::Window,
-    buf: BufferWrapper,
+    pub draw_size: DrawSize,
 }
 
-impl DebugPortal {
-    pub fn new(draw_size: DrawSize) -> DebugPortal {
+impl DebugWindow {
+    pub fn new(draw_size: DrawSize) -> DebugWindow {
         dbg!(&draw_size);
         let mut window = minifb::Window::new(
             "RusXXX - ESC to exit",
@@ -96,29 +95,42 @@ impl DebugPortal {
         .unwrap_or_else(|e| {
             panic!("{}", e);
         });
-
         window.set_target_fps(20);
+        DebugWindow {
+            window,
+            draw_size,
+        }
+    }
+    pub fn continue_run(&self) -> bool {
+        self.window.is_open() && !self.window.is_key_down(minifb::Key::Escape)
+    }
+}
+pub struct DebugPortal {
+    debug_window: DebugWindow,
+    buf: BufferWrapper,
+}
 
-        let bufsize = draw_size.width * draw_size.height;
+impl DebugPortal {
+    pub fn new(debug_window: DebugWindow) -> DebugPortal {
+        let bufsize = debug_window.draw_size.width * debug_window.draw_size.height;
         dbg!(bufsize);
 
         let buf = BufferWrapper(vec![0u32; bufsize]);
 
         DebugPortal {
-            draw_size,
-            window,
+            debug_window,
             buf
          }        
     }
 
     pub fn continue_run(&self) -> bool {
-        self.window.is_open() && !self.window.is_key_down(minifb::Key::Escape)
+        self.debug_window.continue_run()
     }
 
     pub fn update(&mut self) {
         // dbg!("update debug portal");
-        self.window
-            .update_with_buffer(self.buf.borrow(), self.draw_size.width, self.draw_size.height)
+        self.debug_window.window
+            .update_with_buffer(self.buf.borrow(), self.debug_window.draw_size.width, self.debug_window.draw_size.height)
             .expect("Cannot update debug window");
     }
 
