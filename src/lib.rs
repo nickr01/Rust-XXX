@@ -15,7 +15,7 @@ mod test_generator;
 mod test_parity;
 mod test_support;
 
-mod l0_wire; // Audio
+mod l0_audio; // Audio
 mod l1_sync; // sync
 mod l2_gray_code; // gray
 mod l3_ecc; // Ecc
