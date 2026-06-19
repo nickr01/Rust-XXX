@@ -411,7 +411,6 @@ impl Runtime {
 pub struct Modem {
     protocol: &'static Protocol,
     runtime: &'static Runtime,
-    freq_hz: Option<Hz>,
     crc_calc: crc::Crc<u16>,
 }
 
@@ -437,7 +436,6 @@ impl Modem {
     pub fn new(
         protocol:&'static Protocol, 
         runtime: &'static Runtime, 
-        freq_hz: Option<Hz>
     ) -> Modem {
         // This is a recurrent calculation except for the added 0.5
         // what is 0.5 added for - it probably is related to the N/2 + 1 calc
@@ -463,7 +461,6 @@ impl Modem {
         Modem {
             protocol,
             runtime,
-            freq_hz,
             crc_calc
         }
     }
@@ -474,14 +471,6 @@ impl Modem {
 
     pub fn runtime(&self) -> &'static Runtime {
         self.runtime
-    }
-
-    pub fn freq_hz(&self) -> Option<Hz> {
-        self.freq_hz
-    }
-
-    pub fn set_freq_hz(&mut self, freq: Option<Hz>) {
-        self.freq_hz = freq;
     }
 
     pub fn crc_calc(&self) -> &crc::Crc<u16> {

@@ -104,14 +104,14 @@ impl types::Modem {
     }
 
     #[cfg(test)]
-    pub fn l4_outbound(&self, ttl: isize, cw: &Vec<u8>) -> Result<Vec<u8>, error::XxxError> {
+    pub fn l4_outbound(&self, ttl: isize, cw: &Vec<u8>, freq_hz: types::Hz) -> Result<Vec<u8>, error::XxxError> {
         assert_eq!(cw.len(), self.protocol()._ldpc_p_bytes().0);
         let cw_crc = self._l4_crc_add(cw)?;
         assert_eq!(cw_crc.len(), self.protocol()._ldpc_k_bytes().0);
         if ttl == 0 {
             self.l4_inbound(&cw_crc)
         } else {
-            self.l3_outbound(ttl - 1, &cw_crc)
+            self.l3_outbound(ttl - 1, &cw_crc, freq_hz)
         }
     }
 
@@ -185,7 +185,6 @@ mod tests {
         let mut modem: types::Modem = types::Modem::new(
             &test_support::TEST_PROTOCOL, 
             &test_support::TEST_FT8_RUNTIME, 
-            test_support::TEST_FREQUENCY
         );
         test_roundtrips(&mut modem, &L5P0);
         test_roundtrips(&mut modem, &L5P1);

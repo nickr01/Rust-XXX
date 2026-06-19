@@ -77,7 +77,7 @@ impl types::Modem {
 
     #[cfg(test)]
     pub fn l1_outbound(&self, ttl: isize, 
-        l2_tones: &Vec<u8>, // [u8; XXX.nd()]
+        l2_tones: &Vec<u8>, freq_hz: types::Hz // [u8; XXX.nd()]
     ) -> Result<Vec<u8>, error::XxxError>{
         // l2_tones -> l0_tones
         // let l0_tones: Vec<u8> = Vec::with_capacity(self.protocol.nn()); // [u8; XXX.nn()] = [0; XXX.nn()];
@@ -85,7 +85,7 @@ impl types::Modem {
         if ttl == 0 {
             self.l1_inbound(&l0_tones)
         } else {
-            self.l0_outbound(ttl - 1, &l0_tones)
+            self.l0_outbound(ttl - 1, &l0_tones, freq_hz)
         }
     }
 
@@ -115,8 +115,7 @@ mod tests {
     fn test_layer1() {
         let mut modem: types::Modem = types::Modem::new(
             &test_support::TEST_PROTOCOL, 
-            &test_support::TEST_FT8_RUNTIME, 
-            test_support::TEST_FREQUENCY
+            &test_support::TEST_FT8_RUNTIME,
         );
 
         test_roundtrip(&mut modem, &[0u8; test_support::TEST_PROTOCOL.nd().0].to_vec());

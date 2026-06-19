@@ -79,7 +79,7 @@ impl types::Modem {
 
     // codeword pre-filled with message+CRC and trailing zeros
     #[cfg(any(feature = "enable_tx", test))]
-    fn _ecc_encode(&self, 
+    fn ecc_encode(&self, 
         // l4_message: &Vec<u8>, // [u8; XXX.ldpc_k_bytes()], 
         // cw out:  mut [u8; XXX.ldpc_n_bytes()]
         cw_crc: &[u8] // mut [u8; XXX.ldpc_k_bytes()]
@@ -372,7 +372,7 @@ impl types::Modem {
     #[cfg(any(feature = "enable_tx", test))]
     pub fn _l3_ecc_add(&self, cw_crc: &[u8]) -> Result<Vec<u8>, error::XxxError> {
         // TODO encode args not right yet
-        Ok(self._ecc_encode(cw_crc))
+        Ok(self.ecc_encode(cw_crc))
     }
 
     #[cfg(test)]
@@ -389,12 +389,12 @@ impl types::Modem {
     }
 
     #[cfg(test)]
-    pub fn l3_outbound(&self, ttl: isize, cw_crc: &Vec<u8>) -> Result<Vec<u8>, error::XxxError>{
+    pub fn l3_outbound(&self, ttl: isize, cw_crc: &Vec<u8>, freq_hz: types::Hz) -> Result<Vec<u8>, error::XxxError>{
         let cw_crc_ecc = self._l3_ecc_add(cw_crc)?;
         if ttl == 0 {
             self.l3_inbound(&cw_crc_ecc)
         } else {
-            self.l2_outbound(ttl - 1, &cw_crc_ecc)
+            self.l2_outbound(ttl - 1, &cw_crc_ecc, freq_hz)
         }
     }
 
@@ -415,7 +415,7 @@ mod tests {
     fn test_roundtrip(modem: &mut types::Modem, l4_message: Vec<u8>) {
         // let mut _l2_codeword= l4_message;  // msg inc crc in place
 
-        let cw_crc_ecc = modem._ecc_encode(
+        let cw_crc_ecc = modem.ecc_encode(
             &l4_message, 
         );
         
@@ -478,7 +478,6 @@ mod tests {
         let mut modem: types::Modem = types::Modem::new(
             &test_support::TEST_PROTOCOL, 
             &test_support::TEST_FT8_RUNTIME, 
-            test_support::TEST_FREQUENCY
         );
 
         test_roundtrip(&mut modem, L4M0.to_vec());

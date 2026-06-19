@@ -50,7 +50,7 @@ impl types::Modem {
     /// @param[out] signal Output array of signal waveform samples (should have space for n_sym*n_spsym samples)
     ///
     #[cfg(any(feature = "enable_tx", test))]
-    fn _gfsk_synth(&self, l0_tones: &[u8]) -> Vec<f32> {
+    fn _gfsk_synth(&self, l0_tones: &[u8], freq_hz: types::Hz) -> Vec<f32> {
         // let sym_period = self.protocol.symbol_period();
         let n_spsym = (0.5 + self.runtime()._target_output_sample_rate().0) as usize; // Samples per symbol
         
@@ -58,7 +58,6 @@ impl types::Modem {
         let mut signal = Vec::with_capacity(n_wave);
 
         // let symbols = l0_tones;
-        let f0 = self.freq_hz().unwrap().0;
 
         // let n_spsym = (0.5 + signal_rate * symbol_period) as usize; // Samples per symbol
         // let n_wave = n_sym * n_spsym; // Number of output samples
@@ -77,7 +76,7 @@ impl types::Modem {
 
         // Shift frequency up by f0
         for _ in 0..(n_wave + 2 * n_spsym) {
-            dphi.push(std::f32::consts::TAU * f0 / self.runtime()._target_output_sample_rate().0);
+            dphi.push(std::f32::consts::TAU * freq_hz.0 / self.runtime()._target_output_sample_rate().0);
         }
 
         let mut pulse = vec![0.0; self.protocol().token_bits().0 * n_spsym];
@@ -146,10 +145,10 @@ impl types::Modem {
 
     // These are the action stubs
     #[cfg(any(feature = "enable_tx", test))]
-    pub fn _l0_gfsk_synth(&self, l0_tones: &[u8],
+    pub fn l0_gfsk_synth(&self, l0_tones: &[u8], freq_hz: types::Hz,
         // l0_tones: &[u8; XXX.nn()]
     ) -> Result<Vec<f32>, error::XxxError>{
-        Ok(self._gfsk_synth(l0_tones))
+        Ok(self._gfsk_synth(l0_tones, freq_hz))
     }
 
     #[cfg(any(feature = "enable_rx", test))]
@@ -162,8 +161,8 @@ impl types::Modem {
     }
 
     #[cfg(any(test))]
-    pub fn l0_outbound(&self, ttl: isize, l0_tones: &Vec<u8>) -> Result<Vec<u8>, error::XxxError> {
-        let _signal = self._l0_gfsk_synth(l0_tones)?;
+    pub fn l0_outbound(&self, ttl: isize, l0_tones: &Vec<u8>, freq_hz: types::Hz) -> Result<Vec<u8>, error::XxxError> {
+        let _signal = self.l0_gfsk_synth(l0_tones, freq_hz)?;
 
         if ttl == 0 {
             self.l1_inbound(&l0_tones)  // loopback
@@ -208,7 +207,7 @@ mod tests {
             0, 1, 3, 1, 4, 0, 6, 5, 2
     ];
 
-    fn test_roundtrip(modem: &mut types::Modem, l1_tones: &Vec<u8>)
+    fn test_roundtrip(modem: &mut types::Modem, l1_tones: &Vec<u8>, freq_hz: types::Hz)
     {
         let _num_samples =
             (0.5 + modem.protocol().total_symbols_nn().0 as f32 * test_support::TEST_FT8_RUNTIME._target_output_sample_rate().0) as usize;
@@ -216,8 +215,7 @@ mod tests {
         // let mut samples = vec![0.0; num_samples];
 
         let l0_tones = l1_tones.clone();
-        modem.set_freq_hz(test_support::TEST_FREQUENCY);
-        let _signal = modem._gfsk_synth(&l0_tones);
+        let _signal = modem._gfsk_synth(&l0_tones, freq_hz);
 
     //     #[cfg(feature = "gfsk_dump_wav")]
     //     {
@@ -232,8 +230,7 @@ mod tests {
         let mut modem: types::Modem = types::Modem::new(
             &test_support::TEST_PROTOCOL, 
             &test_support::TEST_FT8_RUNTIME, 
-            test_support::TEST_FREQUENCY
         );
-        test_roundtrip(&mut modem, &L0RT1.to_vec());
+        test_roundtrip(&mut modem, &L0RT1.to_vec(), test_support::TEST_FREQUENCY);
     }
 }

@@ -44,7 +44,7 @@ use rustxxx::cpal_helper;
 use rustxxx::debug;
 #[cfg(any(feature = "enable_rx", test))]
 use rustxxx::debug::DebugWindow;
-use rustxxx::pipeline;
+use rustxxx::rx_pipeline;
 use rustxxx::types::*;
 
 // use ringbuf::{traits::*, HeapRb, SharedRb};
@@ -497,7 +497,7 @@ fn rx_main(
         audio_output_buff_reader = audio_input_buff_reader;
     };
 
-    let mut receive_pipeline= rustxxx::pipeline::Pipeline::new(
+    let mut receive_pipeline= rustxxx::rx_pipeline::RxPipeline::new(
         &FT8, 
         runtime,
     );
@@ -586,9 +586,9 @@ fn rx_main(
 
         let ft8_context = ft8_message::FT8Context::new();
         
-        let mut audio_buff = [0f32; pipeline::RX_IN_BUFLEN];
+        let mut audio_buff = [0f32; rx_pipeline::RX_IN_BUFLEN];
         let from_channels = resample_context.from_channels;
-        let audio_read_size = pipeline::RX_IN_BUFLEN * from_channels;
+        let audio_read_size = rx_pipeline::RX_IN_BUFLEN * from_channels;
 
         // this will be our main event loop
         while receive_pipeline.continue_run() {

@@ -1,10 +1,16 @@
 pub mod cpal_helper;
 pub mod debug;
 pub mod error;
-pub mod pipeline;
 pub mod types;
 
+#[cfg(any(feature = "enable_rx", test))]
+pub mod rx_pipeline;
+#[cfg(any(feature = "enable_rx", test))]
 mod receiver;
+
+#[cfg(any(feature = "enable_tx", test))]
+pub mod tx_pipeline;
+
 mod detector;
 mod waterfall;
 mod correlator;

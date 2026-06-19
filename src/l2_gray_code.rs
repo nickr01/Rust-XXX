@@ -21,7 +21,7 @@ impl types::Modem {
 
     // gray encode codewords into tones
     #[cfg(any(feature = "enable_tx", test))]
-    pub fn _gray_encode(&self, 
+    fn gray_encode(&self, 
         codeword: &[u8],  // [u8; XXX.ldpc_n_bytes()], 
         // self.l2_tones: &mut [u8; XXX.nd()]
     ) -> Vec<u8> {
@@ -131,7 +131,7 @@ impl types::Modem {
     ) -> Result<Vec<u8>, error::XxxError>{
         // let mut tones = [0u8; XXX.nd()];
         // codeword -> l2_tones        
-        Ok(self._gray_encode(codeword))
+        Ok(self.gray_encode(codeword))
     }
 
     #[cfg(test)]
@@ -145,7 +145,8 @@ impl types::Modem {
 
     #[cfg(test)]
     pub fn l2_outbound(&self, ttl: isize, 
-        codeword: &Vec<u8> // mut [u8; XXX.ldpc_n_bytes()]
+        codeword: &Vec<u8>,
+        freq_hz: types::Hz
     ) -> Result<Vec<u8>, error::XxxError>{
         // let mut tones = [0u8; XXX.nd()];
         // codeword -> l2_tones
@@ -153,7 +154,7 @@ impl types::Modem {
         if ttl == 0 {
             self.l2_inbound(&l2_tones)
         } else {
-            self.l1_outbound(ttl - 1, &l2_tones)
+            self.l1_outbound(ttl - 1, &l2_tones, freq_hz)
         }
     }
 
@@ -182,7 +183,7 @@ mod tests {
         // modem.codeword = codeword_in.clone();
 
         // let mut tones = [0u8; XXX.nd()];
-        let tones = modem._gray_encode(codeword_in);
+        let tones = modem.gray_encode(codeword_in);
 
         // let mut codeword_out = [0u8; XXX.ldpc_n_bytes()];
         let codeword_out = modem._gray_decode(&tones);
@@ -197,7 +198,6 @@ mod tests {
         let mut modem: types::Modem = types::Modem::new(
             &test_support::TEST_PROTOCOL, 
             &test_support::TEST_FT8_RUNTIME, 
-            test_support::TEST_FREQUENCY
         );
         recheck_config(&modem);
         test_roundtrip(&mut modem, &MSG0.to_vec());

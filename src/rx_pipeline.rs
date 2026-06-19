@@ -10,8 +10,6 @@ use crate::types;
 use crate::debug;
 
 use audioadapter_buffers::direct::InterleavedSlice;
-use ringbuf::traits::Consumer;
-use ringbuf::traits::Observer;
 use rubato::{Resampler, Fft, FixedSync, Indexing};
 // use rustfft::num_traits::ops::saturating;
 
@@ -25,10 +23,11 @@ pub struct ResampleContext {
 }
 
 #[cfg(any(feature = "enable_rx", test))]
-pub const RX_IN_BUFLEN: usize = Pipeline::CHUNK_SIZE;
+pub const RX_IN_BUFLEN: usize = RxPipeline::CHUNK_SIZE;
 
 #[cfg(any(feature = "enable_rx", test))]
-pub struct Pipeline {
+pub struct RxPipeline {
+    // Holds the working data for the Receiver
     receiver: receiver::Receiver,
     rfft_nfft_f: detector::DetectFFT,
     detector_input_bufs: detector::DetectorInputBuffs,
@@ -39,7 +38,7 @@ pub struct Pipeline {
 }
 
 #[cfg(any(feature = "enable_rx", test))]
-impl Pipeline {
+impl RxPipeline {
     const CHUNK_SIZE: usize = 8192 ; // 2048 is too little to keep up with 48K audio stream
     const SUB_CHUNK: usize = 1;  // maybe can tune this
     const CHANNELS: usize = 1;
@@ -47,7 +46,7 @@ impl Pipeline {
     pub fn new(
         protocol: &'static types::Protocol,
         runtime: &'static types::Runtime,
-    ) -> Pipeline {
+    ) -> RxPipeline {
         let receiver = receiver::Receiver::new(protocol, runtime);
         let nfft = receiver.nfft;
 
@@ -81,7 +80,7 @@ impl Pipeline {
 
         let debug_portal = debug::DebugPortal::new(debug_window);
 
-        Pipeline {
+        RxPipeline {
             receiver,
             rfft_nfft_f,
             detector_input_bufs,
@@ -104,9 +103,9 @@ impl Pipeline {
         let resampler = Fft::<f32>::new(
                 from_rate as usize,
                 to_rate as usize, 
-                Pipeline::CHUNK_SIZE, 
-                Pipeline::SUB_CHUNK, 
-                Pipeline::CHANNELS, 
+                RxPipeline::CHUNK_SIZE, 
+                RxPipeline::SUB_CHUNK, 
+                RxPipeline::CHANNELS, 
                 FixedSync::Both
             ).unwrap();
  

@@ -90,7 +90,6 @@ impl Receiver {
                         let mut modem: types::Modem = types::Modem::new(
                             self.protocol, 
                             self.runtime, 
-                            None
                         );
 
                         let decoder = decoder::Decoder::new(self.protocol, self.runtime);
