@@ -49,12 +49,12 @@ impl Decoder {
         freq_hz: types::Hz,
         c_score: f32,
         modem: &mut types::Modem, 
-        logls: &Vec<l3_ecc::LogL>,
+        logls: &[l3_ecc::LogL],
     ) -> Result<Option<types::Message>, error::XxxError> {
-        let mut r = modem.ecc_decode_bp(&logls, self.runtime.ldpc_max_iteration().0);
+        let mut r = modem.ecc_decode_bp(logls, self.runtime.ldpc_max_iteration().0);
         if r.is_err() {
-            r = modem.ecc_decode_bitflip(&logls, self.runtime.ldpc_max_iteration().0);
-            if !r.is_err() {
+            r = modem.ecc_decode_bitflip(logls, self.runtime.ldpc_max_iteration().0);
+            if r.is_ok() {
                 // dbg!("ecc_decode_bitflip contributed");
             }
         } else {
@@ -137,7 +137,7 @@ impl Decoder {
             let x_ofs: usize = self.protocol.gray_map()[j] as usize * self.runtime.rx_freq_osr().0;
             assert!(freq_index.0 + x_ofs < wfl.mag_dbs.len());
             let mag = wfl.mag_dbs[freq_index.0 + x_ofs]; // must be db - as log calcs take place below
-            *s2_item = mag as f32;
+            *s2_item = mag;
         }
 
         let mut logl = l3_ecc::LogL::new(self.protocol);

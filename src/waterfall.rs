@@ -202,7 +202,7 @@ impl Waterfall {
             for f in 0..self.freq_bins() {
                 // candidate.lease= f;
                 let m1 = self.wflines[time_magic_12].mags[f]; 
-                sum += m1 as f32;
+                sum += m1;
             }
 
             let th = sum / self.freq_bins() as f32 / 2.0;

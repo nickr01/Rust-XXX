@@ -76,7 +76,7 @@ impl Detector {
 
     pub fn add_wfline(
         &mut self,
-        fft_input_vec: &mut Vec<f32>,
+        fft_input_vec: &mut [f32],
         rfft_nfft_f: &Arc<dyn RealToComplex<f32>>,
     ) {
         let wfl = self.proc_time_sub(fft_input_vec,rfft_nfft_f);
@@ -173,7 +173,7 @@ impl Detector {
                 // let scaled = 2.0 * db + 3.0 * (<waterfall::WflDataType>::BITS as f32) * 10.0;
                 let scaled = 2.0 * db + 3.0 * 8.0 * 10.0;
 
-                let mag_db: waterfall::WflDataType = if scaled > <waterfall::WflDataType>::MAX as f32 {
+                let mag_db: waterfall::WflDataType = if scaled > <waterfall::WflDataType>::MAX {
                     <waterfall::WflDataType>::MAX
                 } else {
                     scaled as waterfall::WflDataType

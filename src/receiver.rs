@@ -83,7 +83,7 @@ impl Receiver {
         for freq_bin_range in freq_bin_ranges {
             match correlator.find_freq_candidates(&detector.wf, &freq_bin_range) {
                 Some(mut candidates) => {
-                    if candidates.len() > 0 {
+                    if !candidates.is_empty() {
                         // dbg!(candidates.len());
                         // dbg!(&candidates);
 
@@ -156,7 +156,7 @@ impl Receiver {
     fn proc_nfft_buffer(
         &self, 
         rfft_nfft_f: &DetectFFT,
-        fft_input_vec: &mut Vec<f32>,
+        fft_input_vec: &mut [f32],
         detector: &mut detector::Detector,
         correlator: &mut correlator::Correlator,
         message_hash: &mut decoder::DecodeHash,

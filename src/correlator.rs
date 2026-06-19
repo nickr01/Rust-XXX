@@ -100,9 +100,9 @@ impl Correlator {
 
                 // at the moment is only a freq axis test whereas time & freq did better before
                 for scan_tone in 0..scan_max {
-                    let freq_index = freq_index_base.0 + (scan_tone as usize * self.runtime.rx_freq_osr().0);
+                    let freq_index = freq_index_base.0 + (scan_tone * self.runtime.rx_freq_osr().0);
                     let mag = wf.line(time_index.0).mags[freq_index];
-                    if scan_tone as usize == *costas_sym as usize {
+                    if scan_tone == *costas_sym as usize {
                         sync_sum += mag;
                     } else {
                         norm_sum += mag;
@@ -112,7 +112,8 @@ impl Correlator {
         }
 
         // norm_sum = norm_sum - sync_sum / 8 as f32; // normalise
-        norm_sum = norm_sum - sync_sum / (scan_max - 1) as f32; // normalise
+        // norm_sum = norm_sum - sync_sum / (scan_max - 1) as f32; // normalise
+        norm_sum -= sync_sum / (scan_max - 1) as f32; // normalise
 
         if norm_sum > 0.0 {
             sync_sum/norm_sum
@@ -127,7 +128,7 @@ impl Correlator {
         let mut scores = vec![0.0f32; max_bin];
         for candidate in candidates.iter().take(max_bin) {
             counts[candidate.freq_index().0] += 1.0;
-            scores[candidate.freq_index().0] += candidate.score() as f32;
+            scores[candidate.freq_index().0] += candidate.score();
             // dbg!(candidate);
         }
 

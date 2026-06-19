@@ -532,7 +532,7 @@ impl Message {
     }
 
     pub fn from_vec(cwv: Vec<u8>) -> Result<CodeWord, error::XxxError> {
-        if cwv.len() ==  0 {
+        if cwv.is_empty() {
             Err(error::XxxError::EmptyBuf)
         } else if cwv.len() > 16 {
             Err(error::XxxError::BufTooBig(cwv.len()))
