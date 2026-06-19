@@ -156,7 +156,7 @@ pub fn plot_spectrogram_to_buffer(
 
     let spectrogram_cells = drawing_area.split_evenly((draw_size.height, draw_size.width));
 
-    let windows_scaled = spectrogram.iter().copied().collect::<Vec<f32>>();
+    let windows_scaled = spectrogram.to_vec(); // iter().copied().collect::<Vec<f32>>();
     let highest_spectral_density = windows_scaled
         .iter()
         .max_by(|x, y| x.partial_cmp(y).unwrap())
@@ -183,7 +183,7 @@ pub fn _plot_spectrogram_to_file(
 	let drawing_area= BitMapBackend::new(path, (width as u32, height as u32)).into_drawing_area();
     let spectrogram_cells = drawing_area.split_evenly((height, width));
 
-    let windows_scaled = spectrogram.iter().copied().collect::<Vec<f32>>();
+    let windows_scaled = spectrogram.to_vec(); // iter().copied().collect::<Vec<f32>>();
     let highest_spectral_density = windows_scaled
         .iter()
         .max_by(|x, y| x.partial_cmp(y).unwrap())

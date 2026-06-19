@@ -81,73 +81,66 @@ impl Receiver {
         // dbg!(self.runtime.sub_bands().0, &freq_bin_ranges);
 
         for freq_bin_range in freq_bin_ranges {
-            match correlator.find_freq_candidates(&detector.wf, &freq_bin_range) {
-                Some(mut candidates) => {
-                    if !candidates.is_empty() {
-                        // dbg!(candidates.len());
-                        // dbg!(&candidates);
+            if let Some(mut candidates) = correlator.find_freq_candidates(&detector.wf, &freq_bin_range) {
+                assert!(!candidates.is_empty());
+                // dbg!(candidates.len());
+                // dbg!(&candidates);
 
-                        let mut modem: types::Modem = types::Modem::new(
-                            self.protocol, 
-                            self.runtime, 
+                let mut modem: types::Modem = types::Modem::new(
+                    self.protocol, 
+                    self.runtime, 
+                );
+
+                let decoder = decoder::Decoder::new(self.protocol, self.runtime);
+
+                let mut success = 0;
+
+                for c in candidates.iter_mut() {
+                    let logls = decoder.extract_normalised_likelihood(&detector.wf, c);
+
+                    let time_secs =
+                        types::Secs(
+                            ((c.time_stamp().0 + c.time_index().0 as u32) as f32 / detector.wf.time_osr.0 as f32) * self.protocol.symbol_period().0
                         );
 
-                        let decoder = decoder::Decoder::new(self.protocol, self.runtime);
+                    let freq_hz =
+                        types::Hz(
+                            ((c.freq_index().0 as f32 + 1.0)/ detector.wf.freq_osr.0 as f32) / self.protocol.symbol_period().0
+                        );
 
-                        let mut success = 0;
-
-                        for c in candidates.iter_mut() {
-                            let logls = decoder.extract_normalised_likelihood(&detector.wf, c);
-
-                            let time_secs =
-                                types::Secs(
-                                   ((c.time_stamp().0 + c.time_index().0 as u32) as f32 / detector.wf.time_osr.0 as f32) * self.protocol.symbol_period().0
-                                );
-
-                            let freq_hz =
-                                types::Hz(
-                                    ((c.freq_index().0 as f32 + 1.0)/ detector.wf.freq_osr.0 as f32) / self.protocol.symbol_period().0
-                                );
-
-                            let decode_result = decoder.decode(time_secs, freq_hz, c.score(), &mut modem, &logls);
-                            
-                            match decode_result {
-                                Ok(om) => {
-                                    match om {
-                                        Some(message) => {
-                                            if !message.is_empty() {
-                                                // dbg!("test storing msg");
-                                                if !message_hash.contains_key(message.key()) {
-                                                    // dbg!("yes storing msg");
-                                                    message_hash.insert(message.key().clone(), message);
-                                                    success += 1;
-                                                }
-                                                pass_decodes += success;
-                                            } else {
-                                                // dbg!("unexpected empty msg!");
-                                            }
-                                        },
-                                        None => {
-                                            // dbg!("expected empty msg");
-                                        }
+                    let decode_result = decoder.decode(time_secs, freq_hz, c.score(), &mut modem, &logls);
+                    
+                    match decode_result {
+                        Ok(om) => {
+                            match om {
+                                Some(message) => {
+                                    assert!(!message.is_empty());
+                                    // dbg!("test storing msg");
+                                    if !message_hash.contains_key(message.key()) {
+                                        // dbg!("yes storing msg");
+                                        message_hash.insert(message.key().clone(), message);
+                                        success += 1;
                                     }
-
+                                    pass_decodes += success;
                                 },
-                                Err(error::XxxError::_BadEcc) => {
-                                    // dbg!("dropping ecc_error");
-                                }
-                                Err(error::XxxError::_BadCrc) => {
-                                    dbg!("dropping crc_error");
-                                },
-                                Err(error) => {
-                                    dbg!("trapping other error");
-                                    return Err(error);
+                                None => {
+                                    // dbg!("expected empty msg");
                                 }
                             }
-                        };
-                    };
-                }
-                None => {},
+
+                        },
+                        Err(error::XxxError::_BadEcc) => {
+                            // dbg!("dropping ecc_error");
+                        }
+                        Err(error::XxxError::_BadCrc) => {
+                            dbg!("dropping crc_error");
+                        },
+                        Err(error) => {
+                            dbg!("trapping other error");
+                            return Err(error);
+                        }
+                    }
+                };
             }
         }
         Ok(pass_decodes)

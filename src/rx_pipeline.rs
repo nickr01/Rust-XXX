@@ -143,27 +143,23 @@ impl RxPipeline {
         }
 
         let spectrogram_height = self.detector.wf.wflines().len();
-        if let Some(width) = spectr2.len().checked_div(spectrogram_height) {
-            match &mut self.debug_portal {
-                Some(portal) => {
-                    debug::plot_spectrogram_to_buffer(
-                        portal.buf_as_mut(), 
-                        &spectr2,
-                        debug::DrawSize{ width, height: spectrogram_height },
-                    );
-                },
-                None => {}
-            }
+
+        if 
+            let Some(portal) = &mut self.debug_portal 
+            && let Some(width) = spectr2.len().checked_div(spectrogram_height)
+        {
+            debug::plot_spectrogram_to_buffer(
+                portal.buf_as_mut(), 
+                &spectr2,
+                debug::DrawSize{ width, height: spectrogram_height },
+            );
         }
     }
 
     pub fn update_spectrogram(&mut self) {
         self.draw_spectrogram();
-        match &mut self.debug_portal {
-            Some(portal) => {
-                portal.update();
-            },
-            None => {}
+        if let Some(portal) = &mut self.debug_portal {
+            portal.update();
         }
     }
 
