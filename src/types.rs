@@ -456,7 +456,7 @@ impl Modem {
         // assert_eq!(modem.signal.len(), n_wave);
 
         let crc_alg = get_crc_alg(protocol);
-        let crc_calc = crc::Crc::<u16>::new(&crc_alg );
+        let crc_calc = crc::Crc::<u16>::new(crc_alg );
 
         Modem {
             protocol,
@@ -511,7 +511,7 @@ impl Message {
     }
 
     pub fn key(&self) -> &CodeWord {
-        &self.codeword()
+        self.codeword()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -528,7 +528,7 @@ impl Message {
 
     pub fn is_stale(&self, stale_time: Secs) -> bool {
         // dbg!(self.time_secs.0, stale_time.0);
-        return self.time_secs.0 < stale_time.0
+        self.time_secs.0 < stale_time.0
     }
 
     pub fn from_vec(cwv: Vec<u8>) -> Result<CodeWord, error::XxxError> {
