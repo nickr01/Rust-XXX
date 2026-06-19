@@ -144,7 +144,7 @@ impl Waterfall {
         self.wflines.len()
     }
 
-    pub fn time_capacity(&self) -> usize {
+    pub fn _time_capacity(&self) -> usize {
         self.wflines.capacity()
     }
 

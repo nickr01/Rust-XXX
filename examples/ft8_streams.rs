@@ -41,9 +41,9 @@ use cpal::traits::{
 use ft8_message;
 
 use rustxxx::cpal_helper;
-use rustxxx::debug;
-#[cfg(any(feature = "enable_rx", test))]
-use rustxxx::debug::DebugWindow;
+// use rustxxx::debug;
+// #[cfg(any(feature = "enable_rx", test))]
+// use rustxxx::debug::DebugWindow;
 use rustxxx::rx_pipeline;
 use rustxxx::types::*;
 
@@ -658,9 +658,9 @@ fn main() -> Result<(), anyhow::Error> {
 
     // keep receiver in main thread so it can use its debug window
     #[cfg(any(feature = "enable_rx", test))]
-    rx_main(&opt.input_device, &runtime);
+    let _ = rx_main(&opt.input_device, &runtime);
     
-    let res = tx_thread_handle.join();
+    let _ = tx_thread_handle.join();
 
     Ok(())
 }
