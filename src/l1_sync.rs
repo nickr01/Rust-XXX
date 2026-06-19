@@ -1,7 +1,7 @@
 // layer1 - sync and ramp
 // use std::result::*;
 
-#[cfg(any(feature = "enable_tx", test))]
+// #[cfg(any(feature = "enable_tx", test))]
 // use clap::error as clap_error;
 
 use crate::error;

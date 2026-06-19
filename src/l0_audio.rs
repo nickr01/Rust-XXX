@@ -160,7 +160,7 @@ impl types::Modem {
         self._gfsk_decode(signal)
     }
 
-    #[cfg(any(test))]
+    #[cfg(test)]
     pub fn l0_outbound(&self, ttl: isize, l0_tones: &Vec<u8>, freq_hz: types::Hz) -> Result<Vec<u8>, error::XxxError> {
         let _signal = self.l0_gfsk_synth(l0_tones, freq_hz)?;
 
@@ -172,7 +172,7 @@ impl types::Modem {
         }
     }
 
-    #[cfg(any(test))]
+    #[cfg(test)]
     pub fn _l0_inbound(&self, signal: &Vec<f32>) ->Result<Vec<u8>, error::XxxError> {
         let l0_tones = self._l0_gfsk_undo(signal)?;
         self.l1_inbound(&l0_tones)

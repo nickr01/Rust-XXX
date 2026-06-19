@@ -143,15 +143,13 @@ impl RxPipeline {
         }
 
         let spectrogram_height = self.detector.wf.wflines().len();
-        if spectrogram_height > 0 {
-            use crate::debug::DrawSize;
-
+        if let Some(width) = spectr2.len().checked_div(spectrogram_height) {
             match &mut self.debug_portal {
                 Some(portal) => {
                     debug::plot_spectrogram_to_buffer(
                         portal.buf_as_mut(), 
                         &spectr2,
-                        DrawSize{ width: spectr2.len()/spectrogram_height, height: spectrogram_height },
+                        debug::DrawSize{ width, height: spectrogram_height },
                     );
                 },
                 None => {}

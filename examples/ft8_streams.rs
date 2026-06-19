@@ -166,7 +166,6 @@ pub const FT8: Protocol = Protocol::new(
 pub const FT8_RUNTIME: Runtime = Runtime::new(
     // should be indep of bandwidth and freq_osr but not there yet
     Hz(6000.0),  // this is the real design layer - app layer can chose a portion often 250-2500
-    RepeatCount(1), 
     BitCount(32),
     OverSampleMultiplier(4), // 4
     OverSampleMultiplier(2), // 2
@@ -377,7 +376,7 @@ fn tx_main(
         let (audio_output_device, audio_output_config) = cpal_helper::get_audio_output_device_default_config(&host, &audio_output_device_name)?;
         dbg!(&audio_output_config);
 
-        let audio_output_from_channels = runtime.channels().0;
+        let audio_output_from_channels = 1;
         let audio_output_from_rate = runtime.target_input_sample_rate().0 as u32;
 
         _audio_output_to_channels = audio_output_config.channels() as usize;
@@ -523,7 +522,7 @@ fn rx_main(
         audio_input_from_channels = audio_input_config.channels() as usize;
         audio_input_from_rate = audio_input_config.sample_rate();
 
-        let audio_input_to_channels = runtime.channels().0;
+        let audio_input_to_channels = 1;
         let audio_input_to_rate = runtime.target_input_sample_rate().0 as u32;
 
         dbg!(audio_input_from_channels, audio_input_to_channels, audio_input_from_rate, audio_input_to_rate);

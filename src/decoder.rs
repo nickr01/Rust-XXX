@@ -1,4 +1,3 @@
-#[cfg(any(feature = "enable_rx", test))]
 // use core::error as core_error;
 
 use crate::candidate;

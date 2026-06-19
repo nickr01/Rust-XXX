@@ -12,12 +12,12 @@ use cpal::traits::{
     // StreamTrait
 };
 
-pub fn get_audio_input_device_by_id(host: &cpal::Host, audio_input_device_id: &String) -> Result<cpal::Device, anyhow::Error> {
+pub fn get_audio_input_device_by_id(host: &cpal::Host, audio_input_device_id: &str) -> Result<cpal::Device, anyhow::Error> {
     let audio_input_device_id: &cpal::DeviceId = &audio_input_device_id.parse()?;
     dbg!(audio_input_device_id);
     match host.device_by_id(audio_input_device_id) {
         Some(device) => Ok(device),
-        None => { return Err(anyhow::anyhow!("Cannot get input device by id {}", audio_input_device_id)) }
+        None => { Err(anyhow::anyhow!("Cannot get input device by id {}", audio_input_device_id)) }
     }
 }
 
@@ -37,7 +37,7 @@ pub fn get_audio_input_device(host: &cpal::Host, audio_input_device_name: &Strin
     if audio_input_device_name.is_empty() {
         match host.default_input_device() {
             Some(device) => Ok(device),
-            None => { return Err(anyhow::anyhow!("Cannot get default input device")) }
+            None => { Err(anyhow::anyhow!("Cannot get default input device")) }
         }
     } else {
         match get_audio_input_device_by_name(host, audio_input_device_name) {
@@ -62,13 +62,13 @@ pub fn get_audio_input_device_default_config(host: &cpal::Host, audio_input_devi
     }
 }
 
-pub fn get_audio_output_device_by_id(host: &cpal::Host, audio_output_device_id: &String) -> Result<cpal::Device, anyhow::Error> {
+pub fn get_audio_output_device_by_id(host: &cpal::Host, audio_output_device_id: &str) -> Result<cpal::Device, anyhow::Error> {
     let audio_output_device_id: &cpal::DeviceId = &audio_output_device_id.parse()?;
     dbg!(audio_output_device_id);
 
     match host.device_by_id(audio_output_device_id) {
         Some(device) => Ok(device),
-        None => { return Err(anyhow::anyhow!("Cannot get output device by id {}", audio_output_device_id)) }
+        None => { Err(anyhow::anyhow!("Cannot get output device by id {}", audio_output_device_id)) }
     }
 }
 
@@ -89,7 +89,7 @@ pub fn get_audio_output_device(host: &cpal::Host, audio_output_device_name: &Str
     if audio_output_device_name.is_empty() {
         match host.default_output_device() {
             Some(device) => Ok(device),
-            None => { return Err(anyhow::anyhow!("Cannot get default output device")) }
+            None => { Err(anyhow::anyhow!("Cannot get default output device")) }
         }
     } else {
         match get_audio_output_device_by_name(host, audio_output_device_name) {

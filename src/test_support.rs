@@ -29,7 +29,6 @@ pub const _TEST_PROTOCOL: Protocol = Protocol::new(
 pub const _TEST_FT8_RUNTIME: Runtime = Runtime::new(
     // should be indep of bandwidth and freq_osr but not there yet
     Hz(6000.0),  // this is the real design layer - app layer can chose a portion often 250-2500
-    RepeatCount(1), 
     BitCount(32),
     OverSampleMultiplier(4), // 4
     OverSampleMultiplier(2), // 2

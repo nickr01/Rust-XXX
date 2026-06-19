@@ -276,7 +276,7 @@ pub enum WindowFunction {
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Runtime {
     band_width: Hz,  // **
-    channels: RepeatCount, 
+    // channels: RepeatCount, 
     _bit_depth: BitCount,
     rx_symbol_osr: OverSampleMultiplier, // **
     rx_freq_osr: OverSampleMultiplier, // **
@@ -294,7 +294,7 @@ const NYQUIST: f32 = 2.0;
 impl Runtime {
     pub const fn new(
         band_width: Hz,  // **
-        channels: RepeatCount, 
+        // channels: RepeatCount, 
         _bit_depth: BitCount,
         rx_symbol_osr: OverSampleMultiplier, // **
         rx_freq_osr: OverSampleMultiplier, // **
@@ -308,7 +308,7 @@ impl Runtime {
     ) -> Runtime {
         Runtime {
             band_width,
-            channels, 
+            // channels, 
             _bit_depth,
             rx_symbol_osr,
             rx_freq_osr,
@@ -340,9 +340,9 @@ impl Runtime {
         RepeatCount((self.target_input_sample_rate().0 / self.bin_res(baud_rate).0 ) as usize)
     }
 
-    pub const fn channels(&self) -> RepeatCount {
-        self.channels
-    }
+    // pub const fn channels(&self) -> RepeatCount {
+    //     self.channels
+    // }
 
     pub fn _target_output_sample_rate(&self) -> Hz {
         self.target_input_sample_rate()
