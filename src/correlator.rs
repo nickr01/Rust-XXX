@@ -50,12 +50,14 @@ impl Correlator {
                 )
             );
         }
-
-        // candidates.sort_by_key(|b| std::cmp::Reverse(b.freq_index().0));
-        candidates.sort_by_key(|b| b.freq_index().0);
-
-        // self.dump_histogram(wf, &candidates);
-        Some(candidates)
+        if candidates.is_empty() {
+            None
+        } else {
+            // candidates.sort_by_key(|b| std::cmp::Reverse(b.freq_index().0));
+            candidates.sort_by_key(|b| b.freq_index().0);
+            // self.dump_histogram(wf, &candidates);
+            Some(candidates)
+        }            
     }
 
     //Calculate the score based on the correlation between the signal of the target candidate and the Costas array
