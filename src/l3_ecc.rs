@@ -410,7 +410,7 @@ mod tests {
     use super::*;
     use crate::test_support;
 
-    const L4M0: [u8; test_support::TEST_PROTOCOL.ldpc_n_bytes().0] = [ 0xff, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    const L4M0: [u8; test_support::_TEST_PROTOCOL.ldpc_n_bytes().0] = [ 0xff, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
     fn test_roundtrip(modem: &mut types::Modem, l4_message: Vec<u8>) {
         // let mut _l2_codeword= l4_message;  // msg inc crc in place
@@ -476,8 +476,8 @@ mod tests {
     #[test]
     fn test_layer3() {
         let mut modem: types::Modem = types::Modem::new(
-            &test_support::TEST_PROTOCOL, 
-            &test_support::TEST_FT8_RUNTIME, 
+            &test_support::_TEST_PROTOCOL, 
+            &test_support::_TEST_FT8_RUNTIME, 
         );
 
         test_roundtrip(&mut modem, L4M0.to_vec());

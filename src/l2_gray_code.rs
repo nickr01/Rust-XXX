@@ -190,14 +190,14 @@ mod tests {
         assert_eq!(codeword_out, *codeword_in);
     }
 
-    const MSG0: [u8; test_support::TEST_PROTOCOL.ldpc_n_bytes().0] = [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0xfc];
-    const MSG1: [u8; test_support::TEST_PROTOCOL.ldpc_n_bytes().0] = [67, 171, 17, 12, 2, 2, 76, 47, 161, 170, 70, 55, 40, 30, 2, 1, 0, 251, 55, 25, 213, 0xfc];
+    const MSG0: [u8; test_support::_TEST_PROTOCOL.ldpc_n_bytes().0] = [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0xfc];
+    const MSG1: [u8; test_support::_TEST_PROTOCOL.ldpc_n_bytes().0] = [67, 171, 17, 12, 2, 2, 76, 47, 161, 170, 70, 55, 40, 30, 2, 1, 0, 251, 55, 25, 213, 0xfc];
 
     #[test]
     fn test_layer2() {
         let mut modem: types::Modem = types::Modem::new(
-            &test_support::TEST_PROTOCOL, 
-            &test_support::TEST_FT8_RUNTIME, 
+            &test_support::_TEST_PROTOCOL, 
+            &test_support::_TEST_FT8_RUNTIME, 
         );
         recheck_config(&modem);
         test_roundtrip(&mut modem, &MSG0.to_vec());

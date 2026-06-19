@@ -1,7 +1,7 @@
 use crate::types::*;
 
 // this is a clone of FT8
-pub const TEST_PROTOCOL: Protocol = Protocol::new(
+pub const _TEST_PROTOCOL: Protocol = Protocol::new(
     Secs(0.16),
     Secs(15.0),
     true,
@@ -26,7 +26,7 @@ pub const TEST_PROTOCOL: Protocol = Protocol::new(
     SymbolCount(1),
 );
 
-pub const TEST_FT8_RUNTIME: Runtime = Runtime::new(
+pub const _TEST_FT8_RUNTIME: Runtime = Runtime::new(
     // should be indep of bandwidth and freq_osr but not there yet
     Hz(6000.0),  // this is the real design layer - app layer can chose a portion often 250-2500
     RepeatCount(1), 
@@ -42,4 +42,4 @@ pub const TEST_FT8_RUNTIME: Runtime = Runtime::new(
     WindowFunction::_Hann,  // Hann in the FT8_lib c code, or Blackman
 );  
 
-pub const TEST_FREQUENCY: Hz = Hz(1500.0);
+pub const _TEST_FREQUENCY: Hz = Hz(1500.0);

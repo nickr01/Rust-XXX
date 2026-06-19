@@ -114,15 +114,15 @@ mod tests {
     #[test]
     fn test_layer1() {
         let mut modem: types::Modem = types::Modem::new(
-            &test_support::TEST_PROTOCOL, 
-            &test_support::TEST_FT8_RUNTIME,
+            &test_support::_TEST_PROTOCOL, 
+            &test_support::_TEST_FT8_RUNTIME,
         );
 
-        test_roundtrip(&mut modem, &[0u8; test_support::TEST_PROTOCOL.nd().0].to_vec());
-        test_roundtrip(&mut modem, &[5u8; test_support::TEST_PROTOCOL.nd().0].to_vec());
+        test_roundtrip(&mut modem, &[0u8; test_support::_TEST_PROTOCOL.nd().0].to_vec());
+        test_roundtrip(&mut modem, &[5u8; test_support::_TEST_PROTOCOL.nd().0].to_vec());
 
-        let mut msg1 = [0u8; test_support::TEST_PROTOCOL.nd().0];
-        let mut msg2 = [0u8; test_support::TEST_PROTOCOL.nd().0];
+        let mut msg1 = [0u8; test_support::_TEST_PROTOCOL.nd().0];
+        let mut msg2 = [0u8; test_support::_TEST_PROTOCOL.nd().0];
         for i in 0..modem.protocol().nd().0 {
             msg1[i] = (i & 7) as u8;
             msg2[i] = ((i+3) & 7) as u8;

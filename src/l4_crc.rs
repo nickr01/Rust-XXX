@@ -183,8 +183,8 @@ mod tests {
     #[test]
     fn test_layer4() {
         let mut modem: types::Modem = types::Modem::new(
-            &test_support::TEST_PROTOCOL, 
-            &test_support::TEST_FT8_RUNTIME, 
+            &test_support::_TEST_PROTOCOL, 
+            &test_support::_TEST_FT8_RUNTIME, 
         );
         test_roundtrips(&mut modem, &L5P0);
         test_roundtrips(&mut modem, &L5P1);

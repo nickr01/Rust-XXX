@@ -16,8 +16,8 @@ pub struct Detector {
     nfft: RepeatCount,                            // FFT size
     // underload_divisor: constant::RepeatCount,       
 
-    pub min_detected_mag: f32,              // (debug stats)
-    pub max_detected_mag: f32,              // (debug stats)
+    pub _min_detected_mag: f32,              // (debug stats)
+    pub _max_detected_mag: f32,              // (debug stats)
 
     // pub wf_under_load: waterfall::Waterfall,
     pub wf: waterfall::Waterfall,
@@ -67,8 +67,8 @@ impl Detector {
 
             nfft,
             // rfft_nfft_f,
-            min_detected_mag: f32::MAX,
-            max_detected_mag: f32::MIN,
+            _min_detected_mag: f32::MAX,
+            _max_detected_mag: f32::MIN,
             wf,
             window_function_samples,
         }

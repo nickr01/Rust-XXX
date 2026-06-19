@@ -186,7 +186,7 @@ mod tests {
 
     // Https://docs.rs/jack/latest/jack/
 
-    const _L0RT0: [u8; test_support::TEST_PROTOCOL.total_symbols_nn().0] = [
+    const _L0RT0: [u8; test_support::_TEST_PROTOCOL.total_symbols_nn().0] = [
             3, 1, 4, 0, 6, 5, 2, 5, 5, 5, 
             5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 
             5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 
@@ -196,7 +196,7 @@ mod tests {
             5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 
             5, 5, 3, 1, 4, 0, 6, 5, 2
     ];
-    const L0RT1: [u8; test_support::TEST_PROTOCOL.total_symbols_nn().0] = [
+    const L0RT1: [u8; test_support::_TEST_PROTOCOL.total_symbols_nn().0] = [
             3, 1, 4, 0, 6, 5, 2, 0, 1, 2,
             3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 
             5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 
@@ -210,7 +210,7 @@ mod tests {
     fn test_roundtrip(modem: &mut types::Modem, l1_tones: &Vec<u8>, freq_hz: types::Hz)
     {
         let _num_samples =
-            (0.5 + modem.protocol().total_symbols_nn().0 as f32 * test_support::TEST_FT8_RUNTIME._target_output_sample_rate().0) as usize;
+            (0.5 + modem.protocol().total_symbols_nn().0 as f32 * test_support::_TEST_FT8_RUNTIME._target_output_sample_rate().0) as usize;
         // let num_silence = ((XXX.slot_time() *XXX.sample_rate() as f32) as usize -num_samples) /2;
         // let mut samples = vec![0.0; num_samples];
 
@@ -228,9 +228,9 @@ mod tests {
     #[test]
     fn test_layer0() {
         let mut modem: types::Modem = types::Modem::new(
-            &test_support::TEST_PROTOCOL, 
-            &test_support::TEST_FT8_RUNTIME, 
+            &test_support::_TEST_PROTOCOL, 
+            &test_support::_TEST_FT8_RUNTIME, 
         );
-        test_roundtrip(&mut modem, &L0RT1.to_vec(), test_support::TEST_FREQUENCY);
+        test_roundtrip(&mut modem, &L0RT1.to_vec(), test_support::_TEST_FREQUENCY);
     }
 }

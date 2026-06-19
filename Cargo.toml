@@ -8,6 +8,9 @@ default = ["enable_tx", "enable_rx"]
 enable_rx = []
 enable_tx = []
 audio_pass_test = []
+disable_gfsk = []
+disable_gfsk_ramp = []
+use_f32tan = []
 
 [dependencies]
 "wav_io" = "0.1"

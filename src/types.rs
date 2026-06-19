@@ -532,9 +532,9 @@ impl Message {
     }
 
     pub fn from_vec(cwv: Vec<u8>) -> Result<CodeWord, error::XxxError> {
-        if (cwv.len() ==  0) {
+        if cwv.len() ==  0 {
             Err(error::XxxError::EmptyBuf)
-        } else if (cwv.len() > 16) {
+        } else if cwv.len() > 16 {
             Err(error::XxxError::BufTooBig(cwv.len()))
         } else {
             // let mut codeword = 0;
@@ -564,7 +564,7 @@ mod tests {
 
     #[test]
     fn test_constant() {
-        assert!(check(&test_support::TEST_PROTOCOL));
+        assert!(check(&test_support::_TEST_PROTOCOL));
         // assert!(check(&_JS8A));
         // assert!(check(&_LT8A));
     }

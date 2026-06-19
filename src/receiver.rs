@@ -1,5 +1,5 @@
-#[cfg(any(feature = "enable_rx", test))]
-use core::error as core_error;
+// #[cfg(any(feature = "enable_rx", test))]
+// use core::error as core_error;
 
 // use crate::candidate;
 use crate::correlator;
@@ -21,7 +21,7 @@ use crate::waterfall;
 
 #[cfg(any(feature = "enable_rx", test))]
 pub struct Receiver {
-    pub start_time: std::time::Instant,
+    // pub start_time: std::time::Instant,
     pub nfft: usize, 
     pub protocol: &'static types::Protocol,
     pub runtime: &'static types::Runtime,
@@ -57,7 +57,7 @@ impl Receiver {
         // single instance caches plans
         
         Receiver {
-            start_time: std::time::Instant::now(),
+            // start_time: std::time::Instant::now(),
             nfft: nfft.0,
             protocol,
             runtime,

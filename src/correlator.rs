@@ -131,13 +131,13 @@ impl Correlator {
             // dbg!(candidate);
         }
 
-        debug::_plot_graph(
-            "out/magbins.png", 
-            "Magsum",
-            &wf.magsums,
-            0, wf.magsums.len(),
-            0.0, wf.magsums.clone().into_iter().reduce(f32::max).unwrap()
-        );
+        // debug::_plot_graph(
+        //     "out/magbins.png", 
+        //     "Magsum",
+        //     &wf.magsums,
+        //     0, wf.magsums.len(),
+        //     0.0, wf.magsums.clone().into_iter().reduce(f32::max).unwrap()
+        // );
 
         debug::_plot_graph(
             "out/correl_counts.png", 

@@ -1,15 +1,15 @@
 // needed for Traits
-use clap::Parser;
+// use clap::Parser;
 
-use cpal::{
-    StreamConfig, 
-    // SupportedStreamConfig
-};
+// use cpal::{
+//     // StreamConfig, 
+//     // SupportedStreamConfig
+// };
 // use cpal::{Sample, SupportedStreamConfig};
 use cpal::traits::{
     HostTrait, 
     DeviceTrait, 
-    StreamTrait
+    // StreamTrait
 };
 
 pub fn get_audio_input_device_by_id(host: &cpal::Host, audio_input_device_id: &String) -> Result<cpal::Device, anyhow::Error> {

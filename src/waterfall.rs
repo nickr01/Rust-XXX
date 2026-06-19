@@ -78,7 +78,7 @@ pub struct Waterfall {
     pub freq_osr: types::OverSampleMultiplier,   // number of frequency subdivisions ?>=2
 
     wflines: WaterFallLines,
-    pub magsums: Vec<f32>,
+    // pub magsums: Vec<f32>,
 }
 
 impl Waterfall {
@@ -89,7 +89,7 @@ impl Waterfall {
         freq_osr: types::OverSampleMultiplier,
     ) -> Self {
         let wflines: WaterFallLines = circular_buffer::CircularBuffer::<{types::WATERFALL_BUF_SIZE}, WaterfallLine>::boxed();
-        let magsums: Vec<f32> = vec!(0.0; freq_bins);
+        // let magsums: Vec<f32> = vec!(0.0; freq_bins);
 
         Waterfall {
             load_base: 0,
@@ -103,7 +103,7 @@ impl Waterfall {
             freq_osr,
 
             wflines,
-            magsums,
+            // magsums,
         }
     }
 

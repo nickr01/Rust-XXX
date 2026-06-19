@@ -52,23 +52,23 @@ mod tests {
     fn test() {
         
         let mut modem: types::Modem = types::Modem::new(
-            &test_support::TEST_PROTOCOL, 
-            &test_support::TEST_FT8_RUNTIME, 
+            &test_support::_TEST_PROTOCOL, 
+            &test_support::_TEST_FT8_RUNTIME, 
         );
 
         // const M_0: &str = "CQ VK2ZTY QG61";        
 
         let cw00: Vec<u8> = vec![0x00u8; modem.protocol()._ldpc_p_bytes().0];
-        test_roundtrip(&mut modem, cw00, test_support::TEST_FREQUENCY);
+        test_roundtrip(&mut modem, cw00, test_support::_TEST_FREQUENCY);
 
         let cw80: Vec<u8> = vec![0x80u8; modem.protocol()._ldpc_p_bytes().0];
-        test_roundtrip(&mut modem, cw80, test_support::TEST_FREQUENCY);
+        test_roundtrip(&mut modem, cw80, test_support::_TEST_FREQUENCY);
 
         let cw58: Vec<u8> = vec![0x58u8; modem.protocol()._ldpc_p_bytes().0];
-        test_roundtrip(&mut modem, cw58, test_support::TEST_FREQUENCY);
+        test_roundtrip(&mut modem, cw58, test_support::_TEST_FREQUENCY);
 
         let cwf8: Vec<u8> = vec![0xf8u8; modem.protocol()._ldpc_p_bytes().0];
-        test_roundtrip(&mut modem, cwf8, test_support::TEST_FREQUENCY);
+        test_roundtrip(&mut modem, cwf8, test_support::_TEST_FREQUENCY);
     }
 
 }
