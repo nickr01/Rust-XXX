@@ -610,14 +610,41 @@ fn rx_main(
 
                 for payload in payloads {
                     let codeword = &payload.codeword().0;
-                    // println!("{:08b}..{:08b}", codeword[0], codeword[9]);
+                    println!("{:08b}..{:08b}", codeword[0], codeword[9]);
                     let codeword: [u8; ft8_message::FT8_PAYLOAD_BYTES] = codeword[..ft8_message::FT8_PAYLOAD_BYTES].try_into()?;
+
+                    // at this stage the codeword is earliest byte last, and right justified
                     // dbg!(codeword);
-                    if codeword[0] & 0b_111_000_00 != 0b_001_000_00 {
-                        dbg!("non standard msg - skip");
+                    if (codeword[9] >> 3) & 0b_111 != 0b_001 {
+                        dbg!("not an old style standard msg - skip");
                         continue;
                     }
-                    dbg!("standard msg");
+                    dbg!("old style standard msg");
+
+                    // TEMP - fix the order here for nom processing - earliest first, left justified
+                    let mut n = 0u128;
+                    let mut i = ft8_message::FT8_PAYLOAD_BYTES;
+                    while i > 0 {
+                        n <<= 8;
+                        n |= codeword[i - 1 ] as u128;
+                        i -= 1;
+                    }
+                    n <<= 2;
+                    println!("{:b}", n);
+                    // 10_00111100_10011110_01000111_11110110_00100010_00110100_10010100_00000000_00000000_00000000
+                    // TEMP rebuild the codeword
+                    let mut codeword = [0u8; ft8_message::FT8_PAYLOAD_BYTES];
+
+                    let mut i = ft8_message::FT8_PAYLOAD_BYTES;
+                    while i > 0 {
+                        codeword[i - 1 ] = (n & 0xff) as u8;
+                        i -= 1;
+                        n >>= 8;
+                    }
+
+                    println!("{:08b}..{:08b}", codeword[0], codeword[9]);
+                    // assert_eq!(codeword[0] & 0b_111_000_00, 0b_001_000_00);
+
                     let result = ft8_context.ft8_payload_to_message(codeword);
                     match result {
                         Ok(msg) => {
