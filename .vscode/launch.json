@@ -2,12 +2,13 @@
     "version": "0.2.0",
     "configurations": [
         
+        
         {
             "type": "lldb",
             "request": "launch",
             "name": "Debug",
-            "program": "${workspaceFolder}/target/debug/rustxxx",
-            "args": ["--input-file", "data/FT8_orig/test_01.wav"],
+            "program": "${workspaceFolder}/target/debug/ft8_streams",
+            // "args": [],
             "cwd": "${workspaceFolder}"
         }
     ]
