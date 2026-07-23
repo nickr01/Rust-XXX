@@ -176,13 +176,10 @@ impl RxPipeline {
     }
 
     pub fn continue_run(&self) -> bool {
-        match &self.debug_portal {
-            Some(portal) => {
-                portal.continue_run()
-            },
-            None => {
-                true
-            }
+        if let Some(portal) = &self.debug_portal {
+            portal.continue_run()
+        } else {
+            true
         }
     }
 

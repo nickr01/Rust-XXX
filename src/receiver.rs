@@ -118,6 +118,7 @@ impl Receiver {
                                     // dbg!("test storing msg");
                                     if !message_hash.contains_key(message.key()) {
                                         // dbg!("yes storing msg");
+                                        // println!("Storing message {:08b}..{:08b}", message.codeword.0[0], message.codeword.0[9]);
                                         message_hash.insert(message.key().clone(), message);
                                         success += 1;
                                     }

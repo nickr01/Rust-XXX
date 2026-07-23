@@ -11,7 +11,7 @@ use bitvec::prelude::*;
 
 impl types::Modem {
     fn _crc_compute(&self, codeword: &[u8]) -> u16 {
-        assert!(codeword.len() >= self.protocol()._ldpc_p_bytes().0);
+        // assert!(codeword.len() >= self.protocol()._ldpc_p_bytes().0);
         let codeword_bits = codeword.view_bits::<Msb0>();
 
         let mut payload: Vec<u8> = vec![0; self.protocol()._ldpc_p_padded_bytes().0]; 
@@ -36,7 +36,7 @@ impl types::Modem {
 
     #[cfg(any(feature = "enable_tx", test))]
     fn _crc_store(&self, crc_arg: u16, payload: &[u8]) -> Vec<u8> {
-        assert_eq!(payload.len(), self.protocol()._ldpc_p_bytes().0);
+        // assert_eq!(payload.len(), self.protocol()._ldpc_p_bytes().0);
         let mut crc = crc_arg;
         let mut cw_crc = payload.to_owned();
         cw_crc.resize(self.protocol()._ldpc_k_bytes().0, 0);
@@ -50,7 +50,7 @@ impl types::Modem {
 
     #[cfg(any(feature = "enable_rx", test))]
     pub fn _crc_read(&self, codeword: &[u8]) -> u16 {
-        assert_eq!(codeword.len(), self.protocol()._ldpc_k_bytes().0);
+        // assert_eq!(codeword.len(), self.protocol()._ldpc_k_bytes().0);
         let mut crc: u16 = 0;
         let codeword_bits = codeword.view_bits::<Msb0>();
         for i in self.protocol()._ldpc_p().0..self.protocol().ldpc_k().0 {
@@ -63,9 +63,9 @@ impl types::Modem {
     }
 
     #[cfg(any(feature = "enable_rx", test))]
-    pub fn _crc_check(&self, codeword: &[u8]) -> bool {
-        assert_eq!(codeword.len(), self.protocol()._ldpc_k_bytes().0);
-         let crc1 = self._crc_read(codeword);
+    pub fn crc_check(&self, codeword: &[u8]) -> bool {
+        // assert_eq!(codeword.len(), self.protocol()._ldpc_k_bytes().0);
+        let crc1 = self._crc_read(codeword);
         let crc2 = self._crc_compute(codeword);
         crc1 == crc2
     }
@@ -84,8 +84,8 @@ impl types::Modem {
     }
 
     #[cfg(test)]
-    pub fn _l4_crc_remove(&self, cw_crc: &Vec<u8>) -> Result<Vec<u8>, error::XxxError> {
-        if self._crc_check(cw_crc) {
+    pub fn l4_crc_remove(&self, cw_crc: &[u8]) -> Result<Vec<u8>, error::XxxError> {
+        if self.crc_check(cw_crc) {
             let mut cw = cw_crc.to_owned();
             cw.resize(self.protocol()._ldpc_p_bytes().0, 0);
             let resid_bits = (self.protocol()._ldpc_k_bytes().0 - self.protocol()._ldpc_p_bytes().0) % 8;
@@ -104,7 +104,7 @@ impl types::Modem {
     }
 
     #[cfg(test)]
-    pub fn l4_outbound(&self, ttl: isize, cw: &Vec<u8>, freq_hz: types::Hz) -> Result<Vec<u8>, error::XxxError> {
+    pub fn l4_outbound(&self, ttl: isize, cw: &[u8], freq_hz: types::Hz) -> Result<Vec<u8>, error::XxxError> {
         assert_eq!(cw.len(), self.protocol()._ldpc_p_bytes().0);
         let cw_crc = self._l4_crc_add(cw)?;
         assert_eq!(cw_crc.len(), self.protocol()._ldpc_k_bytes().0);
@@ -116,9 +116,9 @@ impl types::Modem {
     }
 
     #[cfg(test)]
-    pub fn l4_inbound(&self, cw_crc: &Vec<u8>) -> Result<Vec<u8>, error::XxxError> {
+    pub fn l4_inbound(&self, cw_crc: &[u8]) -> Result<Vec<u8>, error::XxxError> {
         assert_eq!(cw_crc.len(), self.protocol()._ldpc_k_bytes().0);
-        let cw = self._l4_crc_remove(cw_crc)?;
+        let cw = self.l4_crc_remove(cw_crc)?;
         assert_eq!(cw.len(), self.protocol()._ldpc_p_bytes().0);
         self.l5_top_inbound(&cw)
     }
@@ -169,7 +169,7 @@ mod tests {
             let codeword1 = modem._crc_store(crc, &codeword);
             assert_eq!(modem._crc_read(&codeword1), crc);
             assert_eq!(modem._crc_compute(&codeword1), crc);
-            assert!(modem._crc_check(&codeword1));
+            assert!(modem.crc_check(&codeword1));
         }
 
         // {

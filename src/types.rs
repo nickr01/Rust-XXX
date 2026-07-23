@@ -534,9 +534,18 @@ impl Message {
     pub fn from_vec(cwv: Vec<u8>) -> Result<CodeWord, error::XxxError> {
         if cwv.is_empty() {
             Err(error::XxxError::EmptyBuf)
-        } else if cwv.len() > 16 {
+        } else if cwv.len() > 22 {
             Err(error::XxxError::BufTooBig(cwv.len()))
         } else {
+            // if have 174 bit packet (in 22 bytes) then has 2 bit remainder (174 = 176-2)
+            // reverse byte order?
+            // reverse bit order? - maybe can fix in the decoder?
+            // below doesnt work yet
+            // let mut codeword = Vec::new();
+            // for i in 21..11 {
+            //     codeword.push(cwv[i]);
+            // }
+            // assert_eq!(codeword.len(), 10);
             // let mut codeword = 0;
             // for b in cwv {
             //     codeword <<= 8;
