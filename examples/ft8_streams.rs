@@ -583,7 +583,7 @@ fn rx_main(
             audio_input_from_channels, audio_input_from_rate, 
         );
 
-        let ft8_context = ft8_message::FT8Context::new();
+        let mut ft8_context = ft8_message::FT8Context::new();
         
         let mut audio_buff = [0f32; rx_pipeline::RX_IN_BUFLEN];
         let from_channels = resample_context.from_channels;
@@ -603,16 +603,30 @@ fn rx_main(
                         n += 1;
                     }
                 }
-                let messages = receive_pipeline.write_mono_sample_buffer(
+                let payloads = receive_pipeline.write_mono_sample_buffer(
                     &audio_buff,
                     &mut resample_context
                 )?;
 
-                for msg in messages {
-                    let cw = &msg.codeword().0;
-                    let cw: [u8; ft8_message::FT8_PAYLOAD_BYTES] = cw[..ft8_message::FT8_PAYLOAD_BYTES].try_into()?;
-                    let msg = ft8_context.ft8_payload_to_message(&cw)?;
-                    dbg!(&msg);
+                for payload in payloads {
+                    let codeword = &payload.codeword().0;
+                    // println!("{:08b}..{:08b}", codeword[0], codeword[9]);
+                    let codeword: [u8; ft8_message::FT8_PAYLOAD_BYTES] = codeword[..ft8_message::FT8_PAYLOAD_BYTES].try_into()?;
+                    // dbg!(codeword);
+                    if codeword[0] & 0b_111_000_00 != 0b_001_000_00 {
+                        dbg!("non standard msg - skip");
+                        continue;
+                    }
+                    dbg!("standard msg");
+                    let result = ft8_context.ft8_payload_to_message(codeword);
+                    match result {
+                        Ok(msg) => {
+                            println!("Msg OK: {}", msg.to_string(&mut ft8_context).unwrap());
+                        }
+                        Err(err) => {
+                            eprintln!("FT8TransportError: {}", err);
+                        }
+                    }
                 }
                 receive_pipeline.update_spectrogram();
             }
@@ -627,11 +641,11 @@ fn rx_main(
         loop {};
     }
 
-    match _audio_input_stream {
-        Some(_stream) => {
-        },
-        None => {}
-    }
+    // match _audio_input_stream {
+    //     Some(_stream) => {
+    //     },
+    //     None => {}
+    // }
 
     Ok(())
 }
@@ -653,13 +667,13 @@ fn main() -> Result<(), anyhow::Error> {
     // }
 
     #[cfg(any(feature = "enable_tx", test))]
-    let tx_thread_handle = std::thread::spawn(move || { tx_main(&opt.output_device, &runtime) });
+    // let tx_thread_handle = std::thread::spawn(move || { tx_main(&opt.output_device, &runtime) });
 
     // keep receiver in main thread so it can use its debug window
     #[cfg(any(feature = "enable_rx", test))]
     let _ = rx_main(&opt.input_device, &runtime);
     
-    let _ = tx_thread_handle.join();
+    // let _ = tx_thread_handle.join();
 
     Ok(())
 }
