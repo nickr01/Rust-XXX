@@ -67,7 +67,7 @@ impl Decoder {
                     Ok(None)
                 } else if modem.crc_check(&codeword_vec) {
                     // dbg!("Non-blank codeword", &codeword_vec);
-                    let mut codeword_vec = codeword_vec;
+                    let codeword_vec = codeword_vec;
                     // println!("Decoded 0:{:08b} 9:{:08b} 15:{:08b} 21:{:08b}", codeword_vec[0], codeword_vec[9], codeword_vec[15], codeword_vec[21]);
                     // codeword_vec.truncate(16); // only want these - no need to mask
                     let codeword = types::Message::from_vec(codeword_vec)?;
