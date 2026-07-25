@@ -52,11 +52,11 @@ impl Decoder {
     ) -> Result<Option<types::Message>, error::XxxError> {
         let mut r = modem.ecc_decode_bp(logls, self.runtime.ldpc_max_iteration().0);
         if r.is_ok() {
-            dbg!("decode by ecc_decode_bp");
+            // dbg!("decode by ecc_decode_bp");
         } else {
             r = modem.ecc_decode_bitflip(logls, self.runtime.ldpc_max_iteration().0);
             if r.is_ok() {
-                dbg!("decode by ecc_decode_bitflip");
+                // dbg!("decode by ecc_decode_bitflip");
             }
         };
         match r {
@@ -67,10 +67,11 @@ impl Decoder {
                     Ok(None)
                 } else if modem.crc_check(&codeword_vec) {
                     // dbg!("Non-blank codeword", &codeword_vec);
-                    let codeword_vec = codeword_vec;
                     // println!("Decoded 0:{:08b} 9:{:08b} 15:{:08b} 21:{:08b}", codeword_vec[0], codeword_vec[9], codeword_vec[15], codeword_vec[21]);
-                    // codeword_vec.truncate(16); // only want these - no need to mask
+                    // let mut codeword_vec = codeword_vec;
+                    // at this stage the codeword is earliest byte last, and right justified ??
                     let codeword = types::Message::from_vec(codeword_vec)?;
+                    println!("Storing codeword 0:{:08b}", codeword.0[0]);
                     let msg = types::Message::new(
                         time_secs,
                         freq_hz,
@@ -83,7 +84,7 @@ impl Decoder {
                 }
             }
             Err(_) => {
-                dbg!("Bad Ecc Pass");
+                // dbg!("Bad Ecc Pass");
                 Err(error::XxxError::_BadEcc)
             }
         }

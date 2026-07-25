@@ -537,6 +537,7 @@ impl Message {
         } else if cwv.len() > 22 {
             Err(error::XxxError::BufTooBig(cwv.len()))
         } else {
+            assert_eq!(cwv.len(), 22);
             // if have 174 bit packet (in 22 bytes) then has 2 bit remainder (174 = 176-2)
             // reverse byte order?
             // reverse bit order? - maybe can fix in the decoder?
@@ -551,6 +552,14 @@ impl Message {
             //     codeword <<= 8;
             //     codeword += b as u128;
             // }
+
+            //*** 26/7  Currently earliest byte is in byte 9 - but why?
+            // BUT this does not work reading to right or left from 9
+
+            // BOTH These fails but we know first(earliest) is byte 9
+            // NB need to pair with ft8_streams kludge
+            let cwv = cwv[0..9].to_vec().into_iter().collect();
+            // let cwv = cwv[9..19].to_vec().into_iter().rev().collect();
             Ok(CodeWord(cwv))
         }
     }

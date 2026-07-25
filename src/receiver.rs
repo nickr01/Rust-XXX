@@ -131,7 +131,7 @@ impl Receiver {
 
                         },
                         Err(error::XxxError::_BadEcc) => {
-                            dbg!("dropping ecc_error");
+                            // dbg!("dropping ecc_error");
                         }
                         Err(error::XxxError::_BadCrc) => {
                             dbg!("dropping crc_error");
