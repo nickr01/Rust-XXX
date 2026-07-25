@@ -54,10 +54,10 @@ impl Decoder {
         if r.is_err() {
             r = modem.ecc_decode_bitflip(logls, self.runtime.ldpc_max_iteration().0);
             if r.is_ok() {
-                // dbg!("ecc_decode_bitflip contributed");
+                dbg!("ecc_decode_bitflip contributed");
             }
         } else {
-            // dbg!("primary ecc_decode_bp decode");
+            dbg!("primary ecc_decode_bp decode");
         }
         match r {
             Ok(codeword_vec) => {
