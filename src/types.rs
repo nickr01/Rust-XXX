@@ -558,8 +558,8 @@ impl Message {
 
             // BOTH These fails but we know first(earliest) is byte 9
             // NB need to pair with ft8_streams kludge
-            let cwv = cwv[0..9].to_vec().into_iter().collect();
-            // let cwv = cwv[9..19].to_vec().into_iter().rev().collect();
+            // let cwv = cwv[9..19].to_vec().into_iter().collect();
+            let cwv = cwv[0..10].to_vec().into_iter().rev().collect();
             Ok(CodeWord(cwv))
         }
     }

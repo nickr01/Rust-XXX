@@ -613,24 +613,26 @@ fn rx_main(
                     // println!("{:08b}..{:08b}", codeword[0], codeword[9]);
                     let codeword: [u8; ft8_message::FT8_PAYLOAD_BYTES] = codeword[..ft8_message::FT8_PAYLOAD_BYTES].try_into()?;
 
-                    // at this stage the codeword is earliest byte last, and right justified
+                    // orig at this stage the codeword is earliest byte last, and right justified
+                    // now byte order corrected
                     // dbg!(codeword);
-                    if (codeword[9] >> 3) & 0b_111 != 0b_001 {
+                    if (codeword[0] >> 3) & 0b_111 != 0b_001 {
                         dbg!("not an old style standard msg - skip");
                         continue;
                     }
                     // dbg!("old style standard msg");
 
-                    // TEMP - fix the order here for nom processing - earliest first, left justified
                     let mut n = 0u128;
-                    let mut i = ft8_message::FT8_PAYLOAD_BYTES;
-                    while i > 0 {
+                    let mut i = 0; //  = ft8_message::FT8_PAYLOAD_BYTES;
+                    
+                    for u in codeword {
                         n <<= 8;
-                        n |= codeword[i - 1 ] as u128;
-                        i -= 1;
+                        n |= u as u128;
                     }
+                    // do the bit shift
                     n <<= 2;
-                    // println!("{:b}", n);
+                    println!("{:b}", n);
+
                     // 10_00111100_10011110_01000111_11110110_00100010_00110100_10010100_00000000_00000000_00000000
                     // TEMP rebuild the codeword
                     let mut codeword = [0u8; ft8_message::FT8_PAYLOAD_BYTES];
