@@ -51,14 +51,14 @@ impl Decoder {
         logls: &[l3_ecc::LogL],
     ) -> Result<Option<types::Message>, error::XxxError> {
         let mut r = modem.ecc_decode_bp(logls, self.runtime.ldpc_max_iteration().0);
-        if r.is_err() {
+        if r.is_ok() {
+            dbg!("decode by ecc_decode_bp");
+        } else {
             r = modem.ecc_decode_bitflip(logls, self.runtime.ldpc_max_iteration().0);
             if r.is_ok() {
-                dbg!("ecc_decode_bitflip contributed");
+                dbg!("decode by ecc_decode_bitflip");
             }
-        } else {
-            dbg!("primary ecc_decode_bp decode");
-        }
+        };
         match r {
             Ok(codeword_vec) => {
                 // dbg!("got past ecc");
@@ -83,6 +83,7 @@ impl Decoder {
                 }
             }
             Err(_) => {
+                dbg!("Bad Ecc Pass");
                 Err(error::XxxError::_BadEcc)
             }
         }
