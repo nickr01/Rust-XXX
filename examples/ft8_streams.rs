@@ -610,7 +610,7 @@ fn rx_main(
 
                 for payload in payloads {
                     let codeword = &payload.codeword().0;
-                    println!("{:08b}..{:08b}", codeword[0], codeword[9]);
+                    // println!("{:08b}..{:08b}", codeword[0], codeword[9]);
                     let codeword: [u8; ft8_message::FT8_PAYLOAD_BYTES] = codeword[..ft8_message::FT8_PAYLOAD_BYTES].try_into()?;
 
                     // at this stage the codeword is earliest byte last, and right justified
@@ -619,7 +619,7 @@ fn rx_main(
                         dbg!("not an old style standard msg - skip");
                         continue;
                     }
-                    dbg!("old style standard msg");
+                    // dbg!("old style standard msg");
 
                     // TEMP - fix the order here for nom processing - earliest first, left justified
                     let mut n = 0u128;
@@ -630,7 +630,7 @@ fn rx_main(
                         i -= 1;
                     }
                     n <<= 2;
-                    println!("{:b}", n);
+                    // println!("{:b}", n);
                     // 10_00111100_10011110_01000111_11110110_00100010_00110100_10010100_00000000_00000000_00000000
                     // TEMP rebuild the codeword
                     let mut codeword = [0u8; ft8_message::FT8_PAYLOAD_BYTES];
@@ -642,13 +642,14 @@ fn rx_main(
                         n >>= 8;
                     }
 
-                    println!("{:08b}..{:08b}", codeword[0], codeword[9]);
+                    println!("{:?}", codeword);
+                    // println!("{:08b}..{:08b}", codeword[0], codeword[9]);
                     // assert_eq!(codeword[0] & 0b_111_000_00, 0b_001_000_00);
 
                     let result = ft8_context.ft8_payload_to_message(codeword);
                     match result {
                         Ok(msg) => {
-                            println!("Msg OK: {}", msg.to_string(&mut ft8_context).unwrap());
+                            println!("Msg OK: {}", msg.to_string().unwrap());
                         }
                         Err(err) => {
                             eprintln!("FT8TransportError: {}", err);
