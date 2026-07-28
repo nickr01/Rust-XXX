@@ -616,45 +616,52 @@ fn rx_main(
                     // orig at this stage the codeword is earliest byte last, and right justified
                     // now byte order corrected
                     // dbg!(codeword);
-                    if (codeword[0] >> 3) & 0b_111 != 0b_001 {
-                        dbg!("not an old style standard msg - skip");
-                        continue;
-                    }
+                    // if (codeword[0] >> 3) & 0b_111 != 0b_001 {
+                    //     dbg!("not an old style standard msg - skip");
+                    //     continue;
+                    // }
                     // dbg!("old style standard msg");
 
-                    let mut n = 0u128;
-                    let mut i = 0; //  = ft8_message::FT8_PAYLOAD_BYTES;
+                    // let mut n = 0u128;
+                    // let mut i = 0; //  = ft8_message::FT8_PAYLOAD_BYTES;
                     
-                    for u in codeword {
-                        n <<= 8;
-                        n |= u as u128;
-                    }
-                    // do the bit shift
-                    n <<= 2;
-                    println!("{:b}", n);
+                    // for u in codeword {
+                    //     n <<= 8;
+                    //     n |= u as u128;
+                    // }
+                    // // do the bit shift
+                    // n <<= 2;
+                    // println!("{:b}", n);
 
                     // 10_00111100_10011110_01000111_11110110_00100010_00110100_10010100_00000000_00000000_00000000
                     // TEMP rebuild the codeword
-                    let mut codeword = [0u8; ft8_message::FT8_PAYLOAD_BYTES];
+                    // let mut codeword = [0u8; ft8_message::FT8_PAYLOAD_BYTES];
 
-                    let mut i = ft8_message::FT8_PAYLOAD_BYTES;
-                    while i > 0 {
-                        codeword[i - 1 ] = (n & 0xff) as u8;
-                        i -= 1;
-                        n >>= 8;
-                    }
+                    // let mut i = ft8_message::FT8_PAYLOAD_BYTES;
+                    // while i > 0 {
+                    //     codeword[i - 1 ] = (n & 0xff) as u8;
+                    //     i -= 1;
+                    //     n >>= 8;
+                    // }
 
-                    println!("{:?}", codeword);
+                    // println!("{:?}", codeword);
                     // println!("{:08b}..{:08b}", codeword[0], codeword[9]);
                     // assert_eq!(codeword[0] & 0b_111_000_00, 0b_001_000_00);
 
                     let result = ft8_context.ft8_payload_to_message(codeword);
                     match result {
                         Ok(msg) => {
-                            println!("Msg OK: {}", msg.to_string().unwrap());
+                            match msg.to_string() {
+                                Ok(s) => {
+                                    println!("{}", s);
+                                },
+                                Err(err) => {
+                                    eprintln!("message_to_string: FT8TransportError: {}", err);
+                                }
+                            }
                         }
                         Err(err) => {
-                            eprintln!("FT8TransportError: {}", err);
+                            eprintln!("payload_to_message: FT8TransportError: {}", err);
                         }
                     }
                 }
