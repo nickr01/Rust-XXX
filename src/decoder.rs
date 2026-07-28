@@ -66,12 +66,18 @@ impl Decoder {
                     // dbg!("Blank message :(");
                     Ok(None)
                 } else if modem.crc_check(&codeword_vec) {
+                    // {
+                    //     for (i, n) in codeword_vec.iter().enumerate() {
+                    //         println!("{} {:08b}", i, *n);
+                    //     }
+                    // }
+                    // panic!();
                     // dbg!("Non-blank codeword", &codeword_vec);
                     // println!("Decoded 0:{:08b} 9:{:08b} 15:{:08b} 21:{:08b}", codeword_vec[0], codeword_vec[9], codeword_vec[15], codeword_vec[21]);
                     // let mut codeword_vec = codeword_vec;
                     // at this stage the codeword is earliest byte last, and right justified ??
                     let codeword = types::Message::from_vec(codeword_vec)?;
-                    println!("Storing codeword 0:{:08b}", codeword.0[0]);
+                    // println!("Storing codeword 0:{:08b}", codeword.0[0]);
                     let msg = types::Message::new(
                         time_secs,
                         freq_hz,
