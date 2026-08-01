@@ -1,8 +1,8 @@
 // use std::sync::mpsc::Receiver;
 
 use anyhow::{
-    // Context, 
-    Result
+    // Context,
+    Result,
 }; // - for user level
 
 // use monitor::Waterfall;
@@ -22,19 +22,19 @@ use anyhow::{
 use clap::Parser;
 
 use cpal::{
-    StreamConfig, 
+    StreamConfig,
     // SupportedStreamConfig
 };
 // use cpal::{Sample, SupportedStreamConfig};
 use cpal::traits::{
-    // HostTrait, 
-    DeviceTrait, 
-    StreamTrait
+    // HostTrait,
+    DeviceTrait,
+    StreamTrait,
 };
 
 // use cpal::{StreamConfig, SupportedStreamConfig};
 // use cpal::{Sample, SupportedStreamConfig};
-// use cpal::traits::{ HostTrait, DeviceTrait, 
+// use cpal::traits::{ HostTrait, DeviceTrait,
 //     // StreamTrait
 // };
 
@@ -122,27 +122,34 @@ use ringbuf::traits::Split;
 //     let mut file_out = File::create("./out/gfsk_dump.wav").expect();
 //     writer::to_file(&mut file_out, &WavData::new(header, samples.clone())).expect();
 // }
-        // // #[cfg(feature = "gfsk_dump_wav")]
-        // self._dump_wav(&_signal);
+// // #[cfg(feature = "gfsk_dump_wav")]
+// self._dump_wav(&_signal);
 
-        // if cfg!(not(feature = "disable_gfsk_plot")) {
-        //     plot_graph(
-        //         "./out/signal.png", 
-        //         "GFSK Signal", 
-        //         &signal, 
-        //         0, 500, 
-        //         -1.5, 1.5
-        //     );
-        // }
+// if cfg!(not(feature = "disable_gfsk_plot")) {
+//     plot_graph(
+//         "./out/signal.png",
+//         "GFSK Signal",
+//         &signal,
+//         0, 500,
+//         -1.5, 1.5
+//     );
+// }
 
 pub type AudioSampleBuffer = ringbuf::SharedRb<ringbuf::storage::Heap<f32>>; // SharedRb<ringbuf::storage::Heap<f32>>;
 
-pub type AudioBufWriter = ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, true, false>; 
-pub type AudioBufReader = ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, false, true>;
+pub type AudioBufWriter = ringbuf::wrap::caching::Caching<
+    std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>,
+    true,
+    false,
+>;
+pub type AudioBufReader = ringbuf::wrap::caching::Caching<
+    std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>,
+    false,
+    true,
+>;
 
 // pub type AudioBufReader = std::sync::Arc<std::sync::Mutex<ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, false, true>>>;
 // pub type AudioBufWriter = std::sync::Arc<std::sync::Mutex<ringbuf::wrap::caching::Caching<std::sync::Arc<ringbuf::SharedRb<ringbuf::storage::Heap<f32>>>, true, false>>>;
-
 
 pub const FT8: Protocol = Protocol::new(
     Secs(0.16),
@@ -150,24 +157,24 @@ pub const FT8: Protocol = Protocol::new(
     true,
     BitCount(3),
     SymbolCount(58),
-    SymbolCount(79),             // Total channel symbols (FT8_NS + FT8_ND)
-    SymbolCount(7),     // sync group length
-    RepeatCount(3),        // Number of sync groups
+    SymbolCount(79), // Total channel symbols (FT8_NS + FT8_ND)
+    SymbolCount(7),  // sync group length
+    RepeatCount(3),  // Number of sync groups
     SymbolCount(0),
-    SymbolCount(36),    // Offset between sync groups
-    [3, 1, 4, 0, 6, 5, 2],    //　Costas array
-    BitCount(174),        // Number of bits in the encoded message (payload with LDPC checksum bits)
-    BitCount(91),         // Number of payload bits (including CRC)
+    SymbolCount(36),       // Offset between sync groups
+    [3, 1, 4, 0, 6, 5, 2], //　Costas array
+    BitCount(174), // Number of bits in the encoded message (payload with LDPC checksum bits)
+    BitCount(91),  // Number of payload bits (including CRC)
     [0, 1, 3, 2, 5, 6, 4, 7],
     [0, 1, 3, 2, 6, 4, 5, 7],
-    CrcParams::new(BitCount(5),BitMap(0x2757), BitCount(14), 0, 0),
+    CrcParams::new(BitCount(5), BitMap(0x2757), BitCount(14), 0, 0),
     2.0f32,
     SymbolCount(1),
 );
 
 pub const FT8_RUNTIME: Runtime = Runtime::new(
     // should be indep of bandwidth and freq_osr but not there yet
-    Hz(6000.0),  // this is the real design layer - app layer can chose a portion often 250-2500
+    Hz(6000.0), // this is the real design layer - app layer can chose a portion often 250-2500
     BitCount(32),
     OverSampleMultiplier(4), // 4
     OverSampleMultiplier(2), // 2
@@ -175,9 +182,9 @@ pub const FT8_RUNTIME: Runtime = Runtime::new(
     1.0, // 0.4, // 10,
     RepeatCount(1),
     RepeatCount(20),
-    false, // true, 
+    false, // true,
     // subtracts: RepeatCount(1),
-    WindowFunction::_Hann,  // Hann in the FT8_lib c code, or Blackman
+    WindowFunction::_Hann, // Hann in the FT8_lib c code, or Blackman
 );
 
 #[derive(clap::Parser, std::fmt::Debug)]
@@ -187,21 +194,18 @@ struct Opt {
     #[arg(short, long, default_value = "")]
     input_device: Option<String>,
 
-    // /// The audio input file to use. 
+    // /// The audio input file to use.
     // #[arg(long)]
     // input_file: Option<String>,
-
     /// The audio output device to use.
     #[arg(short, long, default_value = "")]
     output_device: Option<String>,
 
-    // /// The audio input file to use. 
+    // /// The audio input file to use.
     // #[arg(long)]
     // output_file: Option<String>,
-
     #[arg(short, long, default_value = "true")]
     loop_back: Option<bool>,
-
     //  How long to record, in seconds
     // #[arg(long, default_value_t = 15)]
     // duration: u64,
@@ -213,8 +217,8 @@ struct Opt {
 
 // #[cfg(any(feature = "enable_rx", test))]
 // fn do_audio_file_input(
-//     runtime: rustxxx::types::Runtime, 
-//     input_buff_writer: &mut AudioBufWriter, 
+//     runtime: rustxxx::types::Runtime,
+//     input_buff_writer: &mut AudioBufWriter,
 //     input_file: &String,
 //     from_channels: &mut usize,
 //     from_rate: &mut u32
@@ -250,9 +254,9 @@ struct Opt {
 //     //     if header.sample_rate != target_sample_rate {
 //     //         dbg!(header.sample_rate, target_sample_rate);
 //     //         signal = wav_io::resample::linear(
-//     //             signal, 
-//     //             runtime.channels().0 as u16, 
-//     //             header.sample_rate, 
+//     //             signal,
+//     //             runtime.channels().0 as u16,
+//     //             header.sample_rate,
 //     //             target_sample_rate
 //     //         );
 //     //         header.sample_rate = target_sample_rate;
@@ -273,77 +277,77 @@ struct Opt {
 
 //     // let input_buf = ringbuf::HeapRb::<f32>::new(signal.len());
 //     // for testing we'll preload a buffer block
-//     // if let Ok(mut guard) = input_buff_writer.try_lock() 
+//     // if let Ok(mut guard) = input_buff_writer.try_lock()
 //     {
 //         // let input_buff_writer = guard.as_mut();
 //         for sample in signal.iter() {
 //             input_buff_writer.try_push(*sample).expect("input_buf overrun");
 //         }
 //     }
-    
+
 //     Ok(None)
 // }
 
-// fn do_audio_file_output 
+// fn do_audio_file_output
 //     if let Some(_output_file) = opt.output_file {
-        // encode arm
-        // The WAV file we're recording to.
-        // const PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/", output_file, ".wav");
-        // let spec = wav_spec_from_config(&config);
-        // let writer = hound::WavWriter::create(PATH, spec)?;
-        // let writer = std::sync::Arc::new(std::sync::Mutex::new(Some(writer)));
+// encode arm
+// The WAV file we're recording to.
+// const PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/", output_file, ".wav");
+// let spec = wav_spec_from_config(&config);
+// let writer = hound::WavWriter::create(PATH, spec)?;
+// let writer = std::sync::Arc::new(std::sync::Mutex::new(Some(writer)));
 
-        // panic!();
-        // Generate XX8 symbols and GFSK modulated samples.
-        // let frequency = args[1].parse::<f32>().expect();
-		// let attn = args[2].parse::<f32>().expect();
-		// let attn = 10.0_f32.powf(attn/20.0);
+// panic!();
+// Generate XX8 symbols and GFSK modulated samples.
+// let frequency = args[1].parse::<f32>().expect();
+// let attn = args[2].parse::<f32>().expect();
+// let attn = 10.0_f32.powf(attn/20.0);
 
-        // if pack77(&args[3], &mut packed) < 0 {
-        //     dbg!("Cannot parse message! {}", &args[1]);
-        //     return;
-        // }
+// if pack77(&args[3], &mut packed) < 0 {
+//     dbg!("Cannot parse message! {}", &args[1]);
+//     return;
+// }
 
-        // xx8_encode(&packed, &mut tones);
+// xx8_encode(&packed, &mut tones);
 
-        // print!("FSK tones: ");
-        // for t in tones.iter() {
-        //     print!("{} ", t);
-        // }
-        // dbg!();
+// print!("FSK tones: ");
+// for t in tones.iter() {
+//     print!("{} ", t);
+// }
+// dbg!();
 
-        // let num_samples =
-        //     (0.5 + XXX.nn() as f32 *XXX.symbol_period() *CONFIG.sample_rate as f32) as usize;
-        // let num_silence = ((XXX.slot_time() *CONFIG.sample_rate as f32) as usize -num_samples) /2;
+// let num_samples =
+//     (0.5 + XXX.nn() as f32 *XXX.symbol_period() *CONFIG.sample_rate as f32) as usize;
+// let num_silence = ((XXX.slot_time() *CONFIG.sample_rate as f32) as usize -num_samples) /2;
 
-        // samples = vec![0.0; num_samples];
+// samples = vec![0.0; num_samples];
 
-        // synth_gfsk(
-        //     &tones,
-        //     XXX.nn(),
-        //     frequency,
-        //     XXX.symbol_bt(),
-        //     XXX.symbol_period(),
-        //     CONFIG.sample_rate as f32,
-        //     &mut samples,
-        // );
+// synth_gfsk(
+//     &tones,
+//     XXX.nn(),
+//     frequency,
+//     XXX.symbol_bt(),
+//     XXX.symbol_period(),
+//     CONFIG.sample_rate as f32,
+//     &mut samples,
+// );
 
-        // let mut silence_before = vec![0.0; num_silence];
-        // let mut silence_after = vec![0.0; num_silence];
+// let mut silence_before = vec![0.0; num_silence];
+// let mut silence_after = vec![0.0; num_silence];
 
-        // silence_before.append(&mut samples);
-        // silence_before.append(&mut silence_after);
-        // samples = silence_before;
+// silence_before.append(&mut samples);
+// silence_before.append(&mut silence_after);
+// samples = silence_before;
 
-        // samples = samples.iter().map(|x| *x *attn).collect::<Vec<_>>();
-        // header.sample_format = SampleFormat::Float;
-        // header.sample_rate = CONFIG.sample_rate;
-        // header.channels = 1;
-        // header.bits_per_sample = 32;
+// samples = samples.iter().map(|x| *x *attn).collect::<Vec<_>>();
+// header.sample_format = SampleFormat::Float;
+// header.sample_rate = CONFIG.sample_rate;
+// header.channels = 1;
+// header.bits_per_sample = 32;
 
-        // let mut file_out = File::create("./resampled.wav").expect();
-        // writer::to_file(&mut file_out, &WavData::new(header, samples.clone())).expect();
-    // };
+// let mut file_out = File::create("./resampled.wav").expect();
+// writer::to_file(&mut file_out, &WavData::new(header, samples.clone())).expect();
+// };
 
 // fn setup_device_input(
 //     _runtime: constant::Runtime, input_buff:& mut constant::InputBuffer, host: cpal::Host, input_device_name: String
@@ -362,10 +366,11 @@ fn tx_main(
     dbg!("Sender start");
 
     let host = cpal::default_host();
-    
-    let mut _audio_output_to_channels = 0; 
+
+    let mut _audio_output_to_channels = 0;
     let mut _audio_output_to_rate = 0;
-    let audio_output_buffer: AudioSampleBuffer = ringbuf::HeapRb::<f32>::new(rustxxx::types::AUDIO_OUTPUT_BUFSIZE);
+    let audio_output_buffer: AudioSampleBuffer =
+        ringbuf::HeapRb::<f32>::new(rustxxx::types::AUDIO_OUTPUT_BUFSIZE);
     let audio_err_callback = move |err| {
         eprintln!("an error occurred on audio output stream: {err}");
     };
@@ -375,7 +380,8 @@ fn tx_main(
     let _audio_output_stream = if let Some(audio_output_device_name) = &output_device {
         dbg!(&audio_output_device_name);
 
-        let (audio_output_device, audio_output_config) = cpal_helper::get_audio_output_device_default_config(&host, &audio_output_device_name)?;
+        let (audio_output_device, audio_output_config) =
+            cpal_helper::get_audio_output_device_default_config(&host, &audio_output_device_name)?;
         dbg!(&audio_output_config);
 
         let audio_output_from_channels = 1;
@@ -384,10 +390,15 @@ fn tx_main(
         _audio_output_to_channels = audio_output_config.channels() as usize;
         _audio_output_to_rate = audio_output_config.sample_rate();
 
-        dbg!(audio_output_from_channels, _audio_output_to_channels, audio_output_from_rate, _audio_output_to_rate);
+        dbg!(
+            audio_output_from_channels,
+            _audio_output_to_channels,
+            audio_output_from_rate,
+            _audio_output_to_rate
+        );
 
         fn audio_output_data_callback(output: &mut [f32], reader: &mut AudioBufReader) {
-            // if let Ok(mut guard) = reader.try_lock() 
+            // if let Ok(mut guard) = reader.try_lock()
             {
                 // let reader = guard.as_mut();
                 let mut output_fell_behind = false;
@@ -406,30 +417,30 @@ fn tx_main(
             }
         }
 
-        let audio_output_config: StreamConfig = audio_output_config.into();  
-        
+        let audio_output_config: StreamConfig = audio_output_config.into();
+
         // this will spawn a system thread that runs the callback
         // callback should be lightweight
         // NB when ownership of 'stream' is lost then it is shutdown!!
-        let audio_output_stream = audio_output_device.build_output_stream(
-            &audio_output_config,
-            move |data, _: &_| audio_output_data_callback(
-                data, 
-                &mut audio_output_buff_reader,
-            ),
-            audio_err_callback,
-            None, 
-        ).expect("Cannot create audio output stream");
+        let audio_output_stream = audio_output_device
+            .build_output_stream(
+                &audio_output_config,
+                move |data, _: &_| audio_output_data_callback(data, &mut audio_output_buff_reader),
+                audio_err_callback,
+                None,
+            )
+            .expect("Cannot create audio output stream");
 
-        audio_output_stream.play().expect("Cannot play audio output stream");
+        audio_output_stream
+            .play()
+            .expect("Cannot play audio output stream");
         Some(audio_output_stream)
     } else {
         None
     };
 
     match _audio_output_stream {
-        Some(_stream) => {
-        },
+        Some(_stream) => {}
         None => {}
     }
 
@@ -444,7 +455,7 @@ fn rx_main(
     dbg!("Receiver start");
 
     let host = cpal::default_host();
-    
+
     // // Set up the CPAL output device and stream with the default output config.
     // let output_device = if let Some(output_device) = opt.output_device {
     //     let id = &output_device.parse().expect("failed to parse input device id");
@@ -484,10 +495,11 @@ fn rx_main(
     // these get init by the device init blocks
     // pipeline needs to know these as conversions happen in the pipeline i/o
     // which leaves the audio thread callbacks as light as possible
-    let mut audio_input_from_channels = 0; 
+    let mut audio_input_from_channels = 0;
     let mut audio_input_from_rate = 0;
 
-    let audio_input_buffer: AudioSampleBuffer = ringbuf::HeapRb::<f32>::new(rustxxx::types::AUDIO_INPUT_BUFSIZE);
+    let audio_input_buffer: AudioSampleBuffer =
+        ringbuf::HeapRb::<f32>::new(rustxxx::types::AUDIO_INPUT_BUFSIZE);
 
     let (mut audio_input_buff_writer, mut audio_input_buff_reader) = audio_input_buffer.split();
     // let mut audio_input_buff_writer: rustxxx::rustxxx::ThreadedAudioBufWriter = std::sync::Arc::new(std::sync::Mutex::new(_audio_input_buff_writer));
@@ -498,12 +510,9 @@ fn rx_main(
         audio_output_buff_reader = audio_input_buff_reader;
     };
 
-    let mut receive_pipeline= rustxxx::rx_pipeline::RxPipeline::new(
-        &FT8, 
-        runtime,
-    );
+    let mut receive_pipeline = rustxxx::rx_pipeline::RxPipeline::new(&FT8, runtime);
 
-    let _audio_input_stream = 
+    let _audio_input_stream =
     //     if let Some(audio_input_file_name) = &opt.input_file {
     //     do_audio_file_input(*runtime, &mut audio_input_buff_writer, audio_input_file_name, &mut audio_input_from_channels, &mut audio_input_from_rate)?
     // } else 
@@ -530,7 +539,7 @@ fn rx_main(
         dbg!(audio_input_from_channels, audio_input_to_channels, audio_input_from_rate, audio_input_to_rate);
 
         fn audio_input_data_callback(
-            input: &[f32], 
+            input: &[f32],
             writer: &mut AudioBufWriter,
         ) {
             // if let Ok(mut guard) = writer.try_lock() 
@@ -552,19 +561,19 @@ fn rx_main(
         // let input_buf_writer = Arc::new(Mutex::new(Some(input_buff_writer)));
 
         // this ignores buf and sets to Default, and strips SampleFormat
-        let audio_input_config: StreamConfig = audio_input_config.into();  
-        
+        let audio_input_config: StreamConfig = audio_input_config.into();
+
         // this will spawn a system thread that runs the callback
         // callback should be lightweight
         // NB when ownership of 'stream' is lost then it is shutdown!!
         let audio_input_stream = audio_input_device.build_input_stream(
             &audio_input_config,
             move |data, _: &_| audio_input_data_callback(
-                data, 
+                data,
                 &mut audio_input_buff_writer,
             ),
             audio_err_callback,
-            None, 
+            None,
         ).expect("Cannot create audio input stream");
 
         audio_input_stream.play().expect("Cannot play audio input stream");
@@ -574,15 +583,14 @@ fn rx_main(
         None
     };
 
-    // #[cfg(not(feature = "audio_pass_test"))] 
+    // #[cfg(not(feature = "audio_pass_test"))]
     {
         // could not init this until know the input stream info
-        let mut resample_context = receive_pipeline.resample_context(
-            audio_input_from_channels, audio_input_from_rate, 
-        );
+        let mut resample_context =
+            receive_pipeline.resample_context(audio_input_from_channels, audio_input_from_rate);
 
         let mut ft8_context = ft8_message::FT8Context::new();
-        
+
         let mut audio_buff = [0f32; rx_pipeline::RX_IN_BUFLEN];
         let from_channels = resample_context.from_channels;
         let audio_read_size = rx_pipeline::RX_IN_BUFLEN * from_channels;
@@ -599,27 +607,24 @@ fn rx_main(
                     }
                 }
 
-
-                let payloads = receive_pipeline.write_mono_sample_buffer(
-                    &audio_buff,
-                    &mut resample_context,
-                )?;
+                let payloads = receive_pipeline
+                    .write_mono_sample_buffer(&audio_buff, &mut resample_context)?;
 
                 for payload in payloads {
-                    proc_receive_payload( &mut ft8_context, &payload);
+                    proc_receive_payload(&mut ft8_context, &payload);
                 }
 
                 receive_pipeline.update_spectrogram();
             }
-        }   
+        }
     }
 
-    dbg!{"RECEIVE DONE"};
+    dbg! {"RECEIVE DONE"};
 
     #[cfg(feature = "audio_pass_test")]
     {
-        dbg!{"RUNNING AUDIO PASS THROUGH"};
-        loop {};
+        dbg! {"RUNNING AUDIO PASS THROUGH"};
+        loop {}
     }
 
     // match _audio_input_stream {
@@ -631,23 +636,22 @@ fn rx_main(
     Ok(())
 }
 
-fn proc_receive_payload(ft8_context: &mut ft8_message::FT8Context, payload: &Message, ) {
+fn proc_receive_payload(ft8_context: &mut ft8_message::FT8Context, payload: &Message) {
     let codeword = &payload.codeword().0;
     // println!("{:08b}..{:08b}", codeword[0], codeword[9]);
-    let codeword: [u8; ft8_message::FT8_PAYLOAD_BYTES] = codeword[..ft8_message::FT8_PAYLOAD_BYTES].try_into()
+    let codeword: [u8; ft8_message::FT8_PAYLOAD_BYTES] = codeword[..ft8_message::FT8_PAYLOAD_BYTES]
+        .try_into()
         .expect("Cannot parse FT8 payload");
     let result = ft8_context.ft8_payload_to_message(codeword);
     match result {
-        Ok(msg) => {
-            match msg.to_string() {
-                Ok(s) => {
-                    println!("{}", s);
-                },
-                Err(err) => {
-                    eprintln!("message_to_string: FT8TransportError: {}", err);
-                }
+        Ok(msg) => match msg.to_string() {
+            Ok(s) => {
+                println!("{}", s);
             }
-        }
+            Err(err) => {
+                eprintln!("message_to_string: FT8TransportError: {}", err);
+            }
+        },
         Err(err) => {
             eprintln!("payload_to_message: FT8TransportError: {}", err);
         }
@@ -670,7 +674,7 @@ fn main() -> Result<(), anyhow::Error> {
     // }
 
     #[cfg(any(feature = "enable_tx", test))]
-    let tx_thread_handle = std::thread::spawn(move || { tx_main(&opt.output_device, &runtime) });
+    let tx_thread_handle = std::thread::spawn(move || tx_main(&opt.output_device, &runtime));
 
     // receiver MUST be in main thread to use its waterfall debug window
     #[cfg(any(feature = "enable_rx", test))]
@@ -680,4 +684,3 @@ fn main() -> Result<(), anyhow::Error> {
 
     Ok(())
 }
-
