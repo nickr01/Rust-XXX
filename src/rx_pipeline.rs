@@ -8,6 +8,8 @@ use crate::receiver;
 use crate::error;
 use crate::types;
 use crate::debug;
+#[cfg(any(feature = "enable_rx", test))]
+// use crate::types::Message;
 
 use audioadapter_buffers::direct::InterleavedSlice;
 use rubato::{Resampler, Fft, FixedSync, Indexing};
@@ -188,6 +190,7 @@ impl RxPipeline {
         mono_samples: &[f32; RX_IN_BUFLEN],
         resample_context: &mut ResampleContext,
     ) -> Result<Vec<types::Message>, error::XxxError> {
+
         // let planned_load = Pipeline::sample_buf_size(resample_context); // BUFLEN * resample_context.from_channels;
         // assert_eq!(planned_load & 1, 0); // even
         // assert_eq!(mono_samples.len(), planned_load);
@@ -258,7 +261,7 @@ impl RxPipeline {
                 outdata
             };
 
-            // this is occasionally expensive triggering decode processing into message_hash
+            // this is perodically expensive triggering decode processing into message_hash
             for sample in samples_at_new_rate {
                 self.write_sample(sample)?;
             }

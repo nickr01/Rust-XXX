@@ -1,8 +1,9 @@
 use crate::error;
 use crate::types;
+use crate::types::CodeWord;
 
 pub struct TxPipeLine {
-    // keep any temp data then would need to structure like the receiver 
+    // if keeps any state then would need to structure like the receiver 
     modem: types::Modem,
 }
 
@@ -17,8 +18,7 @@ impl TxPipeLine {
         }
     }
 
-    fn modulate(&self, cw:&[u8], freq_hz: types::Hz) -> Result<Vec<f32>, error::XxxError> {
+    fn modulate(&self, cw: &[u8], freq_hz: types::Hz) -> Result<Vec<f32>, error::XxxError> {
         self.modem.modulate(cw, freq_hz)
     }
-
 }
