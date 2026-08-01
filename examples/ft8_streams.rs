@@ -40,6 +40,8 @@ use cpal::traits::{
 
 use ft8_message;
 
+use ringbuf::traits::Observer;
+
 use rustxxx::cpal_helper;
 // use rustxxx::debug;
 // #[cfg(any(feature = "enable_rx", test))]
@@ -572,12 +574,8 @@ fn rx_main(
         None
     };
 
-    dbg!();
-
     // #[cfg(not(feature = "audio_pass_test"))] 
     {
-        // use proto_ft8::protocol::FT8;
-
         // could not init this until know the input stream info
         let mut resample_context = receive_pipeline.resample_context(
             audio_input_from_channels, audio_input_from_rate, 
@@ -589,10 +587,7 @@ fn rx_main(
         let from_channels = resample_context.from_channels;
         let audio_read_size = rx_pipeline::RX_IN_BUFLEN * from_channels;
 
-        // this will be our main event loop
         while receive_pipeline.continue_run() {
-            use ringbuf::traits::Observer;
-
             if audio_input_buff_reader.occupied_len() >= audio_read_size {
                 {
                     // unload the ringbuf into a sized Vec to pass to rustxxx
@@ -603,68 +598,17 @@ fn rx_main(
                         n += 1;
                     }
                 }
+
+
                 let payloads = receive_pipeline.write_mono_sample_buffer(
                     &audio_buff,
-                    &mut resample_context
+                    &mut resample_context,
                 )?;
 
                 for payload in payloads {
-                    let codeword = &payload.codeword().0;
-                    // println!("{:08b}..{:08b}", codeword[0], codeword[9]);
-                    let codeword: [u8; ft8_message::FT8_PAYLOAD_BYTES] = codeword[..ft8_message::FT8_PAYLOAD_BYTES].try_into()?;
-
-                    // orig at this stage the codeword is earliest byte last, and right justified
-                    // now byte order corrected
-                    // dbg!(codeword);
-                    // if (codeword[0] >> 3) & 0b_111 != 0b_001 {
-                    //     dbg!("not an old style standard msg - skip");
-                    //     continue;
-                    // }
-                    // dbg!("old style standard msg");
-
-                    // let mut n = 0u128;
-                    // let mut i = 0; //  = ft8_message::FT8_PAYLOAD_BYTES;
-                    
-                    // for u in codeword {
-                    //     n <<= 8;
-                    //     n |= u as u128;
-                    // }
-                    // // do the bit shift
-                    // n <<= 2;
-                    // println!("{:b}", n);
-
-                    // 10_00111100_10011110_01000111_11110110_00100010_00110100_10010100_00000000_00000000_00000000
-                    // TEMP rebuild the codeword
-                    // let mut codeword = [0u8; ft8_message::FT8_PAYLOAD_BYTES];
-
-                    // let mut i = ft8_message::FT8_PAYLOAD_BYTES;
-                    // while i > 0 {
-                    //     codeword[i - 1 ] = (n & 0xff) as u8;
-                    //     i -= 1;
-                    //     n >>= 8;
-                    // }
-
-                    // println!("{:?}", codeword);
-                    // println!("{:08b}..{:08b}", codeword[0], codeword[9]);
-                    // assert_eq!(codeword[0] & 0b_111_000_00, 0b_001_000_00);
-
-                    let result = ft8_context.ft8_payload_to_message(codeword);
-                    match result {
-                        Ok(msg) => {
-                            match msg.to_string() {
-                                Ok(s) => {
-                                    println!("{}", s);
-                                },
-                                Err(err) => {
-                                    eprintln!("message_to_string: FT8TransportError: {}", err);
-                                }
-                            }
-                        }
-                        Err(err) => {
-                            eprintln!("payload_to_message: FT8TransportError: {}", err);
-                        }
-                    }
+                    proc_receive_payload( &mut ft8_context, &payload);
                 }
+
                 receive_pipeline.update_spectrogram();
             }
         }   
@@ -687,6 +631,28 @@ fn rx_main(
     Ok(())
 }
 
+fn proc_receive_payload(ft8_context: &mut ft8_message::FT8Context, payload: &Message, ) {
+    let codeword = &payload.codeword().0;
+    // println!("{:08b}..{:08b}", codeword[0], codeword[9]);
+    let codeword: [u8; ft8_message::FT8_PAYLOAD_BYTES] = codeword[..ft8_message::FT8_PAYLOAD_BYTES].try_into()
+        .expect("Cannot parse FT8 payload");
+    let result = ft8_context.ft8_payload_to_message(codeword);
+    match result {
+        Ok(msg) => {
+            match msg.to_string() {
+                Ok(s) => {
+                    println!("{}", s);
+                },
+                Err(err) => {
+                    eprintln!("message_to_string: FT8TransportError: {}", err);
+                }
+            }
+        }
+        Err(err) => {
+            eprintln!("payload_to_message: FT8TransportError: {}", err);
+        }
+    }
+}
 
 fn main() -> Result<(), anyhow::Error> {
     color_backtrace::install();
@@ -704,13 +670,13 @@ fn main() -> Result<(), anyhow::Error> {
     // }
 
     #[cfg(any(feature = "enable_tx", test))]
-    // let tx_thread_handle = std::thread::spawn(move || { tx_main(&opt.output_device, &runtime) });
+    let tx_thread_handle = std::thread::spawn(move || { tx_main(&opt.output_device, &runtime) });
 
-    // keep receiver in main thread so it can use its debug window
+    // receiver MUST be in main thread to use its waterfall debug window
     #[cfg(any(feature = "enable_rx", test))]
     let _ = rx_main(&opt.input_device, &runtime);
-    
-    // let _ = tx_thread_handle.join();
+
+    let _ = tx_thread_handle.join();
 
     Ok(())
 }
