@@ -32,14 +32,8 @@ pub struct Decoder {
 
 #[cfg(any(feature = "enable_rx", test))]
 impl Decoder {
-    pub fn new(
-        protocol: &'static types::Protocol,
-        runtime: &'static types::Runtime, 
-    ) -> Decoder {
-        Decoder {
-            protocol,
-            runtime,
-        }
+    pub fn new(protocol: &'static types::Protocol, runtime: &'static types::Runtime) -> Decoder {
+        Decoder { protocol, runtime }
     }
 
     pub fn decode(
@@ -47,7 +41,7 @@ impl Decoder {
         time_secs: types::Secs,
         freq_hz: types::Hz,
         c_score: f32,
-        modem: &mut types::Modem, 
+        modem: &mut types::Modem,
         logls: &[l3_ecc::LogL],
     ) -> Result<Option<types::Message>, error::XxxError> {
         let mut r = modem.ecc_decode_bp(logls, self.runtime.ldpc_max_iteration().0);
@@ -78,12 +72,7 @@ impl Decoder {
                     // at this stage the codeword is earliest byte last, and right justified ??
                     let codeword = types::Message::from_vec(codeword_vec)?;
                     // println!("Storing codeword 0:{:08b}", codeword.0[0]);
-                    let msg = types::Message::new(
-                        time_secs,
-                        freq_hz,
-                        c_score,
-                        codeword,
-                    );
+                    let msg = types::Message::new(time_secs, freq_hz, c_score, codeword);
                     Ok(Some(msg))
                 } else {
                     Err(error::XxxError::_BadCrc)
@@ -96,8 +85,12 @@ impl Decoder {
         }
     }
 
-    pub fn extract_normalised_likelihood(&self, wf: &waterfall::Waterfall, c: &candidate::Candidate) -> Vec<l3_ecc::LogL> {
-        let mut logls: Vec<l3_ecc::LogL> = Vec::new(); 
+    pub fn extract_normalised_likelihood(
+        &self,
+        wf: &waterfall::Waterfall,
+        c: &candidate::Candidate,
+    ) -> Vec<l3_ecc::LogL> {
+        let mut logls: Vec<l3_ecc::LogL> = Vec::new();
 
         //Extract 58 bits of symbols - 3 x bits->(syms in logls)
         for bit_idx in 0..self.protocol.nd().0 {
@@ -106,19 +99,19 @@ impl Decoder {
 
             //calc block num
             let time_index = c.time_index().0 + (sym_idx * wf.time_osr.0);
-            assert!(time_index < wf.time_bins_stored(), "time_index: {}, wf_bins: {}", time_index, wf.time_bins_stored());
-            
-            let logl = if 
-                time_index >= wf.time_bins_stored()
+            assert!(
+                time_index < wf.time_bins_stored(),
+                "time_index: {}, wf_bins: {}",
+                time_index,
+                wf.time_bins_stored()
+            );
+
+            let logl = if time_index >= wf.time_bins_stored()
                 || c.freq_index().0 >= wf.freq_bins - self.protocol.token_tones().0 * wf.freq_osr.0
             {
                 panic!("overrun in decoder"); // layer3::LogL::new(self.protocol)
             } else {
-                self.extract_symbol(
-                    wf, 
-                    types::TimeIndex(time_index),
-                    c.freq_index()
-                )
+                self.extract_symbol(wf, types::TimeIndex(time_index), c.freq_index())
             };
             logls.push(logl);
         }
@@ -130,8 +123,8 @@ impl Decoder {
     }
 
     fn extract_symbol(
-        &self, 
-        wf: &waterfall::Waterfall, 
+        &self,
+        wf: &waterfall::Waterfall,
         time_index: types::TimeIndex,
         freq_index: types::FreqIndex,
     ) -> l3_ecc::LogL {
@@ -139,7 +132,7 @@ impl Decoder {
 
         let token_tones = self.protocol.token_tones(); // 8
 
-        let mut s2: Vec<f32> = vec![0.0; token_tones.0 ];
+        let mut s2: Vec<f32> = vec![0.0; token_tones.0];
 
         //Put the tone intensity corresponding to the gray code into s2
         // for j in 0..token_range.0 {
@@ -164,7 +157,7 @@ impl Decoder {
 
     fn normalize_logl(&self, logls: &mut [l3_ecc::LogL]) {
         assert_eq!(types::SymbolCount(logls.len()), self.protocol.nd());
- 
+
         let mut sum = 0.0f32;
         let mut sum_of_squares = 0.0f32;
 
@@ -172,7 +165,7 @@ impl Decoder {
         for logl in logls.iter() {
             for bit in logl.bits.iter() {
                 sum += bit;
-                sum_of_squares += bit * bit;    
+                sum_of_squares += bit * bit;
             }
         }
 
@@ -187,5 +180,4 @@ impl Decoder {
             }
         }
     }
-
 }
