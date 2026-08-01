@@ -12,12 +12,10 @@ pub type DetectFFT = std::sync::Arc<dyn realfft::RealToComplex<f32>>;
 pub struct Detector {
     // runtime: constant::Runtime,
     // protocol: constant::Protocol,
-
-    nfft: RepeatCount,                            // FFT size
-    // underload_divisor: constant::RepeatCount,       
-
-    pub _min_detected_mag: f32,              // (debug stats)
-    pub _max_detected_mag: f32,              // (debug stats)
+    nfft: RepeatCount, // FFT size
+    // underload_divisor: constant::RepeatCount,
+    pub _min_detected_mag: f32, // (debug stats)
+    pub _max_detected_mag: f32, // (debug stats)
 
     // pub wf_under_load: waterfall::Waterfall,
     pub wf: waterfall::Waterfall,
@@ -25,10 +23,7 @@ pub struct Detector {
 }
 
 #[cfg(any(feature = "enable_rx", test))]
-fn build_window_function_samples(
-    nfft: usize, 
-    runtime: &types::Runtime
-) -> Vec<f32> {
+fn build_window_function_samples(nfft: usize, runtime: &types::Runtime) -> Vec<f32> {
     let mut window_function_samples = Vec::with_capacity(nfft);
     let fft_norm = 2.0f32 / nfft as f32;
     for i in 0..nfft {
@@ -43,28 +38,24 @@ pub type DetectorInputBuffs = Vec<Vec<f32>>;
 #[cfg(any(feature = "enable_rx", test))]
 impl Detector {
     pub fn new(
-        runtime: types::Runtime, 
+        runtime: types::Runtime,
         protocol: types::Protocol,
 
         // real_fft: &mut realfft::RealFftPlanner<f32>,
         nfft: RepeatCount,
     ) -> Self {
-        let window_function_samples =  build_window_function_samples(
-            nfft.0, 
-            &runtime
-        );
+        let window_function_samples = build_window_function_samples(nfft.0, &runtime);
 
         let wf = waterfall::Waterfall::new(
-            protocol.total_symbols_nn().0 * runtime.rx_symbol_osr().0, 
-            nfft.0/(4 * runtime.rx_freq_osr().0), // the sample rate is up because of osr but useful bin proportion is less
-            runtime.rx_symbol_osr(), 
+            protocol.total_symbols_nn().0 * runtime.rx_symbol_osr().0,
+            nfft.0 / (4 * runtime.rx_freq_osr().0), // the sample rate is up because of osr but useful bin proportion is less
+            runtime.rx_symbol_osr(),
             runtime.rx_freq_osr(),
         );
 
         Detector {
             // runtime,
             // protocol,
-
             nfft,
             // rfft_nfft_f,
             _min_detected_mag: f32::MAX,
@@ -79,10 +70,9 @@ impl Detector {
         fft_input_vec: &mut [f32],
         rfft_nfft_f: &Arc<dyn RealToComplex<f32>>,
     ) {
-        let wfl = self.proc_time_sub(fft_input_vec,rfft_nfft_f);
+        let wfl = self.proc_time_sub(fft_input_vec, rfft_nfft_f);
         self.wf.push_line(wfl);
     }
-
 
     // pub fn wload_input_vec(
     //     &mut self, samples: &mut rustxxx::InputBufReader
@@ -125,12 +115,11 @@ impl Detector {
         &self,
         fft_input_vec: &mut [f32],
         rfft_nfft_f: &Arc<dyn RealToComplex<f32>>, // FFT forward
-
     ) -> waterfall::WaterfallLine {
         assert_eq!(fft_input_vec.len(), self.nfft.0);
 
         let mut fft_output_vec = rfft_nfft_f.make_output_vec();
-        assert_eq!(fft_output_vec.len(), self.nfft.0/2 + 1);
+        assert_eq!(fft_output_vec.len(), self.nfft.0 / 2 + 1);
 
         // Execute real fft
         rfft_nfft_f
@@ -143,15 +132,15 @@ impl Detector {
 
         // assert_eq!(self.wf.freq_indep_base_bins * self.wf.freq_osr.0, fft_output_vec.len());
 
-        assert_eq!(self.nfft.0/2 + 1, fft_output_vec.len());
+        assert_eq!(self.nfft.0 / 2 + 1, fft_output_vec.len());
         let mut wfl = waterfall::WaterfallLine::new(self.wf.freq_bins(), self.wf.freq_osr);
 
         // let mut tmp_max: f32 = f32::MIN;
 
-        let mut bin: usize= 0;
+        let mut bin: usize = 0;
         // skip DC bin
         for fft_output_bin in fft_output_vec.iter().skip(1) {
-            //Calc the power of the bin, scale and distribute into the mag4 array 
+            //Calc the power of the bin, scale and distribute into the mag4 array
             // let mag2 = fft_output_vec[fft_bin_idx].norm_sqr();
             let mag2 = fft_output_bin.norm_sqr();
             // if mag2 > tmp_max {
@@ -179,7 +168,7 @@ impl Detector {
                     scaled as waterfall::WflDataType
                 };
                 wfl.mag_dbs[bin] = mag_db; // write_val(freq_base_idx as isize, freq_osr_idx as isize, mag);
-            }   
+            }
 
             // self.wf.magsums[bin] += mag2;
 
@@ -206,7 +195,5 @@ mod tests {
         // let rfft_output = rfft_nfft_f.make_output_vec();
         // dbg!("rfft_output.len: {}", rfft_output.len());
         // assert_eq!(rfft_output.len(), nfft/2 + 1);
-   }
-
+    }
 }
- 

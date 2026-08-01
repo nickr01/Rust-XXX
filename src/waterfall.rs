@@ -7,15 +7,17 @@ pub struct FreqBinRange {
 }
 
 impl FreqBinRange {
-    pub fn from(&self) -> usize { self.from }
-    pub fn to(&self) -> usize { self.to }
+    pub fn from(&self) -> usize {
+        self.from
+    }
+    pub fn to(&self) -> usize {
+        self.to
+    }
 }
 
 pub type WflDataType = f32;
 
-#[derive(Debug)]
-#[derive(Clone)]
-#[derive(PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 
 pub struct WaterfallLine {
     freq_osr: types::OverSampleMultiplier,
@@ -24,10 +26,7 @@ pub struct WaterfallLine {
 }
 
 impl WaterfallLine {
-    pub fn new(
-        freq_bins: usize,
-        freq_osr: types::OverSampleMultiplier,
-    ) -> Self {
+    pub fn new(freq_bins: usize, freq_osr: types::OverSampleMultiplier) -> Self {
         let mags: Vec<WflDataType> = vec![0.0; freq_bins];
         let mag_dbs: Vec<WflDataType> = vec![0.0; freq_bins];
         WaterfallLine {
@@ -65,7 +64,8 @@ impl WaterfallLine {
     // }
 }
 
-type WaterFallLines = Box<circular_buffer::CircularBuffer::<{types::WATERFALL_BUF_SIZE}, WaterfallLine>>;
+type WaterFallLines =
+    Box<circular_buffer::CircularBuffer<{ types::WATERFALL_BUF_SIZE }, WaterfallLine>>;
 pub struct Waterfall {
     pub load_base: u32,
 
@@ -74,8 +74,8 @@ pub struct Waterfall {
 
     pub freq_bins: usize,
 
-    pub time_osr: types::OverSampleMultiplier,   // number of time subdivisions
-    pub freq_osr: types::OverSampleMultiplier,   // number of frequency subdivisions ?>=2
+    pub time_osr: types::OverSampleMultiplier, // number of time subdivisions
+    pub freq_osr: types::OverSampleMultiplier, // number of frequency subdivisions ?>=2
 
     wflines: WaterFallLines,
     // pub magsums: Vec<f32>,
@@ -88,7 +88,9 @@ impl Waterfall {
         time_osr: types::OverSampleMultiplier,
         freq_osr: types::OverSampleMultiplier,
     ) -> Self {
-        let wflines: WaterFallLines = circular_buffer::CircularBuffer::<{types::WATERFALL_BUF_SIZE}, WaterfallLine>::boxed();
+        let wflines: WaterFallLines =
+            circular_buffer::CircularBuffer::<{ types::WATERFALL_BUF_SIZE }, WaterfallLine>::boxed(
+            );
         // let magsums: Vec<f32> = vec!(0.0; freq_bins);
 
         Waterfall {
@@ -129,17 +131,17 @@ impl Waterfall {
     }
 
     pub fn time_base(&self) -> types::TimeStamp {
-        types::TimeStamp(self.load_base-self.time_bins_stored() as u32)
+        types::TimeStamp(self.load_base - self.time_bins_stored() as u32)
     }
 
     pub fn time_bins(&self) -> usize {
         self.time_bins
     }
-    
+
     pub fn symbol_pad(&self) -> usize {
         self.symbol_pad
     }
-    
+
     pub fn time_bins_stored(&self) -> usize {
         self.wflines.len()
     }
@@ -153,7 +155,7 @@ impl Waterfall {
     }
 
     pub fn symbols_stored(&self) -> usize {
-        self.time_bins_stored()/self.time_osr.0
+        self.time_bins_stored() / self.time_osr.0
     }
 
     pub fn freq_bins(&self) -> usize {
@@ -183,7 +185,11 @@ impl Waterfall {
     // }
 
     // this is originally only about determining search ranges and not actual candidates
-    pub fn determine_search_freq_bands(&self, num_of_bands: usize, auto_segment: bool ) -> Vec<FreqBinRange> {
+    pub fn determine_search_freq_bands(
+        &self,
+        num_of_bands: usize,
+        auto_segment: bool,
+    ) -> Vec<FreqBinRange> {
         let mut freq_bin_ranges: Vec<FreqBinRange> = Vec::new();
         // if cfg!(feature = "auto_freq_seg") {
 
@@ -201,7 +207,7 @@ impl Waterfall {
             let mut sum = 0f32;
             for f in 0..self.freq_bins() {
                 // candidate.lease= f;
-                let m1 = self.wflines[time_magic_12].mags[f]; 
+                let m1 = self.wflines[time_magic_12].mags[f];
                 sum += m1;
             }
 
@@ -210,21 +216,22 @@ impl Waterfall {
             for f in 0..self.freq_bins() {
                 // candidate.freq_offset = f;
                 let m1 = self.wflines[time_magic_12].mags[f];
-                if m1  > th as WflDataType {  // u8
+                if m1 > th as WflDataType {
+                    // u8
                     count += 1;
                 }
             }
 
             {
                 let average = count / num_of_bands;
-                let mut from  = 0;
+                let mut from = 0;
 
                 let mut count = 0;
                 for f in 0..self.freq_bins() {
                     let b4: bool = self.wflines[time_magic_12].mags[f] > th as WflDataType
                         || self.wflines[time_magic_12 + 1].mags[f] > th as WflDataType
-                        || self.wflines[time_magic_12 - 1 ].mags[f] > th as WflDataType;
-                            
+                        || self.wflines[time_magic_12 - 1].mags[f] > th as WflDataType;
+
                     if b4 {
                         count += 1;
                     }
@@ -241,16 +248,22 @@ impl Waterfall {
             freq_bin_ranges
         } else {
             // dbg!("Search ALL freq ranges direct from preset band count", num_of_bands);
-            const COSTAS_MAX: usize = 7; 
+            const COSTAS_MAX: usize = 7;
             let step = self.freq_bins() / num_of_bands;
             for bin in (0..self.freq_bins()).step_by(step) {
                 let costas_max = COSTAS_MAX * self.freq_osr.0;
-                if bin + step >= self.freq_bins() - costas_max  {
+                if bin + step >= self.freq_bins() - costas_max {
                     // dbg!("last band");
-                    freq_bin_ranges.push(FreqBinRange{from: bin, to: self.freq_bins() - costas_max}) 
+                    freq_bin_ranges.push(FreqBinRange {
+                        from: bin,
+                        to: self.freq_bins() - costas_max,
+                    })
                 } else {
                     // dbg!("intermediate band");
-                    freq_bin_ranges.push(FreqBinRange{from: bin, to: bin + step})
+                    freq_bin_ranges.push(FreqBinRange {
+                        from: bin,
+                        to: bin + step,
+                    })
                 };
             }
             freq_bin_ranges
@@ -265,13 +278,10 @@ impl Waterfall {
     //     self.time_len
     // }
 
-
     // fn get_mag(&self, candidate: &Candidate) -> u8 {
     //     assert!(candidate.time_offset >= 0); // it is being used for index generation in this case
-    //     let time_offset: usize = candidate.time_offset.try_into().unwrap(); 
+    //     let time_offset: usize = candidate.time_offset.try_into().unwrap();
     //     let m4 = self.mag4[time_offset][candidate.time_sub].read_val(candidate.freq_offset, candidate.freq_sub);
     //     m4
     // }
-
 }
-

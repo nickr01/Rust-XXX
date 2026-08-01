@@ -3,17 +3,13 @@ use crate::types;
 use crate::types::CodeWord;
 
 pub struct TxPipeLine {
-    // if keeps any state then would need to structure like the receiver 
+    // if keeps any state then would need to structure like the receiver
     modem: types::Modem,
 }
 
 impl TxPipeLine {
-    pub fn new (
-        protocol: &'static types::Protocol,
-        runtime: &'static types::Runtime,
-
-    ) -> TxPipeLine {
-        TxPipeLine { 
+    pub fn new(protocol: &'static types::Protocol, runtime: &'static types::Runtime) -> TxPipeLine {
+        TxPipeLine {
             modem: types::Modem::new(protocol, runtime),
         }
     }

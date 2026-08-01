@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 
-lazy_static!{
+lazy_static! {
 // Parity Check Equations.
 // Each row corresponds to parity check matrix column.
 // The numbers indicate the codeword bit. 1-origin.

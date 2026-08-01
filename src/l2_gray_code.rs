@@ -21,9 +21,10 @@ impl types::Modem {
 
     // gray encode codewords into tones
     #[cfg(any(feature = "enable_tx", test))]
-    fn gray_encode(&self, 
-        codeword: &[u8],  // [u8; XXX.ldpc_n_bytes()], 
-        // self.l2_tones: &mut [u8; XXX.nd()]
+    fn gray_encode(
+        &self,
+        codeword: &[u8], // [u8; XXX.ldpc_n_bytes()],
+                         // self.l2_tones: &mut [u8; XXX.nd()]
     ) -> Vec<u8> {
         let mut l2_tones: Vec<u8> = Vec::with_capacity(self.protocol().nd().0);
 
@@ -73,13 +74,14 @@ impl types::Modem {
 
     // gray decode tones into codewords
     #[cfg(any(feature = "enable_rx", test))]
-    pub fn _gray_decode(&self, 
-        l2_tones: &[u8], //  [u8; XXX.nd()], 
+    pub fn _gray_decode(
+        &self,
+        l2_tones: &[u8], //  [u8; XXX.nd()],
     ) -> Vec<u8> {
         // Message structure: S7 D29 S7 D29 S7
         // Total symbols: 79 (XXX.nn())
-        let mut codeword: Vec<u8> = vec![0; self.protocol().ldpc_n_bytes().0]; // Vec::with_capacity(self.protocol.ldpc_n_bytes().0); // )&mut [u8; XXX.ldpc_n_bytes()], 
-        // codeword.resize(self.protocol.ldpc_n_bytes().0, 0);
+        let mut codeword: Vec<u8> = vec![0; self.protocol().ldpc_n_bytes().0]; // Vec::with_capacity(self.protocol.ldpc_n_bytes().0); // )&mut [u8; XXX.ldpc_n_bytes()],
+                                                                               // codeword.resize(self.protocol.ldpc_n_bytes().0, 0);
 
         let mut mask = 0x80u8; // Mask to set 1 bit into self.codeword
         let mut i_byte = 0usize; // Index of the current byte of the self.codeword
@@ -126,28 +128,32 @@ impl types::Modem {
 
     // these are the action stubs
     #[cfg(any(feature = "enable_tx", test))]
-     pub fn _l2_gray_encode(&self, 
-        codeword: &[u8] // mut [u8; XXX.ldpc_n_bytes()]
-    ) -> Result<Vec<u8>, error::XxxError>{
+    pub fn _l2_gray_encode(
+        &self,
+        codeword: &[u8], // mut [u8; XXX.ldpc_n_bytes()]
+    ) -> Result<Vec<u8>, error::XxxError> {
         // let mut tones = [0u8; XXX.nd()];
-        // codeword -> l2_tones        
+        // codeword -> l2_tones
         Ok(self.gray_encode(codeword))
     }
 
     #[cfg(test)]
-    pub fn _l2_gray_decode(&self, 
+    pub fn _l2_gray_decode(
+        &self,
         l2_tones: &[u8], // [u8; XXX.nd()]
-    ) ->Result<Vec<u8>, error::XxxError> {
+    ) -> Result<Vec<u8>, error::XxxError> {
         // l2_tones -> codeword
         // let mut codeword = [0u8; XXX.ldpc_n_bytes()];
         Ok(self._gray_decode(l2_tones))
     }
 
     #[cfg(test)]
-    pub fn l2_outbound(&self, ttl: isize, 
+    pub fn l2_outbound(
+        &self,
+        ttl: isize,
         codeword: &Vec<u8>,
-        freq_hz: types::Hz
-    ) -> Result<Vec<u8>, error::XxxError>{
+        freq_hz: types::Hz,
+    ) -> Result<Vec<u8>, error::XxxError> {
         // let mut tones = [0u8; XXX.nd()];
         // codeword -> l2_tones
         let l2_tones = self._l2_gray_encode(codeword)?;
@@ -159,15 +165,15 @@ impl types::Modem {
     }
 
     #[cfg(test)]
-    pub fn l2_inbound(&self, 
+    pub fn l2_inbound(
+        &self,
         l2_tones: &Vec<u8>, // [u8; XXX.nd()]
-    ) ->Result<Vec<u8>, error::XxxError> {
+    ) -> Result<Vec<u8>, error::XxxError> {
         // l2_tones -> codeword
         // let mut codeword = [0u8; XXX.ldpc_n_bytes()];
         let cw_crc_ecc = self._l2_gray_decode(l2_tones)?;
         self.l3_inbound(&cw_crc_ecc)
     }
-
 }
 #[cfg(test)]
 mod tests {
@@ -175,7 +181,10 @@ mod tests {
     use crate::test_support;
 
     fn recheck_config(modem: &types::Modem) {
-        assert_eq!(modem.protocol().nd().0 * modem.protocol().token_bits().0, modem.protocol().ldpc_n().0);
+        assert_eq!(
+            modem.protocol().nd().0 * modem.protocol().token_bits().0,
+            modem.protocol().ldpc_n().0
+        );
     }
 
     fn test_roundtrip(modem: &types::Modem, codeword_in: &Vec<u8>) {
@@ -190,14 +199,19 @@ mod tests {
         assert_eq!(codeword_out, *codeword_in);
     }
 
-    const MSG0: [u8; test_support::_TEST_PROTOCOL.ldpc_n_bytes().0] = [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0xfc];
-    const MSG1: [u8; test_support::_TEST_PROTOCOL.ldpc_n_bytes().0] = [67, 171, 17, 12, 2, 2, 76, 47, 161, 170, 70, 55, 40, 30, 2, 1, 0, 251, 55, 25, 213, 0xfc];
+    const MSG0: [u8; test_support::_TEST_PROTOCOL.ldpc_n_bytes().0] = [
+        255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+        255, 255, 255, 0xfc,
+    ];
+    const MSG1: [u8; test_support::_TEST_PROTOCOL.ldpc_n_bytes().0] = [
+        67, 171, 17, 12, 2, 2, 76, 47, 161, 170, 70, 55, 40, 30, 2, 1, 0, 251, 55, 25, 213, 0xfc,
+    ];
 
     #[test]
     fn test_layer2() {
         let mut modem: types::Modem = types::Modem::new(
-            &test_support::_TEST_PROTOCOL, 
-            &test_support::_TEST_FT8_RUNTIME, 
+            &test_support::_TEST_PROTOCOL,
+            &test_support::_TEST_FT8_RUNTIME,
         );
         recheck_config(&modem);
         test_roundtrip(&mut modem, &MSG0.to_vec());

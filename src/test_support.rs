@@ -7,14 +7,14 @@ pub const _TEST_PROTOCOL: Protocol = Protocol::new(
     true,
     BitCount(3),
     SymbolCount(58),
-    SymbolCount(79),             // Total channel symbols (FT8_NS + FT8_ND)
-    SymbolCount(7),     // sync group length
-    RepeatCount(3),        // Number of sync groups
+    SymbolCount(79), // Total channel symbols (FT8_NS + FT8_ND)
+    SymbolCount(7),  // sync group length
+    RepeatCount(3),  // Number of sync groups
     SymbolCount(0),
-    SymbolCount(36),    // Offset between sync groups
-    [3, 1, 4, 0, 6, 5, 2],    //　Costas array
-    BitCount(174),        // Number of bits in the encoded message (payload with LDPC checksum bits)
-    BitCount(91),         // Number of payload bits (including CRC)
+    SymbolCount(36),       // Offset between sync groups
+    [3, 1, 4, 0, 6, 5, 2], //　Costas array
+    BitCount(174), // Number of bits in the encoded message (payload with LDPC checksum bits)
+    BitCount(91),  // Number of payload bits (including CRC)
     [0, 1, 3, 2, 5, 6, 4, 7],
     [0, 1, 3, 2, 6, 4, 5, 7],
     CrcParams::new(BitCount(5), BitMap(0x2757), BitCount(14), 0, 0),
@@ -28,7 +28,7 @@ pub const _TEST_PROTOCOL: Protocol = Protocol::new(
 
 pub const _TEST_FT8_RUNTIME: Runtime = Runtime::new(
     // should be indep of bandwidth and freq_osr but not there yet
-    Hz(6000.0),  // this is the real design layer - app layer can chose a portion often 250-2500
+    Hz(6000.0), // this is the real design layer - app layer can chose a portion often 250-2500
     BitCount(32),
     OverSampleMultiplier(4), // 4
     OverSampleMultiplier(2), // 2
@@ -36,9 +36,9 @@ pub const _TEST_FT8_RUNTIME: Runtime = Runtime::new(
     1.0, // 0.4, // 10,
     RepeatCount(1),
     RepeatCount(20),
-    false, // true, 
+    false, // true,
     // subtracts: RepeatCount(1),
-    WindowFunction::_Hann,  // Hann in the FT8_lib c code, or Blackman
-);  
+    WindowFunction::_Hann, // Hann in the FT8_lib c code, or Blackman
+);
 
 pub const _TEST_FREQUENCY: Hz = Hz(1500.0);

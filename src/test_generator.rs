@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 
-lazy_static!{
+lazy_static! {
 
 // Parity generator matrix for (174,91) LDPC code, stored in bitpacked format (MSB first) - FT8!!
 // pub static ref _XXX_LDPC_GENERATOR: vec!(vec!(u8; rustxxx::TEST_PROTOCOL._ldpc_k_bytes().0); rustxxx::TEST_PROTOCOL.ldpc_m().0) = vec!(

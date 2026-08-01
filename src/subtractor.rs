@@ -7,13 +7,12 @@
 //     // fft_nmax_f: Arc<dyn Fft<f32>>,
 //     // fft_nmax_i: Arc<dyn Fft<f32>>,
 
-
 // }
 
 // impl Subtractor {
 //     pub fn new(
 //         protocol: &'static constant::Protocol,
-//         runtime: &'static constant::Runtime, 
+//         runtime: &'static constant::Runtime,
 //     ) -> Subtractor {
 
 //         // maybe we can unify these to share caches
@@ -30,256 +29,249 @@
 
 // nmax: usize, // sig buff size for time slot - used only for the subtractor
 
-
-
 // Build a filter - NMAX long
-    // fn build_subtract_filter(&self) -> Result<Vec<Complex<f32>>, constant::XxxError> {
-    //     const NFILT: usize = 1400;
+// fn build_subtract_filter(&self) -> Result<Vec<Complex<f32>>, constant::XxxError> {
+//     const NFILT: usize = 1400;
 
-    //     // Compute a Hann-like window directly into the real part of the
-    //     // first NFILT + 1 elements in the filter, accumulating the sum
-    //     // as we go.
+//     // Compute a Hann-like window directly into the real part of the
+//     // first NFILT + 1 elements in the filter, accumulating the sum
+//     // as we go.
 
-    //     let mut filter: Vec<Complex<f32>> = Vec::with_capacity(self.nmax);
-    //     filter.resize(self.nmax, Complex { re: 0.0, im: 0.0 });
+//     let mut filter: Vec<Complex<f32>> = Vec::with_capacity(self.nmax);
+//     filter.resize(self.nmax, Complex { re: 0.0, im: 0.0 });
 
-    //     let mut sum: f32 = 0.0;
+//     let mut sum: f32 = 0.0;
 
-    //     for index in 0..NFILT
-    //     // for (int j = -NFILT / 2; j <= NFILT / 2; ++j)
-    //     // maybe should check against NFILT as i16 ?
-    //     {
-    //         let j: i16 = index as i16 - NFILT as i16/2; 
-    //         let c: f32 = (PI * j as f32 / NFILT as f32).cos();
-    //         let value: f32 = c * c;
+//     for index in 0..NFILT
+//     // for (int j = -NFILT / 2; j <= NFILT / 2; ++j)
+//     // maybe should check against NFILT as i16 ?
+//     {
+//         let j: i16 = index as i16 - NFILT as i16/2;
+//         let c: f32 = (PI * j as f32 / NFILT as f32).cos();
+//         let value: f32 = c * c;
 
-    //         // let index: usize = (j + NFILT / 2) as usize;
-    //         filter[index] = Complex { re: value, im: 0.0 }; 
-    //         sum += value;
-    //     }
+//         // let index: usize = (j + NFILT / 2) as usize;
+//         filter[index] = Complex { re: value, im: 0.0 };
+//         sum += value;
+//     }
 
-    //     // // Now that we've got the sum, create actual complex numbers using
-    //     // // the normalized real values that we just populated and zero the
-    //     // // rest of the filter.
+//     // // Now that we've got the sum, create actual complex numbers using
+//     // // the normalized real values that we just populated and zero the
+//     // // rest of the filter.
 
-    //     // std::fill(std::transform(filter.begin(),
-    //     //                          filter.begin() + NFILT + 1,
-    //     //                          filter.begin(),
-    //     //                          [sum](auto const value)
-    //     //                          {
-    //     //                              return std::complex<float>(value.real() / sum, 0.0f);
-    //     //                          }),
-    //     //           filter.end(),
-    //     //           ZERO);
-        
-    //     {
-    //         let filter_end: usize = NFILT + 1;
-    //         for i in 0..filter_end {
-    //             filter[i] = Complex::new(filter[i].re / sum, 0.0);
-    //         }
-    //         filter.resize(filter_end, Complex { re: 0.0, im: 0.0 });
-    //         filter.resize(self.nmax, Complex { re: 0.0, im: 0.0 });
-    //     }
+//     // std::fill(std::transform(filter.begin(),
+//     //                          filter.begin() + NFILT + 1,
+//     //                          filter.begin(),
+//     //                          [sum](auto const value)
+//     //                          {
+//     //                              return std::complex<float>(value.real() / sum, 0.0f);
+//     //                          }),
+//     //           filter.end(),
+//     //           ZERO);
 
-    //     // // Shift to position the window.
-    //     // std::rotate(filter.begin(), // first
-    //     //             filter.begin() + NFILT / 2, // middle
-    //     //             filter.begin() + NFILT + 1); // last
-    //     // Performs a left rotation on a range of elements.
-    //     // Specifically, std::rotate swaps the elements in the range 
-    //     // [first, last) in such a way that the elements in [first, middle) 
-    //     // are placed after the elements in [middle, last) 
-    //     // while the orders of the elements in both ranges are preserved.
-    //     // is -> middle, last, first
-    //     filter.rotate_left(NFILT/ 2);
+//     {
+//         let filter_end: usize = NFILT + 1;
+//         for i in 0..filter_end {
+//             filter[i] = Complex::new(filter[i].re / sum, 0.0);
+//         }
+//         filter.resize(filter_end, Complex { re: 0.0, im: 0.0 });
+//         filter.resize(self.nmax, Complex { re: 0.0, im: 0.0 });
+//     }
 
-    //     // // Transform the filter into the frequency domain.
-    //     self.fft_nmax_f.process(&mut filter);
+//     // // Shift to position the window.
+//     // std::rotate(filter.begin(), // first
+//     //             filter.begin() + NFILT / 2, // middle
+//     //             filter.begin() + NFILT + 1); // last
+//     // Performs a left rotation on a range of elements.
+//     // Specifically, std::rotate swaps the elements in the range
+//     // [first, last) in such a way that the elements in [first, middle)
+//     // are placed after the elements in [middle, last)
+//     // while the orders of the elements in both ranges are preserved.
+//     // is -> middle, last, first
+//     filter.rotate_left(NFILT/ 2);
 
-    //     // fftwf_plan fftw_plan;
-    //     // {
-    //     //     std::lock_guard<std::mutex> lock(fftw_mutex);
+//     // // Transform the filter into the frequency domain.
+//     self.fft_nmax_f.process(&mut filter);
 
-    //     //     fftw_plan = fftwf_plan_dft_1d(Mode::NMAX,
-    //     //                                   reinterpret_cast<fftwf_complex *>(filter.data()),
-    //     //                                   reinterpret_cast<fftwf_complex *>(filter.data()),
-    //     //                                   FFTW_FORWARD,
-    //     //                                   FFTW_ESTIMATE_PATIENT);
-                                            
-    //     //     if (!fftw_plan)
-    //     //     {
-    //     //         throw std::runtime_error("Failed to create FFT plan");
-    //     //     }                     
-    //     // }
+//     // fftwf_plan fftw_plan;
+//     // {
+//     //     std::lock_guard<std::mutex> lock(fftw_mutex);
 
-    //     // fftwf_execute(fftw_plan);
+//     //     fftw_plan = fftwf_plan_dft_1d(Mode::NMAX,
+//     //                                   reinterpret_cast<fftwf_complex *>(filter.data()),
+//     //                                   reinterpret_cast<fftwf_complex *>(filter.data()),
+//     //                                   FFTW_FORWARD,
+//     //                                   FFTW_ESTIMATE_PATIENT);
 
-    //     // {
-    //     //     fftwf_destroy_plan(fftw_plan);
-    //     // }
+//     //     if (!fftw_plan)
+//     //     {
+//     //         throw std::runtime_error("Failed to create FFT plan");
+//     //     }
+//     // }
 
-    //     // // Normalize the frequency domain representation.
-    //     {
-    //         let factor: f32 = 1.0/self.nmax as f32;
-    //         for i in 0..self.nmax {
-    //             filter[i] *= factor;
-    //         }
-    //     }
+//     // fftwf_execute(fftw_plan);
 
-    //     // std::transform(filter.begin(),
-    //     //                filter.end(),
-    //     //                filter.begin(),
-    //     //                [factor = 1.0f / Mode::NMAX](auto value)
-    //     //                {
-    //     //                    return value * factor;
-    //     //                });
+//     // {
+//     //     fftwf_destroy_plan(fftw_plan);
+//     // }
 
-    //     Ok(filter)
-    // }
-        
-    // // Generate a reference signal, based on the provided tone sequence and
-    // // base frequency. The output is a vector of complex values representing
-    // // the signal in the time domain.
+//     // // Normalize the frequency domain representation.
+//     {
+//         let factor: f32 = 1.0/self.nmax as f32;
+//         for i in 0..self.nmax {
+//             filter[i] *= factor;
+//         }
+//     }
 
-    // // std::vector<std::complex<float>> genjs8refsig(std::array<int, NN> const & itone, float               const   f0)
-    // fn genrefsig(&self, l0_tones: &Vec<u8>, f0: f32) -> Vec<Complex<f32>> {
-    //     // Precompute the base frequency contribution; full circle in
-    //     // radians, multipled by the base frequency, multiplied by the
-    //     // sampling interval, i.e., the time step between samples, which
-    //     // results in the base frequency phase increment. Start the
-    //     // phase accumulator off at zero.
+//     // std::transform(filter.begin(),
+//     //                filter.end(),
+//     //                filter.begin(),
+//     //                [factor = 1.0f / Mode::NMAX](auto value)
+//     //                {
+//     //                    return value * factor;
+//     //                });
 
-    //     let symp = self.protocol.symbol_period();
-    //     let nsps = self.runtime.target_input_sample_rate(); // 12000; // Mode::NSPS;
-    //     let bfpi: f32     = TAU * f0 * (1.0 / self.runtime.target_input_sample_rate().0 );
+//     Ok(filter)
+// }
 
-    //     // std::vector<std::complex<float>> cref;
-    //     // cref.reserve(NN * Mode::NSPS);
-    //     let nn= self.protocol.total_symbols_nn(); // 79; // NN;
-    //     let cref_len = constant::ByteCount(nn.0 * nsps.0 as usize);
+// // Generate a reference signal, based on the provided tone sequence and
+// // base frequency. The output is a vector of complex values representing
+// // the signal in the time domain.
 
-    //     let mut cref: Vec<Complex<f32>> = Vec::with_capacity(cref_len.0);
+// // std::vector<std::complex<float>> genjs8refsig(std::array<int, NN> const & itone, float               const   f0)
+// fn genrefsig(&self, l0_tones: &Vec<u8>, f0: f32) -> Vec<Complex<f32>> {
+//     // Precompute the base frequency contribution; full circle in
+//     // radians, multipled by the base frequency, multiplied by the
+//     // sampling interval, i.e., the time step between samples, which
+//     // results in the base frequency phase increment. Start the
+//     // phase accumulator off at zero.
 
-    //     let mut phi = 0.0;
-    //     // for (int i = 0; i < NN; ++i)
-    //     for i in 0..nn.0 {
-    //         // Compute phase increment for the tone; frequency offset is
-    //         // determined by the tone value.
+//     let symp = self.protocol.symbol_period();
+//     let nsps = self.runtime.target_input_sample_rate(); // 12000; // Mode::NSPS;
+//     let bfpi: f32     = TAU * f0 * (1.0 / self.runtime.target_input_sample_rate().0 );
 
-    //         let dphi: f32 = bfpi + TAU * ((l0_tones[i] * self.runtime.rx_freq_osr().0 as u8) as f32)/ nsps.0;
+//     // std::vector<std::complex<float>> cref;
+//     // cref.reserve(NN * Mode::NSPS);
+//     let nn= self.protocol.total_symbols_nn(); // 79; // NN;
+//     let cref_len = constant::ByteCount(nn.0 * nsps.0 as usize);
 
-    //         // Iterate over the samples per symbol to generate the time
-    //         // domain signal.
+//     let mut cref: Vec<Complex<f32>> = Vec::with_capacity(cref_len.0);
 
-    //         // for (std::size_t is = 0; is < Mode::NSPS; ++is)
-    //         for _i in 0..nsps.0 as usize {
-    //             // cref.push_back(std::polar(1.0f, phi));
-    //             cref.push(Complex::from_polar(1.0, phi));
-    //             // phi = std::fmod(phi + dphi, TAU);
-    //             phi = (phi + dphi) % TAU;
-    //         }
-    //     }
-    //     cref
-    // }
+//     let mut phi = 0.0;
+//     // for (int i = 0; i < NN; ++i)
+//     for i in 0..nn.0 {
+//         // Compute phase increment for the tone; frequency offset is
+//         // determined by the tone value.
 
-    // // Subtract a JS8 signal - inplace in DD
-    // //
-    // // Measured signal  : dd(t)    = a(t)cos(2*pi*f0*t+theta(t))
-    // // Reference signal : cref(t)  = exp( j*(2*pi*f0*t+phi(t)) )
-    // // Complex amp      : cfilt(t) = LPF[ dd(t)*CONJG(cref(t)) ]
-    // // Subtract         : dd(t)    = dd(t) - 2*REAL{cref*cfilt}
-    // //
-    // // Important to note that dt can be negative here.
-    // fn subtract_candidate(&mut self, 
-    //     // candidate: &Candidate, 
-    //     detector: &Detector, cref: &Vec<Complex<f32>>, signal: &mut Vec<f32>, dt: f32
-    // ) {
-    //     if self.filter.len() == 0 {
-    //         self.filter = self.build_subtract_filter().unwrap();
-    //     }
+//         let dphi: f32 = bfpi + TAU * ((l0_tones[i] * self.runtime.rx_freq_osr().0 as u8) as f32)/ nsps.0;
 
-    //     signal.resize(self.nmax, 0.0);
-    //     // assert_eq!(signal.len(), self.nmax);
+//         // Iterate over the samples per symbol to generate the time
+//         // domain signal.
 
-    //     // let cref: &Vec<Complex<f32>> = &modem.signal;  // Needs cref to be complex - eg from genrefsig
+//         // for (std::size_t is = 0; is < Mode::NSPS; ++is)
+//         for _i in 0..nsps.0 as usize {
+//             // cref.push_back(std::polar(1.0f, phi));
+//             cref.push(Complex::from_polar(1.0, phi));
+//             // phi = std::fmod(phi + dphi, TAU);
+//             phi = (phi + dphi) % TAU;
+//         }
+//     }
+//     cref
+// }
 
-    //     let nstart: f32 = dt * self.runtime.target_input_sample_rate().0; 
-    //     let cref_start = if nstart < 0.0 { -nstart as usize } else { 0 };
-    //     let dd_start   = if nstart > 0.0 { nstart as usize } else { 0 };
-    //     let size  = min(cref.len() - cref_start, self.nmax - dd_start);
+// // Subtract a JS8 signal - inplace in DD
+// //
+// // Measured signal  : dd(t)    = a(t)cos(2*pi*f0*t+theta(t))
+// // Reference signal : cref(t)  = exp( j*(2*pi*f0*t+phi(t)) )
+// // Complex amp      : cfilt(t) = LPF[ dd(t)*CONJG(cref(t)) ]
+// // Subtract         : dd(t)    = dd(t) - 2*REAL{cref*cfilt}
+// //
+// // Important to note that dt can be negative here.
+// fn subtract_candidate(&mut self,
+//     // candidate: &Candidate,
+//     detector: &Detector, cref: &Vec<Complex<f32>>, signal: &mut Vec<f32>, dt: f32
+// ) {
+//     if self.filter.len() == 0 {
+//         self.filter = self.build_subtract_filter().unwrap();
+//     }
 
-    //     // Populate complex filter with the conjugate of the reference signal.
-    //     let mut cfilt: Vec<Complex<f32>> = Vec::with_capacity(self.nmax);
-    //     for i in 0..size {
-    //         cfilt.push(signal[dd_start + i] * cref[cref_start + i].conj());
-    //     }
+//     signal.resize(self.nmax, 0.0);
+//     // assert_eq!(signal.len(), self.nmax);
 
-    //     // Zero-fill the remainder, if any.
-    //     cfilt.resize(self.nmax, Complex::ZERO);
+//     // let cref: &Vec<Complex<f32>> = &modem.signal;  // Needs cref to be complex - eg from genrefsig
 
-    //     // FFT to the frequency domain.
-    //     self.fft_nmax_f.process(&mut cfilt);
+//     let nstart: f32 = dt * self.runtime.target_input_sample_rate().0;
+//     let cref_start = if nstart < 0.0 { -nstart as usize } else { 0 };
+//     let dd_start   = if nstart > 0.0 { nstart as usize } else { 0 };
+//     let size  = min(cref.len() - cref_start, self.nmax - dd_start);
 
-    //     // Apply the detector filter in the frequency domain.
-    //     for i in 0..self.nmax {
-    //         cfilt[i] *= self.filter[i];
-    //     }
+//     // Populate complex filter with the conjugate of the reference signal.
+//     let mut cfilt: Vec<Complex<f32>> = Vec::with_capacity(self.nmax);
+//     for i in 0..size {
+//         cfilt.push(signal[dd_start + i] * cref[cref_start + i].conj());
+//     }
 
-    //     // Inverse FFT to return to the time domain.
-    //     self.fft_nmax_i.process(&mut cfilt);
+//     // Zero-fill the remainder, if any.
+//     cfilt.resize(self.nmax, Complex::ZERO);
 
-    //     // Subtract the reconstructed signal. - correct! DD is signal is real
-    //     for i in 0..size {
-    //         // signal[dd_start + i] -= (cfilt[i] * modem.signal[signal_start + i]).re;
-    //         // signal[dd_start + i] -= 2.0 * (cfilt[i] * modem.signal[signal_start + i]).re;
-    //         signal[dd_start + i] -= 2.0 * (cfilt[i] * cref[cref_start + i]).re;
-    //     }
-    // }
+//     // FFT to the frequency domain.
+//     self.fft_nmax_f.process(&mut cfilt);
 
-    //         JS8::encode(i3bit, Costas, message.data(), itone.data());
+//     // Apply the detector filter in the frequency domain.
+//     for i in 0..self.nmax {
+//         cfilt[i] *= self.filter[i];
+//     }
 
-    // // Subtract signal if needed.
-    // if lsubtract {
-    //     subtractjs8(genjs8refsig(itone, f1), xdt2);
-    // }
+//     // Inverse FFT to return to the time domain.
+//     self.fft_nmax_i.process(&mut cfilt);
 
+//     // Subtract the reconstructed signal. - correct! DD is signal is real
+//     for i in 0..size {
+//         // signal[dd_start + i] -= (cfilt[i] * modem.signal[signal_start + i]).re;
+//         // signal[dd_start + i] -= 2.0 * (cfilt[i] * modem.signal[signal_start + i]).re;
+//         signal[dd_start + i] -= 2.0 * (cfilt[i] * cref[cref_start + i]).re;
+//     }
+// }
 
-                            // if pass + 1 < self.runtime.subtracts() {
-                        //     // subtract the successful decode
-                        //     let crf_modem: constant::Modem = constant::Modem::new(
-                        //         &constant::FT8, 
-                        //         &self.runtime, 
-                        //         freq_hz
-                        //     );
-                        //     let l3_out = crf_modem.l3_ecc_add(&message.codeword).unwrap();
-                        //     let l2_out = crf_modem.l2_gray_encode(&l3_out).unwrap();
-                        //     let l1_out = crf_modem.l1_sync_add(&l2_out).unwrap();
+//         JS8::encode(i3bit, Costas, message.data(), itone.data());
 
+// // Subtract signal if needed.
+// if lsubtract {
+//     subtractjs8(genjs8refsig(itone, f1), xdt2);
+// }
 
-                        //     // need to get this direct approach to work?
-                        //     // let cref: Vec<Complex<f32>> = self.genrefsig(&l1_out, freq_hz + 1.0 * 3.125); 
-                        //     // let time_adjust: f32 = 0.0;
+// if pass + 1 < self.runtime.subtracts() {
+//     // subtract the successful decode
+//     let crf_modem: constant::Modem = constant::Modem::new(
+//         &constant::FT8,
+//         &self.runtime,
+//         freq_hz
+//     );
+//     let l3_out = crf_modem.l3_ecc_add(&message.codeword).unwrap();
+//     let l2_out = crf_modem.l2_gray_encode(&l3_out).unwrap();
+//     let l1_out = crf_modem.l1_sync_add(&l2_out).unwrap();
 
-                        //     // this is approx accurate - if use time_sec + 0.08125
-                        //     // need to adjust for the 1 symbol pad at beginning
-                        //     let l0_out = crf_modem.l0_gfsk_synth(&l1_out).unwrap();
-                        //     let cref = hilbert(&l0_out);
-                        //     // not sure yet why this needs to be adjusted by symbol_period/2
-                        //     let time_adjust = self.protocol.symbol_period() / 2.0; // * self.protocol.ramp_symbols() as f32; //  / self.runtime.time_osr() as f32;
+//     // need to get this direct approach to work?
+//     // let cref: Vec<Complex<f32>> = self.genrefsig(&l1_out, freq_hz + 1.0 * 3.125);
+//     // let time_adjust: f32 = 0.0;
 
-                        //     // self.subtract_candidate(
-                        //     //     // &c, 
-                        //     //     &mut detector, &cref, &mut samples, time_sec + time_adjust
-                        //     // );
-                        // } 
+//     // this is approx accurate - if use time_sec + 0.08125
+//     // need to adjust for the 1 symbol pad at beginning
+//     let l0_out = crf_modem.l0_gfsk_synth(&l1_out).unwrap();
+//     let cref = hilbert(&l0_out);
+//     // not sure yet why this needs to be adjusted by symbol_period/2
+//     let time_adjust = self.protocol.symbol_period() / 2.0; // * self.protocol.ramp_symbols() as f32; //  / self.runtime.time_osr() as f32;
 
-    #[cfg(test)]
+//     // self.subtract_candidate(
+//     //     // &c,
+//     //     &mut detector, &cref, &mut samples, time_sec + time_adjust
+//     // );
+// }
+
+#[cfg(test)]
 mod tests {
     // use super::*;
 
     #[test]
-    fn test() {
-   }
-
+    fn test() {}
 }
- 

@@ -1,6 +1,6 @@
-use crate::types;
-use crate::debug;
 use crate::candidate;
+use crate::debug;
+use crate::types;
 use crate::waterfall;
 
 pub struct Correlator {
@@ -9,46 +9,34 @@ pub struct Correlator {
 }
 
 impl Correlator {
-    pub fn new(
-        protocol: &'static types::Protocol,
-        runtime: &'static types::Runtime, 
-    ) -> Correlator {
-        Correlator {
-            protocol,
-            runtime,
-        }
+    pub fn new(protocol: &'static types::Protocol, runtime: &'static types::Runtime) -> Correlator {
+        Correlator { protocol, runtime }
     }
 
     pub fn find_freq_candidates(
         &self,
-        wf: &waterfall::Waterfall, 
+        wf: &waterfall::Waterfall,
         freq_bin_range: &waterfall::FreqBinRange,
     ) -> Option<Vec<candidate::Candidate>> {
         // dbg!("entry");
 
         let mut candidates: Vec<candidate::Candidate> = Vec::new();
         assert!(wf.symbols_stored() >= self.protocol.nd().0);
- 
-        for freq_index in 
-                freq_bin_range.from() + wf.freq_osr.0 
-                .. freq_bin_range.to() - (self.protocol.token_tones().0 * wf.freq_osr.0)
+
+        for freq_index in freq_bin_range.from() + wf.freq_osr.0
+            ..freq_bin_range.to() - (self.protocol.token_tones().0 * wf.freq_osr.0)
         {
-            let score = self.score_sync_correlation(
-                wf, 
-                types::FreqIndex(freq_index),
-            );
-            if score < self.runtime.sync_min_score()  {
+            let score = self.score_sync_correlation(wf, types::FreqIndex(freq_index));
+            if score < self.runtime.sync_min_score() {
                 continue;
             }
             // dbg!(score);
-            candidates.push(
-                candidate::Candidate::new(
-                    wf.time_base(),
-                    types::TimeIndex(0),
-                    types::FreqIndex(freq_index),
-                    score, 
-                )
-            );
+            candidates.push(candidate::Candidate::new(
+                wf.time_base(),
+                types::TimeIndex(0),
+                types::FreqIndex(freq_index),
+                score,
+            ));
         }
         if candidates.is_empty() {
             None
@@ -57,14 +45,14 @@ impl Correlator {
             candidates.sort_by_key(|b| b.freq_index().0);
             // self.dump_histogram(wf, &candidates);
             Some(candidates)
-        }            
+        }
     }
 
     //Calculate the score based on the correlation between the signal of the target candidate and the Costas array
     pub fn score_sync_correlation(
-        &self, 
-        wf: &waterfall::Waterfall, 
-        freq_index_base: types::FreqIndex
+        &self,
+        wf: &waterfall::Waterfall,
+        freq_index_base: types::FreqIndex,
     ) -> f32 {
         if wf.symbols_stored() < self.protocol.nd().0 {
             return 0.0;
@@ -75,7 +63,7 @@ impl Correlator {
 
         // assert!(time_index_base.0 >= wf.time_osr.0);
         assert!(freq_index_base.0 >= wf.freq_osr.0);
-        
+
         let mut sync_sum: f32 = 0.0;
         let mut norm_sum: f32 = 0.0;
 
@@ -84,14 +72,15 @@ impl Correlator {
         //Loop through the potential 3 Costas array locations
         for sync_block_num in 0..self.protocol.num_sync().0 {
             let sync_block_index = sync_block_num * self.protocol.sync_offset().0; // -> 0, 36, 72
-            // dbg!(sync_block_index);
-            //Loop over each element of Costas array
+                                                                                   // dbg!(sync_block_index);
+                                                                                   //Loop over each element of Costas array
             for (costas_index, costas_sym) in self.protocol.costas_pattern().iter().enumerate() {
                 //The starting position of the Costas array is bits 0, 36, and 72.
                 let sync_symbol_index = (sync_block_index + costas_index) * wf.time_osr.0;
 
-                let time_index = types::TimeIndex(sync_symbol_index); 
-                if time_index.0 > wf.time_bins_stored() { // } - wf.time_osr.0 {
+                let time_index = types::TimeIndex(sync_symbol_index);
+                if time_index.0 > wf.time_bins_stored() {
+                    // } - wf.time_osr.0 {
                     dbg!("run out of lines", time_index.0);
                     continue;
                 }
@@ -118,7 +107,7 @@ impl Correlator {
         norm_sum -= sync_sum / (scan_max - 1) as f32; // normalise
 
         if norm_sum > 0.0 {
-            sync_sum/norm_sum
+            sync_sum / norm_sum
         } else {
             0.0
         }
@@ -135,7 +124,7 @@ impl Correlator {
         }
 
         // debug::_plot_graph(
-        //     "out/magbins.png", 
+        //     "out/magbins.png",
         //     "Magsum",
         //     &wf.magsums,
         //     0, wf.magsums.len(),
@@ -143,20 +132,23 @@ impl Correlator {
         // );
 
         debug::_plot_graph(
-            "out/correl_counts.png", 
+            "out/correl_counts.png",
             "Correlator counts",
             &counts,
-            0, counts.len(),
-            0.0, counts.clone().into_iter().reduce(f32::max).unwrap()
+            0,
+            counts.len(),
+            0.0,
+            counts.clone().into_iter().reduce(f32::max).unwrap(),
         );
 
         debug::_plot_graph(
-            "out/correl_scores.png", 
+            "out/correl_scores.png",
             "Correlator scores",
             &scores,
-            0, scores.len(),
-            0.0, scores.clone().into_iter().reduce(f32::max).unwrap()
+            0,
+            scores.len(),
+            0.0,
+            scores.clone().into_iter().reduce(f32::max).unwrap(),
         );
-
     }
 }

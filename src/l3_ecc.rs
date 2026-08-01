@@ -21,9 +21,7 @@ pub struct LogL {
 impl LogL {
     pub fn new(protocol: &types::Protocol) -> LogL {
         let bits: Vec<f32> = vec![0.0; protocol.token_bits().0];
-        LogL {
-            bits
-        }
+        LogL { bits }
     }
 }
 
@@ -70,7 +68,7 @@ fn fast_atanh(x: f32) -> f32 {
 }
 
 impl types::Modem {
-        // Encode via LDPC a 91-bit message and return a 174-bit codeword.
+    // Encode via LDPC a 91-bit message and return a 174-bit codeword.
     // The generator matrix has dimensions (87,87).
     // The code is a (174,91) regular LDPC code with column weight 3.
     // Arguments:
@@ -79,11 +77,12 @@ impl types::Modem {
 
     // codeword pre-filled with message+CRC and trailing zeros
     #[cfg(any(feature = "enable_tx", test))]
-    fn ecc_encode(&self, 
-        // l4_message: &Vec<u8>, // [u8; XXX.ldpc_k_bytes()], 
+    fn ecc_encode(
+        &self,
+        // l4_message: &Vec<u8>, // [u8; XXX.ldpc_k_bytes()],
         // cw out:  mut [u8; XXX.ldpc_n_bytes()]
-        cw_crc: &[u8] // mut [u8; XXX.ldpc_k_bytes()]
-        // , cw_crc: &Vec<u8>
+        cw_crc: &[u8], // mut [u8; XXX.ldpc_k_bytes()]
+                       // , cw_crc: &Vec<u8>
     ) -> Vec<u8> {
         // assert!(false);
         // This implementation accesses the generator bits straight from the packed binary representation in kXXX_LDPC_generator
@@ -95,15 +94,23 @@ impl types::Modem {
 
         // Compute the LDPC checksum bits in the original message and store them back into codeword
         // for i in 0..self.protocol.ldpc_m().0 {
-        for (i, row) in test_generator::XXX_LDPC_GENERATOR.iter().enumerate().take(self.protocol().ldpc_m().0) {
+        for (i, row) in test_generator::XXX_LDPC_GENERATOR
+            .iter()
+            .enumerate()
+            .take(self.protocol().ldpc_m().0)
+        {
             // implementation of bitwise multiplication and parity checking
             // Normally nsum would contain the result of dot product between message and kXXX_LDPC_generator[i],
             // but we only compute the sum modulo 2.
             let mut nsum = 0u8;
 
-            for (j, m) in cw_crc.iter().enumerate().take(self.protocol()._ldpc_k_bytes().0) {
+            for (j, m) in cw_crc
+                .iter()
+                .enumerate()
+                .take(self.protocol()._ldpc_k_bytes().0)
+            {
                 let bits = m & row[j]; // bitwise AND (bitwise multiplication)
-                // let bits = m & _XXX_LDPC_GENERATOR[i][j]; // bitwise AND (bitwise multiplication)
+                                       // let bits = m & _XXX_LDPC_GENERATOR[i][j]; // bitwise AND (bitwise multiplication)
                 nsum ^= _ecc_parity8(bits); // bitwise XOR (addition modulo 2)
             }
 
@@ -123,13 +130,13 @@ impl types::Modem {
 
     //     let mut codeword = [0u8; XXX.ldpc_n_bytes()];
 
-
     //     encode174(&a91, &mut codeword);
 
     // Check if each bit of Codeword satisfies the check matrix of ldpc
     #[cfg(any(feature = "enable_rx", test))]
-    pub fn ecc_check_errors(&self, cw_crc_ecc: &[u8]
-        // codeword: &[u8; XXX.ldpc_n_bytes()]
+    pub fn ecc_check_errors(
+        &self,
+        cw_crc_ecc: &[u8], // codeword: &[u8; XXX.ldpc_n_bytes()]
     ) -> usize {
         assert_eq!(cw_crc_ecc.len(), self.protocol().ldpc_n_bytes().0);
 
@@ -182,7 +189,8 @@ impl types::Modem {
     //
     // #[cfg(feature = "ldpc_bp")]
     #[cfg(any(feature = "enable_rx", test))]
-    pub fn ecc_decode_bp(&self, 
+    pub fn ecc_decode_bp(
+        &self,
         logls: &[LogL], // bits
         max_iters: usize,
         // plain_bytes: &mut [u8; XXX.ldpc_n_bytes()],
@@ -190,7 +198,7 @@ impl types::Modem {
         // dbg!("ecc_decode_bp");
 
         assert_eq!(logls.len(), self.protocol().nd().0);
-        let mut plain_bytes: Vec<u8> = vec![0; self.protocol().ldpc_n_bytes().0]; 
+        let mut plain_bytes: Vec<u8> = vec![0; self.protocol().ldpc_n_bytes().0];
         // Vec::with_capacity(self.protocol.ldpc_n_bytes().0);
         // plain_bytes.resize(self.protocol.ldpc_n_bytes().0, 0);
 
@@ -200,7 +208,7 @@ impl types::Modem {
 
         //Initialize bit message
         let mut toc: Vec<[f32; 7]> = Vec::with_capacity(self.protocol().ldpc_m().0);
-        toc.resize(self.protocol().ldpc_m().0,[0.0f32; 7]);
+        toc.resize(self.protocol().ldpc_m().0, [0.0f32; 7]);
 
         //Initialize with the maximum value that can have the minimum number of errors
         let mut min_errors = self.protocol().ldpc_m().0;
@@ -245,13 +253,14 @@ impl types::Modem {
             //Use log likelihood to determine whether each check node m has a higher probability of 0 or 1 from the perspective of the bit node.
             // for m in 0..self.protocol.ldpc_m().0 {
             for (m, toc_item) in toc.iter_mut().enumerate().take(self.protocol().ldpc_m().0) {
-                    //Extract the elements of each row of the check matrix
+                //Extract the elements of each row of the check matrix
                 for (n_idx, &n) in test_parity::XXX_LDPC_NM[m].iter().enumerate() {
                     if n != 0 {
                         //Find the bit node n connected to the check node
                         let n = n - 1;
                         //The received value of codeword[n] (bit position n) is set as the initial value.
-                        let mut tnm = logls[n/self.protocol().token_bits().0].bits[n % self.protocol().token_bits().0];
+                        let mut tnm = logls[n / self.protocol().token_bits().0].bits
+                            [n % self.protocol().token_bits().0];
                         //Add check message e of bit node n (excluding messages coming from node m)
                         // for m_idx in 0..3 {
                         for (m_idx, tov_item) in tov[n].iter().enumerate().take(3) {
@@ -298,7 +307,8 @@ impl types::Modem {
     //
     // #[cfg(feature = "ldpc_bitflip")]
     #[cfg(any(feature = "enable_rx", test))]
-    pub fn ecc_decode_bitflip(&self, 
+    pub fn ecc_decode_bitflip(
+        &self,
         logls: &[LogL], // bits!!
         max_iters: usize,
         // plain_bytes: &mut [u8; XXX.ldpc_n_bytes()],
@@ -306,7 +316,7 @@ impl types::Modem {
         // dbg!("ecc_decode_bitflip");
 
         assert_eq!(logls.len(), self.protocol().nd().0);
-        let mut plain_bytes: Vec<u8> = vec![0; self.protocol().ldpc_n_bytes().0]; 
+        let mut plain_bytes: Vec<u8> = vec![0; self.protocol().ldpc_n_bytes().0];
         // Vec::with_capacity(self.protocol.ldpc_n_bytes().0);
         // plain_bytes.resize(self.protocol.ldpc_n_bytes().0, 0);
 
@@ -340,7 +350,7 @@ impl types::Modem {
                     //Take xor with bit node other than bit node bi
                     for i in e.iter() {
                         if *i != 0 && *i != *bi {
-                            x ^= if plain[*i - 1] { 1 } else { 0 };   // NBNBNBN *i or i?
+                            x ^= if plain[*i - 1] { 1 } else { 0 }; // NBNBNBN *i or i?
                         }
                     }
                     //Vote on the ideal value of bit node bi based on the checksum result
@@ -376,7 +386,7 @@ impl types::Modem {
     }
 
     #[cfg(test)]
-    pub fn _l3_ecc_remove(&self, cw_crc_ecc: &[u8]) ->Result<Vec<u8>, error::XxxError> {
+    pub fn _l3_ecc_remove(&self, cw_crc_ecc: &[u8]) -> Result<Vec<u8>, error::XxxError> {
         if self.ecc_check_errors(cw_crc_ecc) == 0 {
             // let codeword_bits = self.codeword.view_bits_mut::<Msb0>();
             // for i in self.protocol.ldpc_k()..self.protocol.ldpc_n() {
@@ -389,7 +399,12 @@ impl types::Modem {
     }
 
     #[cfg(test)]
-    pub fn l3_outbound(&self, ttl: isize, cw_crc: &Vec<u8>, freq_hz: types::Hz) -> Result<Vec<u8>, error::XxxError>{
+    pub fn l3_outbound(
+        &self,
+        ttl: isize,
+        cw_crc: &Vec<u8>,
+        freq_hz: types::Hz,
+    ) -> Result<Vec<u8>, error::XxxError> {
         let cw_crc_ecc = self._l3_ecc_add(cw_crc)?;
         if ttl == 0 {
             self.l3_inbound(&cw_crc_ecc)
@@ -399,7 +414,7 @@ impl types::Modem {
     }
 
     #[cfg(test)]
-    pub fn l3_inbound(&self, cw_crc_ecc: &Vec<u8>) ->Result<Vec<u8>, error::XxxError> {
+    pub fn l3_inbound(&self, cw_crc_ecc: &Vec<u8>) -> Result<Vec<u8>, error::XxxError> {
         let cw_crc = self._l3_ecc_remove(cw_crc_ecc)?;
         self.l4_inbound(&cw_crc)
     }
@@ -410,15 +425,15 @@ mod tests {
     use super::*;
     use crate::test_support;
 
-    const L4M0: [u8; test_support::_TEST_PROTOCOL.ldpc_n_bytes().0] = [ 0xff, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    const L4M0: [u8; test_support::_TEST_PROTOCOL.ldpc_n_bytes().0] = [
+        0xff, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ];
 
     fn test_roundtrip(modem: &mut types::Modem, l4_message: Vec<u8>) {
         // let mut _l2_codeword= l4_message;  // msg inc crc in place
 
-        let cw_crc_ecc = modem.ecc_encode(
-            &l4_message, 
-        );
-        
+        let cw_crc_ecc = modem.ecc_encode(&l4_message);
+
         // let mut l2_codeword_bits = [false; XXX.ldpc_n()];
         // unpack_codeword(&l2_codeword, &mut l2_codeword_bits);
         // assert_eq!(ecc_check_errors(&l2_codeword_bits), 0); // check is in bits with no errors
@@ -428,15 +443,18 @@ mod tests {
         let mut cw_crc_ecc_bits_f32: Vec<f32> = Vec::with_capacity(modem.protocol().ldpc_n().0);
         cw_crc_ecc_bits_f32.resize(modem.protocol().ldpc_n().0, 0f32);
 
-
         let mut cw_crc_ecc_logls: Vec<LogL> = Vec::new();
-        cw_crc_ecc_logls.resize(modem.protocol().ldpc_n().0 / modem.protocol().token_bits().0, LogL::new(modem.protocol()));
+        cw_crc_ecc_logls.resize(
+            modem.protocol().ldpc_n().0 / modem.protocol().token_bits().0,
+            LogL::new(modem.protocol()),
+        );
         assert_eq!(cw_crc_ecc_logls.len(), modem.protocol().nd().0);
         {
             let mut i = 0;
             for ls_idx in 0..modem.protocol().nd().0 {
                 for bit in 0..modem.protocol().token_bits().0 {
-                    cw_crc_ecc_logls[ls_idx].bits[bit] = if !cw_crc_ecc_bits[i] { -0.01 } else { 1.0 };
+                    cw_crc_ecc_logls[ls_idx].bits[bit] =
+                        if !cw_crc_ecc_bits[i] { -0.01 } else { 1.0 };
                     i += 1;
                 }
             }
@@ -445,27 +463,23 @@ mod tests {
         {
             // test bp decode
             // let mut l4_message1_bytes = [0u8; XXX.ldpc_n_bytes()];
-            let _cw_crc_ecc_bytes = modem.ecc_decode_bp(
-                &cw_crc_ecc_logls, 
-                20, 
-            ).unwrap(); // decode/check are in bits
+            let _cw_crc_ecc_bytes = modem.ecc_decode_bp(&cw_crc_ecc_logls, 20).unwrap();
+            // decode/check are in bits
         }
 
         {
             // test bitflip decode
             // let mut l4_message1_bytes = [0u8; XXX.ldpc_n_bytes()];
-            let _cw_crc_ecc_bytes = modem.ecc_decode_bitflip(
-                &cw_crc_ecc_logls, 
-                20, 
-            ).unwrap(); // decode/check are in bits
+            let _cw_crc_ecc_bytes = modem.ecc_decode_bitflip(&cw_crc_ecc_logls, 20).unwrap();
+            // decode/check are in bits
         }
 
         // _________
-        
+
         // let mut l4_message1 = [0u8; XXX.ldpc_n_bytes()];
         // pack_codeword(&l4_message1_bits, &mut l4_message1);
 
-        // let mut l4_message1_k: [u8; _] = [0u8; XXX.ldpc_k_bytes()];  
+        // let mut l4_message1_k: [u8; _] = [0u8; XXX.ldpc_k_bytes()];
         // l4_message1_k.copy_from_slice(&l4_message1[0..XXX.ldpc_k_bytes()]);
 
         // let mut l4_message1_n = [0u8; XXX.ldpc_n_bytes()];
@@ -476,8 +490,8 @@ mod tests {
     #[test]
     fn test_layer3() {
         let mut modem: types::Modem = types::Modem::new(
-            &test_support::_TEST_PROTOCOL, 
-            &test_support::_TEST_FT8_RUNTIME, 
+            &test_support::_TEST_PROTOCOL,
+            &test_support::_TEST_FT8_RUNTIME,
         );
 
         test_roundtrip(&mut modem, L4M0.to_vec());

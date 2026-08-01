@@ -14,7 +14,7 @@ impl types::Modem {
         // assert!(codeword.len() >= self.protocol()._ldpc_p_bytes().0);
         let codeword_bits = codeword.view_bits::<Msb0>();
 
-        let mut payload: Vec<u8> = vec![0; self.protocol()._ldpc_p_padded_bytes().0]; 
+        let mut payload: Vec<u8> = vec![0; self.protocol()._ldpc_p_padded_bytes().0];
         // Vec::with_capacity(self.protocol._ldpc_p_padded_bytes().0);
         // payload.resize(self.protocol._ldpc_p_padded_bytes().0, 0);
 
@@ -23,13 +23,13 @@ impl types::Modem {
 
         // load just the bits left shifted by the pad
         // https://wsjt.sourceforge.io/FT4_FT8_QEX.pdf  page 8
-        // "The CRC is calculated on the source-encoded message, zero-extended from 77 to 82 bits. 
+        // "The CRC is calculated on the source-encoded message, zero-extended from 77 to 82 bits.
         // Whole bytes for library crc calc input??
-        payload_bits[
-            payload_buflen_bits-self.protocol()._ldpc_p().0-self.protocol()._crc_pad_bits().0..payload_buflen_bits-self.protocol()._crc_pad_bits().0
-        ].copy_from_bitslice(
-            &codeword_bits[0..self.protocol()._ldpc_p().0]
-        );
+        payload_bits[payload_buflen_bits
+            - self.protocol()._ldpc_p().0
+            - self.protocol()._crc_pad_bits().0
+            ..payload_buflen_bits - self.protocol()._crc_pad_bits().0]
+            .copy_from_bitslice(&codeword_bits[0..self.protocol()._ldpc_p().0]);
 
         self.crc_calc().checksum(&payload)
     }
@@ -78,7 +78,7 @@ impl types::Modem {
 
     // these are the action stubs
     #[cfg(any(feature = "enable_tx", test))]
-    pub fn _l4_crc_add(&self, cw: &[u8]) -> Result<Vec<u8>, error::XxxError>{
+    pub fn _l4_crc_add(&self, cw: &[u8]) -> Result<Vec<u8>, error::XxxError> {
         assert_eq!(cw.len(), self.protocol()._ldpc_p_bytes().0);
         Ok(self._crc_add(cw))
     }
@@ -88,7 +88,8 @@ impl types::Modem {
         if self.crc_check(cw_crc) {
             let mut cw = cw_crc.to_owned();
             cw.resize(self.protocol()._ldpc_p_bytes().0, 0);
-            let resid_bits = (self.protocol()._ldpc_k_bytes().0 - self.protocol()._ldpc_p_bytes().0) % 8;
+            let resid_bits =
+                (self.protocol()._ldpc_k_bytes().0 - self.protocol()._ldpc_p_bytes().0) % 8;
             if resid_bits > 0 {
                 let codeword_bits = cw.view_bits_mut::<Msb0>();
                 for i in self.protocol()._ldpc_p().0..self.protocol()._ldpc_p().0 + resid_bits {
@@ -104,7 +105,12 @@ impl types::Modem {
     }
 
     #[cfg(test)]
-    pub fn l4_outbound(&self, ttl: isize, cw: &[u8], freq_hz: types::Hz) -> Result<Vec<u8>, error::XxxError> {
+    pub fn l4_outbound(
+        &self,
+        ttl: isize,
+        cw: &[u8],
+        freq_hz: types::Hz,
+    ) -> Result<Vec<u8>, error::XxxError> {
         assert_eq!(cw.len(), self.protocol()._ldpc_p_bytes().0);
         let cw_crc = self._l4_crc_add(cw)?;
         assert_eq!(cw_crc.len(), self.protocol()._ldpc_k_bytes().0);
@@ -132,10 +138,10 @@ mod tests {
     struct CrcTestData {
         payload: u128,
         checksum: u16,
-    }    
+    }
     const L5P0: CrcTestData = CrcTestData {
         payload: 0,
-        checksum: 0 
+        checksum: 0,
     };
 
     const L5P1: CrcTestData = CrcTestData {
@@ -151,7 +157,7 @@ mod tests {
 
         let mut codeword: Vec<u8> = Vec::with_capacity(modem.protocol()._ldpc_p_bytes().0);
         codeword.resize(modem.protocol()._ldpc_p_bytes().0, 0);
-        // copy the test binary payload into the codeword buffer 
+        // copy the test binary payload into the codeword buffer
         {
             let codeword_bits = codeword.view_bits_mut::<Msb0>();
             codeword_bits[0..modem.protocol()._ldpc_p().0].store_be::<u128>(crctestdata.payload);
@@ -183,8 +189,8 @@ mod tests {
     #[test]
     fn test_layer4() {
         let mut modem: types::Modem = types::Modem::new(
-            &test_support::_TEST_PROTOCOL, 
-            &test_support::_TEST_FT8_RUNTIME, 
+            &test_support::_TEST_PROTOCOL,
+            &test_support::_TEST_FT8_RUNTIME,
         );
         test_roundtrips(&mut modem, &L5P0);
         test_roundtrips(&mut modem, &L5P1);

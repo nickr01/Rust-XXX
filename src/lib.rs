@@ -4,19 +4,19 @@ pub mod error;
 pub mod types;
 
 #[cfg(any(feature = "enable_rx", test))]
-pub mod rx_pipeline;
-#[cfg(any(feature = "enable_rx", test))]
 mod receiver;
+#[cfg(any(feature = "enable_rx", test))]
+pub mod rx_pipeline;
 
 #[cfg(any(feature = "enable_tx", test))]
 pub mod tx_pipeline;
 
-mod detector;
-mod waterfall;
+mod candidate;
 mod correlator;
 mod decoder;
+mod detector;
 mod subtractor;
-mod candidate;
+mod waterfall;
 
 mod test_generator;
 mod test_parity;
