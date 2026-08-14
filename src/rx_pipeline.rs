@@ -139,8 +139,8 @@ impl RxPipeline {
 
         let spectrogram_height = self.detector.wf.wflines().len();
 
-        if let Some(portal) = &mut self.debug_portal {
-            if let Some(width) = spectr2.len().checked_div(spectrogram_height) {
+        if let Some(portal) = &mut self.debug_portal
+            && let Some(width) = spectr2.len().checked_div(spectrogram_height) {
                 debug::plot_spectrogram_to_buffer(
                     portal.buf_as_mut(),
                     &spectr2,
@@ -150,7 +150,6 @@ impl RxPipeline {
                     },
                 );
             }
-        }
     }
 
     pub fn update_spectrogram(&mut self) {
