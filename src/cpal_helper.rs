@@ -201,34 +201,39 @@ pub fn get_audio_output_device_default_config(
 mod tests {
     use super::*;
 
+    // These need to match local environment Loopback setup, and device needs to be enabled/available in Loopback
+    // Would be better in a config
+    const LOOPBACK_NAME: &str = "Loopback_XXX_Test"; 
+    // Use 'enumerate'proj for id
+    const LOOPBACK_DEVICE: &str = "coreaudio:com.rogueamoeba.Loopback::883B7892-07E0-40FE-B30D-2D89BCD12942";
+
     // Https://docs.rs/jack/latest/jack/
 
     #[test]
     fn test_audio_input_device_by_name() {
         let host = cpal::default_host();
-        let name: String = "Loopback Audio".to_string();
+        let name: String = LOOPBACK_NAME.to_string();
         let _ = get_audio_input_device_by_name(&host, &name).expect("Cannot get device by name {}");
     }
 
     #[test]
     fn test_audio_input_device_by_id() {
         let host = cpal::default_host();
-        let id: String =
-            "coreaudio:com.rogueamoeba.Loopback:FDC858DA-EA9D-469B-9B86-2C4ADC20537E".to_string();
+        let id: String = LOOPBACK_DEVICE.to_string();
         let _ = get_audio_input_device_by_id(&host, &id).expect("Cannot get device by name");
     }
 
     #[test]
     fn test_audio_input_config_by_name() {
         let host = cpal::default_host();
-        let name: String = "Loopback Audio".to_string();
+        let name: String = LOOPBACK_NAME.to_string();
         let _ = get_audio_input_device_by_name(&host, &name).expect("Cannot get device by name");
     }
 
     #[test]
     fn test_audio_input_device_default_config_by_name() {
         let host = cpal::default_host();
-        let name: String = "Loopback Audio".to_string();
+        let name: String = LOOPBACK_NAME.to_string();
         let (_, _) = get_audio_input_device_default_config(&host, &name)
             .expect("Cannot get device and config");
     }
@@ -236,8 +241,7 @@ mod tests {
     #[test]
     fn test_audio_input_device_default_config_by_id() {
         let host = cpal::default_host();
-        let id: String =
-            "coreaudio:com.rogueamoeba.Loopback:FDC858DA-EA9D-469B-9B86-2C4ADC20537E".to_string();
+        let id: String = LOOPBACK_DEVICE.to_string();
         let (_, _) = get_audio_input_device_default_config(&host, &id)
             .expect("Cannot get device and config");
     }
